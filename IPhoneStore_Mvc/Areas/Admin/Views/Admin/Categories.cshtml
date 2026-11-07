@@ -1,0 +1,199 @@
+@model List<Category>
+@{
+    ViewData["Title"] = "Danh mục dòng máy (iPhone Series)";
+    var totalProducts = Model.Sum(c => c.Products?.Count ?? 0);
+    var activeCount = Model.Count(c => c.IsActive);
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h1 class="h3 fw-bold text-dark mb-1">Danh mục dòng máy (iPhone Series)</h1>
+        <p class="text-muted small mb-0">Quản lý các thế hệ iPhone, sắp xếp thứ tự hiển thị và quản lý tính toàn vẹn dữ liệu.</p>
+    </div>
+    <button type="button" class="btn btn-primary btn-sm px-3 rounded-pill fw-semibold shadow-sm" onclick="openCategoryDrawer()">
+        + Thêm dòng máy mới
+    </button>
+</div>
+
+<!-- ================= SUMMARY KPI CARDS ================= -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-12">
+        <div class="aar-stat-box">
+            <div class="aar-stat-icon-wrap bg-primary bg-opacity-10 text-primary">
+                📱
+            </div>
+            <div>
+                <div class="text-muted small fw-semibold">Tổng số thế hệ iPhone</div>
+                <div class="h4 fw-bold text-dark mb-0">@Model.Count thế hệ</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-12">
+        <div class="aar-stat-box">
+            <div class="aar-stat-icon-wrap bg-success bg-opacity-10 text-success">
+                📦
+            </div>
+            <div>
+                <div class="text-muted small fw-semibold">Tổng sản phẩm trực thuộc</div>
+                <div class="h4 fw-bold text-dark mb-0">@totalProducts model</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-12">
+        <div class="aar-stat-box">
+            <div class="aar-stat-icon-wrap bg-info bg-opacity-10 text-info">
+                ✅
+            </div>
+            <div>
+                <div class="text-muted small fw-semibold">Trạng thái phát hành</div>
+                <div class="h4 fw-bold text-dark mb-0">@activeCount / @Model.Count Đang kinh doanh</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= CATEGORY TABLE ================= -->
+<div class="aar-card">
+    <div class="aar-card-header">
+        <h3 class="aar-card-title">
+            Danh sách thế hệ iPhone
+        </h3>
+        <span class="badge bg-light text-muted border">Bảo vệ toàn vẹn: Không thể xóa danh mục đang có sản phẩm</span>
+    </div>
+    <div class="table-responsive">
+        <table class="aar-table">
+            <thead>
+                <tr>
+                    <th style="width: 80px;">Thứ tự</th>
+                    <th>Dòng máy</th>
+                    <th>Mô tả tiếp thị Apple</th>
+                    <th>Số sản phẩm</th>
+                    <th>Trạng thái</th>
+                    <th style="width: 160px; text-align: right;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var cat in Model)
+                {
+                    var prodCount = cat.Products?.Count ?? 0;
+                    <tr>
+                        <td class="fw-bold text-muted">#@cat.DisplayOrder</td>
+                        <td>
+                            <div class="fw-bold text-dark fs-6">@cat.Name</div>
+                            <div class="text-muted small">ID: @cat.Id</div>
+                        </td>
+                        <td class="text-secondary small" style="max-width: 320px;">
+                            @(string.IsNullOrEmpty(cat.Description) ? "Chưa có mô tả tiếp thị" : cat.Description)
+                        </td>
+                        <td>
+                            <span class="badge bg-blue-50 text-primary border border-primary border-opacity-25 px-2 py-1 fw-semibold">
+                                @prodCount model
+                            </span>
+                        </td>
+                        <td>
+                            @if (cat.IsActive)
+                            {
+                                <span class="aar-pill aar-pill-green">Đang kinh doanh</span>
+                            }
+                            else
+                            {
+                                <span class="aar-pill aar-pill-gray">Tạm ngưng</span>
+                            }
+                        </td>
+                        <td style="text-align: right;">
+                            <div class="d-inline-flex gap-2">
+                                <button type="button" class="btn btn-outline-secondary btn-sm px-2 py-1" 
+                                        onclick="editCategory(@cat.Id, '@Html.Raw(cat.Name)', '@Html.Raw(cat.Description ?? "")', @cat.DisplayOrder, @cat.IsActive.ToString().ToLower())">
+                                    Sửa
+                                </button>
+                                <form asp-area="Admin" asp-controller="Admin" asp-action="DeleteCategory" method="post" class="d-inline"
+                                      onsubmit="return confirm('Bạn có chắc chắn muốn xóa dòng @cat.Name? @(prodCount > 0 ? "Lưu ý: Không thể xóa vì danh mục đang có sản phẩm!" : "")');">
+                                    @Html.AntiForgeryToken()
+                                    <input type="hidden" name="id" value="@cat.Id" />
+                                    <button type="submit" class="btn btn-outline-danger btn-sm px-2 py-1" @(prodCount > 0 ? "title='Không thể xóa vì đang có sản phẩm' disabled" : "")>
+                                        Xóa
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ================= RIGHT DRAWER FOR ADD / EDIT ================= -->
+<div class="aar-drawer-overlay" id="drawerOverlay" onclick="closeCategoryDrawer()"></div>
+
+<div class="aar-drawer" id="categoryDrawer">
+    <div class="aar-drawer-header">
+        <h4 class="h6 fw-bold mb-0 text-dark" id="drawerTitle">Thêm dòng máy mới</h4>
+        <button type="button" class="btn-close" onclick="closeCategoryDrawer()"></button>
+    </div>
+    <form asp-area="Admin" asp-controller="Admin" asp-action="SaveCategory" method="post" id="categoryForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="Id" id="catId" value="0" />
+
+        <div class="aar-drawer-body">
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Tên dòng máy <span class="text-danger">*</span></label>
+                <input type="text" name="Name" id="catName" class="form-control" placeholder="VD: iPhone 16 Pro Max" required />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Thứ tự hiển thị</label>
+                <input type="number" name="DisplayOrder" id="catOrder" class="form-control" value="1" min="1" max="99" />
+                <div class="form-text small">Số nhỏ hơn sẽ hiển thị trước trên thanh điều hướng Storefront.</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Mô tả tiếp thị Apple</label>
+                <textarea name="Description" id="catDescription" class="form-control" rows="4" placeholder="VD: Dynamic Island. Camera 48MP. USB-C. Apple Intelligence."></textarea>
+            </div>
+
+            <div class="mb-3 form-check form-switch">
+                <input type="checkbox" name="IsActive" id="catIsActive" class="form-check-input" value="true" checked />
+                <label class="form-check-label small fw-bold" for="catIsActive">Đang kinh doanh (Hiển thị cho khách hàng)</label>
+            </div>
+        </div>
+
+        <div class="aar-drawer-footer">
+            <button type="button" class="btn btn-light btn-sm px-3" onclick="closeCategoryDrawer()">Hủy bỏ</button>
+            <button type="submit" class="btn btn-primary btn-sm px-4 fw-semibold">Lưu thay đổi</button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function openCategoryDrawer() {
+            document.getElementById('catId').value = "0";
+            document.getElementById('catName').value = "";
+            document.getElementById('catDescription').value = "";
+            document.getElementById('catOrder').value = "1";
+            document.getElementById('catIsActive').checked = true;
+            document.getElementById('drawerTitle').innerText = "Thêm dòng máy mới";
+
+            document.getElementById('drawerOverlay').classList.add('open');
+            document.getElementById('categoryDrawer').classList.add('open');
+        }
+
+        function editCategory(id, name, desc, order, isActive) {
+            document.getElementById('catId').value = id;
+            document.getElementById('catName').value = name;
+            document.getElementById('catDescription').value = desc;
+            document.getElementById('catOrder').value = order;
+            document.getElementById('catIsActive').checked = isActive;
+            document.getElementById('drawerTitle').innerText = "Chỉnh sửa dòng " + name;
+
+            document.getElementById('drawerOverlay').classList.add('open');
+            document.getElementById('categoryDrawer').classList.add('open');
+        }
+
+        function closeCategoryDrawer() {
+            document.getElementById('drawerOverlay').classList.remove('open');
+            document.getElementById('categoryDrawer').classList.remove('open');
+        }
+    </script>
+}

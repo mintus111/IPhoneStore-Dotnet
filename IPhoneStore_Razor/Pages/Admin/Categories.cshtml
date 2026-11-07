@@ -1,0 +1,183 @@
+@page
+@model IPhoneStore_Razor.Pages.Admin.CategoriesModel
+@{
+    ViewData["Title"] = "2. Danh Mục Dòng Máy (Series)";
+}
+
+<div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1">PRODUCT TAXONOMY</span>
+                <span class="text-secondary small">Quản lý các thế hệ iPhone chính hãng</span>
+            </div>
+            <h1 class="fs-3 fw-bold text-dark mb-0">2. Danh Mục Dòng Máy (Series)</h1>
+        </div>
+        <button type="button" class="apple-cta-primary py-2 px-3 fs-6" onclick="openAddCatModal()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Thêm Dòng Máy Mới</span>
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.AlertMessage))
+    {
+        <div class="alert alert-info alert-dismissible fade show border-0 rounded-3 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>@Model.AlertMessage</span>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Clean Categories Table (Mockup 2) -->
+    <div class="admin-table-container">
+        <div class="admin-table-header">
+            <div>
+                <h3 class="fs-6 fw-bold text-dark mb-0">Danh Sách Dòng Máy Apple (@Model.Categories.Count dòng)</h3>
+                <div class="text-secondary small">Thứ tự hiển thị trên thanh điều hướng trang chủ</div>
+            </div>
+            <div class="apple-search-pill-container" style="width: 240px;">
+                <svg class="search-icon-inside" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" class="apple-search-pill" placeholder="Tìm tên dòng máy..." />
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">ID</th>
+                        <th>Tên dòng máy</th>
+                        <th>Mô tả chi tiết</th>
+                        <th style="width: 100px;">Thứ tự</th>
+                        <th>Số lượng máy</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end" style="width: 160px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model.Categories)
+                    {
+                        <tr>
+                            <td class="text-secondary fw-bold">#@c.Id</td>
+                            <td><strong class="text-dark fs-6">@c.Name</strong></td>
+                            <td class="text-secondary small">@c.Description</td>
+                            <td><span class="badge bg-light text-dark border">@c.DisplayOrder</span></td>
+                            <td>
+                                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold">@c.Products.Count sản phẩm</span>
+                            </td>
+                            <td>
+                                @if (c.IsActive)
+                                {
+                                    <span class="status-pill success">Hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="status-pill danger">Đang ẩn</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-2">
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3"
+                                            onclick='openEditCatModal(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new { c.Id, c.Name, c.Description, c.DisplayOrder, c.IsActive })))'>
+                                        Sửa
+                                    </button>
+                                    <form method="post" asp-page-handler="Delete" asp-route-id="@c.Id" onsubmit="return confirm('Bạn có chắc muốn xóa dòng máy này? Hệ thống sẽ ngăn chặn nếu dòng máy đang chứa sản phẩm.');">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3">Xóa</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination (Mockup 2) -->
+        <div class="p-3 border-top">
+            <nav class="apple-pagination mb-0">
+                <span class="page-item disabled">‹ Trước</span>
+                <span class="page-item active">1</span>
+                <a href="javascript:void(0);" class="page-link">2</a>
+                <a href="javascript:void(0);" class="page-link">Sau ›</a>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- ================= ADD / EDIT CATEGORY MODAL ================= -->
+<div class="modal fade" id="categoryModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header border-bottom py-3">
+                <h5 class="modal-title fw-bold text-dark mb-0" id="catModalTitle">Thêm Dòng Máy iPhone Mới</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="Save">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="catId" name="InputCategory.Id" value="0" />
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">Tên Dòng Máy (Series): <span class="text-danger">*</span></label>
+                        <input type="text" id="catName" name="InputCategory.Name" class="form-control rounded-3 py-2" placeholder="Ví dụ: iPhone 16 Pro Max, iPhone 16..." required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">Mô Tả Tiếp Thị:</label>
+                        <textarea id="catDescription" name="InputCategory.Description" class="form-control rounded-3" rows="3" placeholder="Ví dụ: Đỉnh cao công nghệ Titanium cùng chip A18 Pro..."></textarea>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-dark small">Thứ Tự Hiển Thị:</label>
+                            <input type="number" id="catDisplayOrder" name="InputCategory.DisplayOrder" class="form-control rounded-3 py-2" value="1" min="1" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-dark small">Trạng Thái Hiển Thị:</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" id="catIsActive" name="InputCategory.IsActive" value="true" checked />
+                                <label class="form-check-label small text-dark" for="catIsActive">Kích hoạt trên Web</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-2">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="apple-cta-primary px-4 py-2">
+                        Lưu Thay Đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var catModal;
+        document.addEventListener('DOMContentLoaded', function () {
+            catModal = new bootstrap.Modal(document.getElementById('categoryModal'));
+        });
+
+        function openAddCatModal() {
+            document.getElementById('catModalTitle').innerText = 'Thêm Dòng Máy iPhone Mới';
+            document.getElementById('catId').value = '0';
+            document.getElementById('catName').value = '';
+            document.getElementById('catDescription').value = '';
+            document.getElementById('catDisplayOrder').value = '1';
+            document.getElementById('catIsActive').checked = true;
+            catModal.show();
+        }
+
+        function openEditCatModal(cat) {
+            document.getElementById('catModalTitle').innerText = 'Chỉnh Sửa Dòng Máy #' + cat.Id;
+            document.getElementById('catId').value = cat.Id;
+            document.getElementById('catName').value = cat.Name;
+            document.getElementById('catDescription').value = cat.Description || '';
+            document.getElementById('catDisplayOrder').value = cat.DisplayOrder || 1;
+            document.getElementById('catIsActive').checked = cat.IsActive;
+            catModal.show();
+        }
+    </script>
+}

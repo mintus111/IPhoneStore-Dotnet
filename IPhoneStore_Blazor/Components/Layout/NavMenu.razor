@@ -1,0 +1,247 @@
+@implements IDisposable
+@inject CartService Cart
+@inject NavigationManager Nav
+
+<!-- Top Utility Header -->
+<div class="BomChelsea-utility-bar">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-3">
+            <span>Đại lý ủy quyền chính thức của Apple tại Việt Nam</span>
+            <span class="d-none d-md-inline text-secondary">|</span>
+            <span class="d-none d-md-inline">Hotline: <strong class="text-white">1900.6789</strong> (7:30 - 22:00)</span>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <a href="javascript:void(0);">Hệ thống 120 cửa hàng</a>
+            <a href="/my-orders">Tra cứu đơn hàng</a>
+            <a href="/warranty" class="text-primary fw-semibold">Bảo hành Apple Care</a>
+        </div>
+    </div>
+</div>
+
+<!-- Main BomChelsea Header -->
+<header class="apple-navbar">
+    <div class="container d-flex align-items-center justify-content-between py-2">
+        <!-- Logo -->
+        <a href="/" class="navbar-brand d-flex align-items-center gap-2 me-4 text-decoration-none">
+            <img src="/images/chelsea-logo.svg" alt="Chelsea FC" width="36" height="36" class="rounded-circle shadow-sm" style="border: 1.5px solid #d1ab3e;" />
+            <span class="fw-bold tracking-tight text-dark fs-5">Bom<span style="color: #034694;">Chelsea</span></span>
+        </a>
+
+        <!-- Category Links -->
+        <nav class="d-none d-lg-flex align-items-center gap-1">
+            <a class="apple-nav-link" href="/#danh-sach-iphone">Tất cả iPhone</a>
+            <a class="apple-nav-link" href="/?categoryId=1#danh-sach-iphone">iPhone 16 Series</a>
+            <a class="apple-nav-link" href="/?categoryId=2#danh-sach-iphone">iPhone 15 Series</a>
+            <a class="apple-nav-link" href="/?categoryId=3#danh-sach-iphone">iPhone 14 Series</a>
+            <a class="apple-nav-link" href="/my-orders">📦 Đơn hàng</a>
+            <a class="apple-nav-link text-primary fw-semibold" href="/warranty">Tra Cứu Bảo Hành</a>
+        </nav>
+
+        <!-- Right: Search + Cart + User -->
+        <div class="d-flex align-items-center gap-3">
+            <form method="get" action="/" class="apple-search-pill-container d-none d-md-flex align-items-center" style="width: 240px; position: relative;">
+                <svg class="search-icon-inside" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" name="searchKeyword" class="apple-search-pill pe-5" placeholder="Tìm iPhone, phụ kiện..." />
+                <button type="submit" class="btn btn-sm btn-link text-secondary position-absolute end-0 top-50 translate-middle-y me-1 p-0 border-0" title="Tìm kiếm">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+            </form>
+
+            <AuthorizeView>
+                <Authorized>
+                    <a href="/cart" class="apple-cart-btn me-2" title="Giỏ hàng của bạn">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                        <span class="apple-cart-badge">@Cart.GetCount()</span>
+                    </a>
+                    <div class="dropdown">
+                        <button class="btn btn-link text-decoration-none text-dark p-0 d-flex align-items-center gap-2 dropdown-toggle" type="button" @onclick="() => ToggleMenu(1)">
+                            <div class="user-avatar-circle">
+                                @(context.User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")
+                            </div>
+                            <span class="d-none d-sm-inline fw-semibold small">@context.User.Identity?.Name</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0 rounded-3 @(_openMenu == 1 ? "show" : "")">
+                            <li><h6 class="dropdown-header">Xin chào, @context.User.Identity?.Name</h6></li>
+                            @if (!((context.User.IsInRole("Admin") || context.User.IsInRole("Manager") || context.User.IsInRole("Staff") || context.User.IsInRole("Cashier") || context.User.IsInRole("Shipper")) && !context.User.IsInRole("Customer")))
+                            {
+                                <li><a class="dropdown-item" href="/my-orders" @onclick="CloseMenus">Đơn hàng của tôi</a></li>
+                                <li><a class="dropdown-item" href="/warranty" @onclick="CloseMenus">Bảo hành thiết bị</a></li>
+                            }
+                            @if (context.User.IsInRole("Admin") || context.User.IsInRole("Manager") || context.User.IsInRole("Staff") || context.User.IsInRole("Cashier") || context.User.IsInRole("Shipper"))
+                            {
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item text-primary fw-bold" href="/admin" @onclick="CloseMenus">Trang Quản Trị Hệ Thống</a></li>
+                            }
+                            <li><hr class="dropdown-divider"></li>
+                            <li><button type="button" class="dropdown-item text-danger" @onclick="SignOut">Đăng xuất</button></li>
+                        </ul>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-primary btn-sm rounded-pill px-3 py-1 fw-semibold" data-bs-toggle="modal" data-bs-target="#authModal" onclick="document.getElementById('login-tab')?.click()">
+                            Đăng nhập
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-1 fw-semibold" data-bs-toggle="modal" data-bs-target="#authModal" onclick="document.getElementById('register-tab')?.click()">
+                            Đăng ký
+                        </button>
+                    </div>
+                </NotAuthorized>
+            </AuthorizeView>
+        </div>
+    </div>
+</header>
+
+<!-- ================= AUTH POPUP MODAL (ĐĂNG NHẬP / ĐĂNG KÝ) ================= -->
+<div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: #fff;">
+            <div class="modal-header border-0 pb-0 pt-4 px-4 position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                <div class="w-100 text-center">
+                    <svg class="brand-apple-logo mb-2" viewBox="0 0 170 170" style="width: 38px; height: 38px; fill: #000;">
+                        <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.67-7.81-11.94-14.3-6.19-9.36-11.05-20.08-14.57-32.17-3.52-12.09-5.28-23.72-5.28-34.91 0-16.22 4.18-29.62 12.53-40.21 8.36-10.59 18.79-15.99 31.31-16.2 5.09 0 10.59 1.34 16.51 4.02 5.92 2.68 9.77 4.08 11.55 4.2 1.56-.23 5.46-1.61 11.7-4.14 6.24-2.54 11.55-3.7 15.93-3.48 11.72.63 21.36 4.87 28.91 12.72-10.26 6.21-15.28 15.02-15.06 26.43.23 8.92 3.69 16.38 10.38 22.39 6.69 6 14.62 9.53 23.79 10.59-2.12 6.53-4.68 13.06-7.69 19.59zM119.22 32.64c0-7.25 2.67-14.17 8.01-20.76 5.34-6.59 11.83-10.96 19.46-13.12 1.01 7.25-.9 14.28-5.73 21.09-4.83 6.81-11.23 11.19-19.2 13.14-.67-.12-1.51-.24-2.54-.35z"/>
+                    </svg>
+                    <h4 class="fw-bold text-dark mb-1">Tài Khoản Apple BomChelsea</h4>
+                    <p class="text-secondary small mb-3">Đăng nhập để nhận bảo hành chính hãng và theo dõi đơn</p>
+
+                    <!-- Nav tabs -->
+                    <ul class="nav nav-pills nav-fill p-1 bg-light rounded-pill mb-2" id="authTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active rounded-pill fw-semibold py-2" id="login-tab" data-bs-toggle="pill" data-bs-target="#login-pane" type="button" role="tab">Đăng Nhập</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-pill fw-semibold py-2" id="register-tab" data-bs-toggle="pill" data-bs-target="#register-pane" type="button" role="tab">Đăng Ký</button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="modal-body p-4 pt-2">
+                <div class="tab-content" id="authTabsContent">
+                    <!-- Tab Login -->
+                    <div class="tab-pane fade show active" id="login-pane" role="tabpanel">
+                        <form action="/Account/QuickLogin" method="post">
+                            <input type="hidden" name="returnUrl" value="/" />
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold text-secondary mb-1">Tên đăng nhập / Email / SĐT</label>
+                                <input type="text" name="username" id="modalUsername" class="form-control rounded-3 py-2 px-3" placeholder="Username, email hoặc số điện thoại" required />
+                            </div>
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label small fw-semibold text-secondary mb-0">Mật khẩu</label>
+                                    <a href="javascript:void(0);" onclick="alert('Tính năng khôi phục mật khẩu qua mã OTP SMS/Email đang được kết nối tổng đài. Vui lòng liên hệ Hotline 1900.6789 nếu cần hỗ trợ khẩn cấp!');" class="small text-primary text-decoration-none">Quên mật khẩu?</a>
+                                </div>
+                                <input type="password" name="password" id="modalPassword" class="form-control rounded-3 py-2 px-3" placeholder="Nhập mật khẩu" required />
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="modalRememberMe" checked>
+                                <label class="form-check-label small text-secondary" for="modalRememberMe">
+                                    Ghi nhớ đăng nhập trên thiết bị này (30 ngày)
+                                </label>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100 py-2 rounded-pill fw-semibold mb-2">
+                                Đăng Nhập Ngay &rarr;
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Tab Register -->
+                    <!-- Tab Register -->
+                    <div class="tab-pane fade" id="register-pane" role="tabpanel">
+                        <form action="/Account/QuickRegister" method="post" id="modalBlazorRegisterForm">
+                            <!-- Alert thông báo lỗi đăng ký inline -->
+                            <div id="modalBlazorRegAlert" class="alert alert-danger d-none py-2 px-3 small rounded-3 mb-2" role="alert"></div>
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold text-secondary mb-1">Họ và tên <span class="text-danger">*</span></label>
+                                <input type="text" name="fullName" id="modalBlazorFullName" class="form-control rounded-3 py-2 px-3" placeholder="Nguyễn Văn A" required />
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">Số điện thoại <span class="text-danger">*</span></label>
+                                    <input type="tel" name="phone" id="modalBlazorPhone" class="form-control rounded-3 py-2 px-3" placeholder="0912345678" required autocomplete="tel" />
+                                    <div id="modalBlazorPhoneFeedback" class="form-text mt-1" style="font-size:0.75rem; min-height: 18px;"></div>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">Tên đăng nhập</label>
+                                    <input type="text" name="username" id="modalBlazorUser" class="form-control rounded-3 py-2 px-3" placeholder="Tùy chọn" autocomplete="off" />
+                                    <div id="modalBlazorUserFeedback" class="form-text mt-1" style="font-size:0.75rem; min-height: 18px;"></div>
+                                </div>
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label small fw-semibold text-secondary mb-1">Email <span class="text-muted fw-normal">(Tùy chọn)</span></label>
+                                <input type="email" name="email" id="modalBlazorEmail" class="form-control rounded-3 py-2 px-3" placeholder="name@example.com" autocomplete="email" />
+                                <div id="modalBlazorEmailFeedback" class="form-text mt-1" style="font-size:0.75rem; min-height: 18px;"></div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label small fw-semibold text-secondary mb-1">Mật khẩu <span class="text-danger">*</span></label>
+                                <input type="password" name="password" id="modalBlazorPassword" class="form-control rounded-3 py-2 px-3" placeholder="Ít nhất 8 ký tự (3/4 nhóm)" required />
+                            </div>
+                            <button type="submit" id="modalBlazorRegBtn" class="btn btn-primary w-100 py-2 rounded-pill fw-semibold">
+                                Đăng Ký Tài Khoản BomChelsea
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Real-time duplicate check styling for modal (Đồng bộ Ảnh 1) */
+    .modal-check-invalid, input.modal-check-invalid, input.modal-check-invalid:focus {
+        border-color: #ea4335 !important;
+        background-color: #fff9f9 !important;
+        box-shadow: 0 0 0 3px rgba(234, 67, 53, 0.15) !important;
+    }
+    .modal-check-valid, input.modal-check-valid, input.modal-check-valid:focus {
+        border-color: #198754 !important;
+        background-color: #f9fffb !important;
+        box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.15) !important;
+    }
+    .modal-feedback-error {
+        color: #ea4335 !important;
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
+        margin-top: 4px !important;
+        line-height: 1.3 !important;
+    }
+    .modal-feedback-success {
+        color: #198754 !important;
+        font-size: 0.75rem !important;
+        font-weight: 500 !important;
+        margin-top: 4px !important;
+        line-height: 1.3 !important;
+    }
+</style>
+
+@code {
+    @inject IJSRuntime JS
+    private int _openMenu;
+
+    protected override void OnInitialized() => Cart.Changed += OnCartChanged;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Cart.EnsureLoadedAsync();
+            try
+            {
+                await JS.InvokeVoidAsync("initAuthModalCheck");
+            }
+            catch { }
+        }
+    }
+
+    private void OnCartChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private void ToggleMenu(int id) => _openMenu = _openMenu == id ? 0 : id;
+    private void CloseMenus() => _openMenu = 0;
+    private void SignOut() => Nav.NavigateTo("/Account/SignOut", forceLoad: true);
+
+    public void Dispose() => Cart.Changed -= OnCartChanged;
+}
+

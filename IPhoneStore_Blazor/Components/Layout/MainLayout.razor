@@ -1,0 +1,80 @@
+﻿@inherits LayoutComponentBase
+
+<NavMenu />
+
+<main role="main" class="flex-grow-1">
+    @Body
+</main>
+
+<ToastHost />
+
+<!-- ================= UNIFIED 4-COLUMN FOOTER ================= -->
+<footer class="apple-footer">
+    <div class="container">
+        <div class="row g-4 mb-5">
+            <div class="col-lg-3 col-md-6">
+                <div class="footer-title">Hệ Thống BomChelsea</div>
+                <ul class="footer-links">
+                    <li><a href="javascript:void(0);">Giới thiệu chuỗi BomChelsea</a></li>
+                    <li><a href="javascript:void(0);">Hệ thống 120 cửa hàng</a></li>
+                    <li><a href="javascript:void(0);">Chính sách bảo mật Apple</a></li>
+                    <li><a href="javascript:void(0);">Quy chế hoạt động</a></li>
+                    <li><a href="javascript:void(0);">Tuyển dụng chuyên viên Apple</a></li>
+                </ul>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="footer-title">Chính Sách & Hỗ Trợ</div>
+                <ul class="footer-links">
+                    <li><a href="javascript:void(0);">Chính sách 1 đổi 1 trong 30 ngày</a></li>
+                    <li><a href="javascript:void(0);">Chính sách giao hàng hỏa tốc 2H</a></li>
+                    <li><a href="javascript:void(0);">Hướng dẫn trả góp 0% lãi suất</a></li>
+                    <li><a href="/warranty">Tra cứu bảo hành điện tử chính hãng</a></li>
+                    <li><a href="javascript:void(0);">Trung tâm ủy quyền Apple Care</a></li>
+                </ul>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="footer-title">Tổng Đài Hỗ Trợ (Miễn Phí)</div>
+                <ul class="footer-links">
+                    <li>Mua hàng: <strong class="text-white">1900.6789</strong> (7:30 - 22:00)</li>
+                    <li>Khiếu nại: <strong class="text-white">1800.1062</strong> (8:00 - 21:30)</li>
+                    <li>Bảo hành: <strong class="text-white">1900.8655</strong> (8:00 - 21:00)</li>
+                    <li>Kỹ thuật Apple: <strong class="text-white">1800.1127</strong> (24/7)</li>
+                </ul>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <div class="footer-title">Chứng Nhận & Thanh Toán</div>
+                <p class="text-secondary small mb-3">
+                    BomChelsea là đại lý bán lẻ ủy quyền cao cấp nhất của Apple (Apple Authorized Reseller - AAR) tại thị trường Việt Nam.
+                </p>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge bg-light text-dark px-2 py-1">Apple Pay</span>
+                    <span class="badge bg-light text-dark px-2 py-1">VietQR</span>
+                    <span class="badge bg-light text-dark px-2 py-1">Visa/Master</span>
+                    <span class="badge bg-light text-dark px-2 py-1">COD</span>
+                </div>
+                <div class="text-secondary small">
+                    Hotline phản ánh: <strong class="text-primary">support@bomchelsea.vn</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer-bottom">
+            <div>
+                &copy; @DateTime.Now.Year Công ty Cổ phần Bán lẻ Apple BomChelsea Việt Nam. ĐKKD: 0102030405.
+            </div>
+            <div>
+                Thiết kế theo chuẩn Apple Human Interface Guidelines &amp; Bộ nhận diện BomChelsea 2026.
+            </div>
+        </div>
+    </div>
+</footer>
+
+<div id="blazor-error-ui" data-nosnippet>
+    Đã xảy ra lỗi không mong muốn.
+    <a href="." class="reload">Tải lại</a>
+    <span class="dismiss">🗙</span>
+</div>
+

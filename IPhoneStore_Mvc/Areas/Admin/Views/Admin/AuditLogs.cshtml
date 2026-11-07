@@ -1,0 +1,395 @@
+@model AuditLogsViewModel
+@{
+    ViewData["Title"] = "Nhật ký kiểm toán hệ thống (Audit Trail)";
+}
+
+@functions {
+    public static (string Label, string Icon, string CssClass) GetActionInfo(string action)
+    {
+        return action switch
+        {
+            "SYSTEM_INIT" => ("Khởi tạo hệ thống", "⚙️", "audit-badge-slate"),
+            "IMPORT_IMEI" => ("Nhập lô IMEI", "📥", "audit-badge-emerald"),
+            "FULFILL_ORDER" => ("Xuất kho đơn hàng", "📦", "audit-badge-blue"),
+            "WARRANTY_EXCHANGE" => ("Đổi máy mới 1-1", "🔄", "audit-badge-purple"),
+            "WARRANTY_REPLACE_1TO1" => ("Đổi máy mới 1-1", "🔄", "audit-badge-purple"),
+            "PLACE_ORDER" => ("Khách đặt đơn hàng", "🛒", "audit-badge-emerald"),
+            "AUTO_CANCEL_HOLD" => ("Hủy giữ kho tự động", "⏱️", "audit-badge-amber"),
+            "CANCEL_ORDER" => ("Hủy đơn hàng", "❌", "audit-badge-rose"),
+            "UPDATE_IMEI_STATUS" => ("Đổi trạng thái IMEI", "🏷️", "audit-badge-amber"),
+            "CREATE_PRODUCT" => ("Thêm sản phẩm mới", "✨", "audit-badge-blue"),
+            "EDIT_PRODUCT" => ("Cập nhật sản phẩm", "✏️", "audit-badge-blue"),
+            "DELETE_PRODUCT" => ("Xóa sản phẩm", "🗑️", "audit-badge-rose"),
+            "LOCK_USER" => ("Khóa tài khoản", "🚫", "audit-badge-rose"),
+            "UNLOCK_USER" => ("Mở khóa tài khoản", "🔓", "audit-badge-emerald"),
+            "RESET_PASSWORD" => ("Cấp lại mật khẩu", "🔑", "audit-badge-amber"),
+            _ => (action, "📌", "audit-badge-slate")
+        };
+    }
+
+    public static (string Label, string Icon) GetEntityInfo(string entity)
+    {
+        return entity switch
+        {
+            "WarrantyClaims" => ("Phiếu bảo hành", "📋"),
+            "Warranties" => ("Hồ sơ bảo hành", "🛡️"),
+            "Orders" => ("Đơn hàng", "📦"),
+            "OrderDetails" => ("Chi tiết đơn", "📑"),
+            "ProductImeis" => ("Kho IMEI", "📱"),
+            "Products" => ("Sản phẩm", "🛍️"),
+            "Categories" => ("Danh mục dòng máy", "📂"),
+            "Customers" => ("Khách hàng", "👤"),
+            "AspNetUsers" => ("Tài khoản", "👥"),
+            "System" => ("Hệ thống", "💻"),
+            _ => (entity, "📄")
+        };
+    }
+}
+
+<style>
+    /* ================= AUDIT LOG BADGES & STYLING ================= */
+    .audit-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: 0.01em;
+        white-space: nowrap;
+        border: 1px solid transparent;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    .audit-badge-emerald {
+        background-color: #ecfdf5 !important;
+        color: #047857 !important;
+        border-color: #a7f3d0 !important;
+    }
+    .audit-badge-blue {
+        background-color: #eff6ff !important;
+        color: #1d4ed8 !important;
+        border-color: #bfdbfe !important;
+    }
+    .audit-badge-purple {
+        background-color: #faf5ff !important;
+        color: #6b21a8 !important;
+        border-color: #e9d5ff !important;
+    }
+    .audit-badge-amber {
+        background-color: #fffbeb !important;
+        color: #b45309 !important;
+        border-color: #fde68a !important;
+    }
+    .audit-badge-rose {
+        background-color: #fef2f2 !important;
+        color: #b91c1c !important;
+        border-color: #fecaca !important;
+    }
+    .audit-badge-slate {
+        background-color: #f1f5f9 !important;
+        color: #334155 !important;
+        border-color: #cbd5e1 !important;
+    }
+
+    /* User Avatar */
+    .audit-user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #034694, #0071e3);
+        color: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Entity Tag */
+    .audit-entity-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.65rem;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #0f172a;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    .audit-record-id {
+        color: #0284c7;
+        font-weight: 700;
+    }
+
+    /* Diff View in Modal */
+    .aar-diff-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    .aar-diff-card {
+        border-radius: 10px;
+        padding: 1rem;
+        font-size: 0.85rem;
+        min-height: 120px;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+        line-height: 1.6;
+    }
+    .aar-diff-old {
+        background-color: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+    }
+    .aar-diff-new {
+        background-color: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        color: #166534;
+    }
+</style>
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div>
+        <h1 class="h3 fw-bold text-dark mb-1">Nhật ký kiểm toán hệ thống (Audit Trail)</h1>
+        <p class="text-muted small mb-0">Hồ sơ bất biến ghi nhận mọi biến động về luồng IMEI, xuất kho đơn hàng, thẩm định 1 đổi 1 và can thiệp quản trị.</p>
+    </div>
+    <span class="badge bg-dark text-white px-3 py-2 fw-semibold rounded-pill shadow-sm">
+        🔒 Dữ liệu kiểm toán chỉ đọc (Append-Only)
+    </span>
+</div>
+
+<!-- ================= SEARCH & FILTERS BAR ================= -->
+<div class="aar-card p-3 mb-4">
+    <form asp-area="Admin" asp-controller="Admin" asp-action="AuditLogs" method="get" class="row g-2 align-items-center">
+        <div class="col-lg-3 col-md-4">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light border-end-0">🔍</span>
+                <input type="text" name="searchKeyword" value="@Model.SearchKeyword" class="form-control border-start-0" placeholder="Username, mã bản ghi, nội dung..." />
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-3">
+            <select name="actionFilter" class="form-select form-select-sm">
+                <option value="">-- Tất cả hành động --</option>
+                <option value="IMPORT_IMEI" selected="@(Model.ActionFilter == "IMPORT_IMEI")">📥 IMPORT_IMEI (Nhập lô IMEI)</option>
+                <option value="FULFILL_ORDER" selected="@(Model.ActionFilter == "FULFILL_ORDER")">📦 FULFILL_ORDER (Xuất kho đơn)</option>
+                <option value="WARRANTY_EXCHANGE" selected="@(Model.ActionFilter == "WARRANTY_EXCHANGE")">🔄 WARRANTY_EXCHANGE (Đổi máy 1-1)</option>
+                <option value="WARRANTY_REPLACE_1TO1" selected="@(Model.ActionFilter == "WARRANTY_REPLACE_1TO1")">🔄 WARRANTY_REPLACE_1TO1 (Đổi máy 1-1)</option>
+                <option value="PLACE_ORDER" selected="@(Model.ActionFilter == "PLACE_ORDER")">🛒 PLACE_ORDER (Đặt đơn hàng)</option>
+                <option value="AUTO_CANCEL_HOLD" selected="@(Model.ActionFilter == "AUTO_CANCEL_HOLD")">⏱️ AUTO_CANCEL_HOLD (Hủy đơn & hoàn kho)</option>
+                <option value="UPDATE_IMEI_STATUS" selected="@(Model.ActionFilter == "UPDATE_IMEI_STATUS")">🏷️ UPDATE_IMEI_STATUS (Đổi trạng thái IMEI)</option>
+                <option value="CREATE_PRODUCT" selected="@(Model.ActionFilter == "CREATE_PRODUCT")">✨ CREATE_PRODUCT (Tạo sản phẩm)</option>
+                <option value="EDIT_PRODUCT" selected="@(Model.ActionFilter == "EDIT_PRODUCT")">✏️ EDIT_PRODUCT (Sửa sản phẩm)</option>
+                <option value="LOCK_USER" selected="@(Model.ActionFilter == "LOCK_USER")">🚫 LOCK_USER (Khóa tài khoản)</option>
+                <option value="UNLOCK_USER" selected="@(Model.ActionFilter == "UNLOCK_USER")">🔓 UNLOCK_USER (Mở khóa tài khoản)</option>
+                <option value="RESET_PASSWORD" selected="@(Model.ActionFilter == "RESET_PASSWORD")">🔑 RESET_PASSWORD (Cấp lại mật khẩu)</option>
+                <option value="SYSTEM_INIT" selected="@(Model.ActionFilter == "SYSTEM_INIT")">⚙️ SYSTEM_INIT (Khởi tạo hệ thống)</option>
+            </select>
+        </div>
+
+        <div class="col-lg-2 col-md-2">
+            <input type="date" name="fromDate" value="@(Model.FromDate?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" title="Từ ngày" />
+        </div>
+
+        <div class="col-lg-2 col-md-2">
+            <input type="date" name="toDate" value="@(Model.ToDate?.ToString("yyyy-MM-dd"))" class="form-control form-control-sm" title="Đến ngày" />
+        </div>
+
+        <div class="col-lg-2 col-md-1 d-flex gap-2 justify-content-end">
+            <button type="submit" class="btn btn-primary btn-sm px-3 fw-semibold">Lọc</button>
+            <a asp-area="Admin" asp-controller="Admin" asp-action="AuditLogs" class="btn btn-light btn-sm px-2">Đặt lại</a>
+        </div>
+    </form>
+</div>
+
+<!-- ================= AUDIT LOGS TABLE ================= -->
+<div class="aar-card shadow-sm border">
+    <div class="aar-card-header bg-white py-3">
+        <h3 class="aar-card-title mb-0">
+            Dòng thời gian sự kiện kiểm toán
+        </h3>
+        <span class="badge bg-light text-dark border px-3 py-2 fw-semibold">Tổng số: @Model.TotalCount sự kiện</span>
+    </div>
+    <div class="table-responsive">
+        <table class="aar-table mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 160px;">Thời gian</th>
+                    <th style="width: 200px;">Người thực hiện</th>
+                    <th style="width: 190px;">Hành động</th>
+                    <th style="width: 200px;">Bảng dữ liệu &amp; Bản ghi</th>
+                    <th style="width: 130px;">Địa chỉ IP</th>
+                    <th>Tóm tắt sự kiện</th>
+                    <th style="text-align: right; width: 100px;">Chi tiết</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Logs.Any())
+                {
+                    foreach (var log in Model.Logs)
+                    {
+                        var act = GetActionInfo(log.Action);
+                        var ent = GetEntityInfo(log.EntityName ?? "");
+                        <tr>
+                            <td>
+                                <div class="fw-bold text-dark" style="font-size: 0.85rem;">
+                                    @log.Timestamp.ToString("dd/MM/yyyy")
+                                </div>
+                                <div class="text-muted small">
+                                    @log.Timestamp.ToString("HH:mm:ss")
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="audit-user-avatar">
+                                        @(string.IsNullOrEmpty(log.UserName) ? "S" : log.UserName.Substring(0, 1).ToUpper())
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold text-dark" style="font-size: 0.88rem;">@(log.UserName ?? "Hệ thống AAR")</div>
+                                        <div class="d-flex align-items-center gap-1 mt-1">
+                                            <span class="badge bg-light text-secondary border px-2 py-0" style="font-size: 0.7rem;">
+                                                @(log.UserName == "admin" ? "Quản trị viên" : "Hệ thống")
+                                            </span>
+                                            @if (!string.IsNullOrEmpty(log.UserId) && log.UserId != "SYSTEM")
+                                            {
+                                                <span class="text-muted font-monospace" style="font-size: 0.7rem;" title="User GUID: @log.UserId">
+                                                    ID: @(log.UserId.Length > 8 ? "..." + log.UserId.Substring(log.UserId.Length - 8) : log.UserId)
+                                                </span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="audit-badge @act.CssClass" title="Mã hành động: @log.Action">
+                                    <span>@act.Icon</span>
+                                    <span>@act.Label</span>
+                                </span>
+                                <div class="text-muted font-monospace mt-1 ps-1" style="font-size: 0.72rem; letter-spacing: 0.02em;">
+                                    @log.Action
+                                </div>
+                            </td>
+                            <td>
+                                <div class="audit-entity-tag">
+                                    <span>@ent.Icon</span>
+                                    <span>@ent.Label</span>
+                                    <span class="audit-record-id">#@log.RecordId</span>
+                                </div>
+                                <div class="text-muted font-monospace mt-1 ps-1" style="font-size: 0.72rem;">
+                                    @log.EntityName
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border font-monospace px-2 py-1" style="font-size: 0.8rem;">
+                                    🌐 @(log.IpAddress ?? "127.0.0.1")
+                                </span>
+                            </td>
+                            <td>
+                                <div class="text-dark small" style="max-width: 380px; line-height: 1.5;">
+                                    @(log.NewValues ?? log.OldValues ?? "-")
+                                </div>
+                            </td>
+                            <td style="text-align: right;">
+                                <button type="button" class="btn btn-outline-primary btn-sm px-2 py-1 fw-semibold rounded-pill"
+                                        onclick="showDiffModal('@log.Action', '@log.EntityName', '@log.RecordId', '@Html.Raw(log.OldValues?.Replace("'", "\\'")?.Replace("\r", "")?.Replace("\n", "\\n") ?? "")', '@Html.Raw(log.NewValues?.Replace("'", "\\'")?.Replace("\r", "")?.Replace("\n", "\\n") ?? "")', '@log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")', '@log.UserName', '@log.IpAddress')">
+                                    Xem Diff &rarr;
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <div class="h5 mb-2">Không tìm thấy bản ghi kiểm toán nào</div>
+                            <p class="small">Thử điều chỉnh lại bộ lọc ngày hoặc từ khóa tìm kiếm.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="aar-card-header bg-light d-flex justify-content-between align-items-center py-3">
+            <span class="small text-muted">Trang @Model.CurrentPage / @Model.TotalPages (Tổng @Model.TotalCount sự kiện)</span>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                    <a class="page-link" asp-area="Admin" asp-controller="Admin" asp-action="AuditLogs"
+                       asp-route-currentPage="@(Model.CurrentPage - 1)" asp-route-searchKeyword="@Model.SearchKeyword" asp-route-actionFilter="@Model.ActionFilter" asp-route-fromDate="@Model.FromDate" asp-route-toDate="@Model.ToDate">Trước</a>
+                </li>
+                @for (int p = 1; p <= Model.TotalPages; p++)
+                {
+                    <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                        <a class="page-link" asp-area="Admin" asp-controller="Admin" asp-action="AuditLogs"
+                           asp-route-currentPage="@p" asp-route-searchKeyword="@Model.SearchKeyword" asp-route-actionFilter="@Model.ActionFilter" asp-route-fromDate="@Model.FromDate" asp-route-toDate="@Model.ToDate">@p</a>
+                    </li>
+                }
+                <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                    <a class="page-link" asp-area="Admin" asp-controller="Admin" asp-action="AuditLogs"
+                       asp-route-currentPage="@(Model.CurrentPage + 1)" asp-route-searchKeyword="@Model.SearchKeyword" asp-route-actionFilter="@Model.ActionFilter" asp-route-fromDate="@Model.FromDate" asp-route-toDate="@Model.ToDate">Sau</a>
+                </li>
+            </ul>
+        </div>
+    }
+</div>
+
+<!-- ================= MODAL: DIFF BEFORE / AFTER ================= -->
+<div class="modal fade" id="diffModal" tabindex="-1" aria-labelledby="diffModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 16px; overflow: hidden;">
+            <div class="modal-header bg-light border-bottom">
+                <div>
+                    <h5 class="modal-title fw-bold text-dark mb-1" id="diffModalTitle">Chi tiết sự kiện kiểm toán</h5>
+                    <div class="small text-muted" id="diffModalMeta"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="aar-diff-container">
+                    <div>
+                        <div class="d-flex align-items-center gap-1 small fw-bold text-danger mb-2">
+                            <span>🔴</span>
+                            <span>GIÁ TRỊ TRƯỚC THAY ĐỔI (BEFORE):</span>
+                        </div>
+                        <div class="aar-diff-card aar-diff-old shadow-sm" id="diffOldContent">Không có dữ liệu cũ</div>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-1 small fw-bold text-success mb-2">
+                            <span>🟢</span>
+                            <span>GIÁ TRỊ SAU THAY ĐỔI (AFTER):</span>
+                        </div>
+                        <div class="aar-diff-card aar-diff-new shadow-sm" id="diffNewContent">Không có dữ liệu mới</div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light border-top">
+                <button type="button" class="btn btn-secondary btn-sm px-3 rounded-pill" data-bs-dismiss="modal">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function showDiffModal(action, entity, recordId, oldVal, newVal, timestamp, username, ip) {
+            document.getElementById('diffModalTitle').innerText = '🔍 Chi tiết sự kiện: ' + action + ' (' + entity + ' #' + recordId + ')';
+            document.getElementById('diffModalMeta').innerText = '⏰ Thời điểm: ' + timestamp + ' | 👤 Thực hiện: ' + (username || 'Hệ thống') + ' | 🌐 IP: ' + (ip || '127.0.0.1');
+            document.getElementById('diffOldContent').innerText = oldVal || '(Trống - Bản ghi mới được tạo)';
+            document.getElementById('diffNewContent').innerText = newVal || '(Trống - Bản ghi đã bị xóa)';
+
+            new bootstrap.Modal(document.getElementById('diffModal')).show();
+        }
+    </script>
+}

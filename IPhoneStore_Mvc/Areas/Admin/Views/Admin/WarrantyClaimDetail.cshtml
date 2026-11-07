@@ -1,0 +1,498 @@
+@model WarrantyClaimDetailViewModel
+@{
+    var claim = Model.Claim;
+    var warranty = Model.Warranty;
+    var claimCode = claim.ClaimCode ?? "BH261024-" + claim.Id.ToString("D3");
+    ViewData["Title"] = $"Phiếu tiếp nhận & 1 Đổi 1 #{claimCode}";
+    var daysSincePurchase = (claim.ClaimDate - warranty.StartDate).Days;
+    bool eligible30Days = daysSincePurchase <= 30;
+    bool isProcessed = claim.Status == "Hoàn tất" || claim.Status == "Từ chối";
+
+    bool isExchange = string.IsNullOrEmpty(claim.ActionTaken) || claim.ActionTaken.Contains("Đổi");
+    bool isAasp = !isExchange && (claim.ActionTaken?.Contains("AASP") == true || claim.Status == "Gửi Apple");
+    bool isReject = !isExchange && !isAasp && (claim.ActionTaken?.Contains("Từ chối") == true || claim.Status == "Từ chối");
+    if (!isExchange && !isAasp && !isReject) isExchange = true;
+
+    string FormatProductName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "iPhone";
+        var res = name;
+        res = System.Text.RegularExpressions.Regex.Replace(res, @"Sa\s*M[^\s]*c", "Sa Mạc", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        res = System.Text.RegularExpressions.Regex.Replace(res, @"M[áâå\?º¡]+c", "Mạc", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return res.Replace("Sa Máº¡c", "Sa Mạc")
+                  .Replace("Máº¡c", "Mạc")
+                  .Replace("Sa Måº¡c", "Sa Mạc")
+                  .Replace("Måº¡c", "Mạc")
+                  .Replace("Sa Mº¡c", "Sa Mạc")
+                  .Replace("Mº¡c", "Mạc")
+                  .Replace("Sa M?c", "Sa Mạc")
+                  .Replace("áº¡", "ạ")
+                  .Replace("åº¡", "ạ")
+                  .Replace("º¡", "ạ");
+    }
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a asp-area="Admin" asp-controller="Admin" asp-action="Warranty" class="text-decoration-none text-muted small">
+                &larr; Quay lại danh sách bảo hành
+            </a>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <h1 class="h3 fw-bold text-dark mb-0">Phiếu tiếp nhận &amp; 1 Đổi 1 #@claimCode</h1>
+            @if (claim.Status == "Hoàn tất")
+            {
+                <span class="aar-pill aar-pill-green">Đã hoàn tất đổi máy</span>
+            }
+            else if (claim.Status == "Từ chối")
+            {
+                <span class="aar-pill aar-pill-red">Từ chối bảo hành</span>
+            }
+            else if (claim.Status == "Gửi Apple")
+            {
+                <span class="aar-pill aar-pill-blue">Đã gửi Apple AASP</span>
+            }
+            else
+            {
+                <span class="aar-pill aar-pill-amber">Đang thụ lý kiểm tra</span>
+            }
+        </div>
+        <p class="text-muted small mt-1 mb-0">Thời gian tiếp nhận: @claim.ClaimDate.ToString("dd/MM/yyyy HH:mm:ss") · Kỹ thuật viên: @(claim.CreatedBy ?? "Nguyễn Văn Kỹ Thuật (AAR Tech)")</p>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3 rounded-pill" onclick="window.print()">
+            🖨️ In biên bản AAR Apple Care
+        </button>
+    </div>
+</div>
+
+@if (claim.Status == "Hoàn tất")
+{
+    <div class="alert alert-success d-flex align-items-center gap-3 mb-4 border-success border-opacity-25 shadow-sm" role="alert">
+        <div class="fs-2">🎉</div>
+        <div>
+            <h5 class="alert-heading mb-1 fw-bold">Phiếu bảo hành đã xử lý 1 Đổi 1 thành công &amp; Đã hoàn tất!</h5>
+            <div class="small">
+                Hệ thống đã tự động xuất kho máy mới IMEI: <strong class="font-monospace text-dark">@claim.NewImei</strong> (trạng thái kho: <span class="badge bg-success">Đã xuất bán - Sold</span>), đồng thời thu hồi máy cũ IMEI: <strong class="font-monospace text-dark">@claim.OldImei</strong> về kho bảo hành (trạng thái kho: <span class="badge bg-danger">Hàng lỗi - Defective</span>). 
+                Toàn bộ hồ sơ bảo hành đã được lưu trữ và <strong>khóa quyền chỉnh sửa (Chế độ chỉ xem)</strong>.
+            </div>
+        </div>
+    </div>
+}
+else if (claim.Status == "Từ chối")
+{
+    <div class="alert alert-danger d-flex align-items-center gap-3 mb-4 border-danger border-opacity-25 shadow-sm" role="alert">
+        <div class="fs-2">🚫</div>
+        <div>
+            <h5 class="alert-heading mb-1 fw-bold">Phiếu bảo hành đã bị từ chối!</h5>
+            <div class="small">Thiết bị không đáp ứng đủ điều kiện bảo hành Apple AAR. Hồ sơ đã được đóng và <strong>khóa quyền chỉnh sửa (Chế độ chỉ xem)</strong>.</div>
+        </div>
+    </div>
+}
+else if (claim.Status == "Gửi Apple")
+{
+    <div class="alert alert-info d-flex align-items-center gap-3 mb-4 border-primary border-opacity-25 shadow-sm" role="alert">
+        <div class="fs-2">📦</div>
+        <div>
+            <h5 class="alert-heading mb-1 fw-bold">Thiết bị đang gửi xử lý tại Trung Tâm Bảo Hành Ủy Quyền Apple (AASP)</h5>
+            <div class="small">Phiếu đã được tiếp nhận và bàn giao sang đơn vị bảo hành AASP (CareS / Thakral One / FPT Services) để thẩm định chuyên sâu &amp; thay thế linh kiện chính hãng.</div>
+        </div>
+    </div>
+}
+
+<form asp-area="Admin" asp-controller="Admin" asp-action="ProcessWarrantyClaim" method="post" id="claimForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="claimId" value="@claim.Id" />
+
+    <div class="row g-4">
+        <!-- ================= CỘT TRÁI (8 COLS) ================= -->
+        <div class="col-lg-8">
+            <!-- 1. Thông tin khách & Thiết bị gốc -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">1. Thông tin khách hàng &amp; Thiết bị gốc</h3>
+                </div>
+                <div class="aar-card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6 border-end">
+                            <div class="small text-muted mb-1">Khách hàng sở hữu:</div>
+                            <div class="fw-bold text-dark fs-6">@(warranty.Customer?.FullName ?? "Khách hàng BomChelsea")</div>
+                            <div class="text-muted small">SĐT: @(warranty.Customer?.PhoneNumber ?? "-")</div>
+                            <div class="text-muted small">Email: @(warranty.Customer?.Email ?? "-")</div>
+                            <div class="text-muted small mt-1">Ngày mua: <strong>@warranty.StartDate.ToString("dd/MM/yyyy")</strong></div>
+                        </div>
+                        <div class="col-md-6 ps-md-4">
+                            <div class="small text-muted mb-1">Thiết bị mang bảo hành:</div>
+                            <div class="fw-bold text-dark fs-6">@FormatProductName(warranty.Product?.Name)</div>
+                            <div class="font-monospace small text-primary fw-bold mt-1">
+                                IMEI GỐC: @(claim.OldImei ?? warranty.Imei ?? "-")
+                            </div>
+                            <div class="small text-muted">SKU: @(warranty.Product?.Sku ?? "-") · @warranty.Product?.Storage · @warranty.Product?.Color</div>
+                            <div class="small mt-2">
+                                Thời gian đã dùng: <strong class="@(eligible30Days ? "text-success" : "text-danger")">@daysSincePurchase ngày</strong>
+                                @if (eligible30Days)
+                                {
+                                    <span class="badge bg-success bg-opacity-15 text-success small ms-1">Đủ điều kiện &le; 30 ngày</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger bg-opacity-15 text-danger small ms-1">&gt; 30 ngày (Chuyển sang sửa chữa)</span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Bảng kiểm tra 3 điều kiện chuẩn Apple 1 Đổi 1 -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">
+                        2. Thẩm định 3 điều kiện Apple 1 Đổi 1 trong 30 ngày
+                    </h3>
+                    <span class="badge bg-light text-muted border">Chính sách bảo hành ủy quyền AAR</span>
+                </div>
+                <div class="aar-card-body p-0">
+                    <div class="p-3 border-bottom d-flex align-items-start gap-3">
+                        <div class="form-check fs-5">
+                            <input class="form-check-input" type="checkbox" name="pass30Days" id="chk30Days" value="true" checked="@eligible30Days" @(isProcessed ? "disabled" : "") />
+                        </div>
+                        <div>
+                            <label class="form-check-label fw-bold text-dark" for="chk30Days">
+                                Điều kiện 1: Thời gian sử dụng trong vòng 30 ngày
+                            </label>
+                            <p class="text-muted small mb-0">
+                                Máy được mua ngày @warranty.StartDate.ToString("dd/MM/yyyy"), tính đến thời điểm lập phiếu là @daysSincePurchase ngày.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="p-3 border-bottom d-flex align-items-start gap-3">
+                        <div class="form-check fs-5">
+                            <input class="form-check-input" type="checkbox" name="passHardware" id="chkHardware" value="true" checked @(isProcessed ? "disabled" : "") />
+                        </div>
+                        <div>
+                            <label class="form-check-label fw-bold text-dark" for="chkHardware">
+                                Điều kiện 2: Lỗi phần cứng do nhà sản xuất Apple
+                            </label>
+                            <p class="text-muted small mb-0">
+                                Lỗi mô tả: <strong>@claim.IssueDescription</strong>. Xác nhận phần cứng bị lỗi kỹ thuật, không do tác động ngoại lực hay can thiệp phần mềm bên thứ 3.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="p-3 d-flex align-items-start gap-3">
+                        <div class="form-check fs-5">
+                            <input class="form-check-input" type="checkbox" name="passAppearance" id="chkAppearance" value="true" checked @(isProcessed ? "disabled" : "") />
+                        </div>
+                        <div>
+                            <label class="form-check-label fw-bold text-dark" for="chkAppearance">
+                                Điều kiện 3: Ngoại quan nguyên vẹn &amp; Chưa vào nước
+                            </label>
+                            <p class="text-muted small mb-0">
+                                Thân máy không cấn móp, không nứt vỡ kính cường lực, cảm biến quỳ tím LCI chưa đổi màu đỏ (chưa ngấm chất lỏng).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Biên bản chẩn đoán kỹ thuật -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">3. Biên bản chẩn đoán &amp; Ghi chú kỹ thuật viên</h3>
+                </div>
+                <div class="aar-card-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Kết luận kỹ thuật chi tiết</label>
+                        <textarea name="technicianNotes" class="form-control" rows="3" placeholder="Nhập kết quả chẩn đoán..." @(isProcessed ? "disabled readonly" : "")>@(claim.TechnicianNotes ?? "Đã chạy Apple Service Diagnostics suite, xác nhận lỗi sọc màn hình phần cứng panel OLED, đạt chuẩn 1 Đổi 1.")</textarea>
+                    </div>
+
+                    <div class="p-3 bg-light border rounded-3 d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <span>📎</span>
+                            <span class="small fw-semibold text-dark">Biên bản chẩn đoán kỹ thuật điện tử: <strong>DIAG-202410-006.pdf</strong></span>
+                        </div>
+                        <span class="badge bg-success bg-opacity-10 text-success fw-bold">ĐÃ KÝ DUYỆT AAR</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= CỘT PHẢI (4 COLS) ================= -->
+        <div class="col-lg-4">
+            <!-- Quyết định giải quyết -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">Quyết định xử lý</h3>
+                </div>
+                <div class="aar-card-body">
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="decision" id="optExchange" value="Exchange_1to1" @(isExchange ? "checked" : "") onchange="toggleReplacementPanel()" @(isProcessed ? "disabled" : "") />
+                        <label class="form-check-label fw-bold text-dark" for="optExchange">
+                            1. Đổi mới thiết bị 1-1 (Instant Replacement)
+                        </label>
+                        <div class="text-muted small mt-1">Xuất ngay 1 máy nguyên seal từ kho InStock cho khách.</div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="decision" id="optAASP" value="AASP_Repair" @(isAasp ? "checked" : "") onchange="toggleReplacementPanel()" @(isProcessed ? "disabled" : "") />
+                        <label class="form-check-label fw-bold text-dark" for="optAASP">
+                            2. Chuyển TTBH Apple AASP sửa chữa
+                        </label>
+                        <div class="text-muted small mt-1">Dành cho máy đã quá 30 ngày hoặc lỗi linh kiện thay thế.</div>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="radio" name="decision" id="optReject" value="Reject" @(isReject ? "checked" : "") onchange="toggleReplacementPanel()" @(isProcessed ? "disabled" : "") />
+                        <label class="form-check-label fw-bold text-dark" for="optReject">
+                            3. Từ chối bảo hành
+                        </label>
+                        <div class="text-muted small mt-1">Lỗi do tác động người dùng hoặc vào nước.</div>
+                    </div>
+
+                    <hr />
+
+                    <!-- Quét chọn IMEI máy mới thay thế -->
+                    <div id="replacementImeiPanel" class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <label class="form-label small fw-bold text-primary mb-0">
+                                Quét / Chọn mã IMEI máy mới thay thế: <span class="text-danger">*</span>
+                            </label>
+                            <span class="badge bg-primary bg-opacity-10 text-primary small">
+                                Kho có: <strong>@Model.AvailableReplacementImeis.Count máy</strong>
+                            </span>
+                        </div>
+
+                        @if (!string.IsNullOrEmpty(claim.NewImei))
+                        {
+                            <div class="p-2 border rounded bg-success bg-opacity-10 border-success border-opacity-25 mb-2 small d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span class="text-success fw-bold">✓ Máy đang gán hiện tại:</span>
+                                    <span class="font-monospace fw-bold text-dark fs-6 ms-1">@claim.NewImei</span>
+                                </div>
+                                <span class="badge bg-success bg-opacity-75 text-white" style="font-size: 0.65rem;">Đã lưu</span>
+                            </div>
+                        }
+
+                        <!-- Dropdown tự chọn mã IMEI trong kho (không để required tĩnh để không chặn Option 2 & 3) -->
+                        <div class="mb-2">
+                            <select name="newImei" id="newImeiSelect" class="form-select font-monospace border-primary shadow-sm" @(isProcessed ? "disabled" : "")>
+                                <option value="">-- Bấm để chọn mã IMEI có sẵn trong kho (InStock) --</option>
+                                @if (!string.IsNullOrEmpty(claim.NewImei))
+                                {
+                                    <option value="@claim.NewImei" selected="selected">
+                                        🏷️ @claim.NewImei (Máy đang chọn cho phiếu này)
+                                    </option>
+                                }
+                                @foreach (var imei in Model.AvailableReplacementImeis)
+                                {
+                                    if (imei.Imei != claim.NewImei)
+                                    {
+                                        var isSameProduct = imei.ProductId == (claim.Warranty?.ProductId ?? 0);
+                                        <option value="@imei.Imei">
+                                            @(isSameProduct ? "✓ [Đúng model] " : "• ")@imei.Imei - @(imei.Product?.Name ?? "iPhone") (SN: @imei.SerialNumber)
+                                        </option>
+                                    }
+                                }
+                            </select>
+                        </div>
+
+                        @if (!isProcessed)
+                        {
+                            <!-- Ô quét mã vạch / Tìm kiếm nhanh -->
+                            <div class="input-group input-group-sm mb-2">
+                                <span class="input-group-text bg-white border-end-0">🔍</span>
+                                <input type="text" id="quickScanImeiInput" class="form-control font-monospace border-start-0" placeholder="Quét hoặc nhập nhanh mã IMEI 15 số..." />
+                                <button class="btn btn-outline-primary fw-semibold" type="button" onclick="handleQuickScanReplacement()">Gán nhanh</button>
+                            </div>
+
+                            <div class="form-text small text-muted" style="font-size: 0.75rem;">
+                                💡 Bạn có thể chọn trực tiếp từ danh mục máy InStock phía trên hoặc đưa đầu đọc quét mã vạch tem hộp.
+                            </div>
+                        }
+                    </div>
+
+                    <!-- Panel hướng dẫn cho Option 1 -->
+                    <div id="infoExchangePanel" class="p-3 bg-blue-50 border border-primary border-opacity-25 rounded-3 mb-3 small text-muted">
+                        <strong class="text-dark">Cơ chế nghiệp vụ tự động:</strong>
+                        <ul class="mb-0 ps-3 mt-1" style="line-height:1.4;">
+                            <li>IMEI cũ sẽ tự động chuyển sang <strong>Defective</strong> (Hàng lỗi Apple).</li>
+                            <li>IMEI mới chuyển sang <strong>Sold</strong> (Đã xuất bán).</li>
+                            <li>Hạn bảo hành được tự động kế thừa nguyên vẹn.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Panel hướng dẫn cho Option 2 -->
+                    <div id="infoAaspPanel" class="p-3 bg-warning bg-opacity-10 border border-warning border-opacity-50 rounded-3 mb-3 small" style="display: none;">
+                        <div class="fw-bold text-dark mb-1 d-flex align-items-center gap-1">
+                            <span>📦</span> <strong>Quy trình chuyển tiếp Apple AASP:</strong>
+                        </div>
+                        <ul class="mb-0 ps-3 text-muted" style="line-height:1.5;">
+                            <li>Phiếu chuyển sang trạng thái <span class="badge bg-primary">Gửi Apple</span>.</li>
+                            <li>Máy được đóng gói niêm phong chuyển về TTBH Apple Care (CareS / Thakral One / FPT Services).</li>
+                            <li>Không xuất máy mới từ kho, chờ xử lý sửa chữa / thay linh kiện chính hãng từ Apple.</li>
+                        </ul>
+                    </div>
+
+                    <!-- Panel hướng dẫn cho Option 3 -->
+                    <div id="infoRejectPanel" class="p-3 bg-danger bg-opacity-10 border border-danger border-opacity-50 rounded-3 mb-3 small" style="display: none;">
+                        <div class="fw-bold text-danger mb-1 d-flex align-items-center gap-1">
+                            <span>🚫</span> <strong>Quy trình từ chối bảo hành:</strong>
+                        </div>
+                        <ul class="mb-0 ps-3 text-muted" style="line-height:1.5;">
+                            <li>Phiếu chuyển sang trạng thái <span class="badge bg-danger">Từ chối</span> và đóng hồ sơ bảo hành.</li>
+                            <li>Lý do: Lỗi do tác động người dùng hoặc vào nước (ngoại quan cấn móp, quỳ tím LCI đổi màu đỏ).</li>
+                            <li>In biên bản từ chối bảo hành AAR và hoàn trả thiết bị lại cho khách hàng.</li>
+                        </ul>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        @if (!isProcessed)
+                        {
+                            <button type="submit" id="btnSubmitDecision" class="btn btn-primary fw-semibold py-2">
+                                Xác nhận phê duyệt nghiệp vụ
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="text-center p-3 rounded bg-light border border-secondary border-opacity-25 text-muted small fw-semibold">
+                                🔒 Phiếu bảo hành đã đóng &mdash; Đã khóa toàn bộ thao tác (Chỉ xem)
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        function toggleReplacementPanel() {
+            const optExchange = document.getElementById('optExchange');
+            const optAASP = document.getElementById('optAASP');
+            const optReject = document.getElementById('optReject');
+
+            const isExchange = optExchange ? optExchange.checked : false;
+            const isAasp = optAASP ? optAASP.checked : false;
+            const isReject = optReject ? optReject.checked : false;
+
+            const repPanel = document.getElementById('replacementImeiPanel');
+            const exPanel = document.getElementById('infoExchangePanel');
+            const aaspPanel = document.getElementById('infoAaspPanel');
+            const rejectPanel = document.getElementById('infoRejectPanel');
+            const select = document.getElementById('newImeiSelect');
+            const submitBtn = document.getElementById('btnSubmitDecision');
+
+            if (repPanel) repPanel.style.display = isExchange ? 'block' : 'none';
+            if (exPanel) exPanel.style.display = isExchange ? 'block' : 'none';
+            if (aaspPanel) aaspPanel.style.display = isAasp ? 'block' : 'none';
+            if (rejectPanel) rejectPanel.style.display = isReject ? 'block' : 'none';
+
+            if (select) {
+                // Chỉ bật và bắt buộc nhập khi chọn 1 Đổi 1
+                select.disabled = !isExchange;
+                if (!isExchange) {
+                    select.removeAttribute('required');
+                } else {
+                    select.setAttribute('required', 'required');
+                }
+            }
+
+            if (submitBtn) {
+                if (isExchange) {
+                    submitBtn.className = 'btn btn-primary fw-semibold py-2';
+                    submitBtn.innerHTML = 'Xác nhận đổi mới 1-1 &amp; Xuất kho';
+                } else if (isAasp) {
+                    submitBtn.className = 'btn btn-warning fw-semibold py-2 text-dark';
+                    submitBtn.innerHTML = '📦 Xác nhận chuyển tiếp TTBH Apple AASP';
+                } else if (isReject) {
+                    submitBtn.className = 'btn btn-danger fw-semibold py-2 text-white';
+                    submitBtn.innerHTML = '🚫 Xác nhận từ chối bảo hành';
+                }
+            }
+        }
+
+        function handleQuickScanReplacement() {
+            const input = document.getElementById('quickScanImeiInput');
+            const select = document.getElementById('newImeiSelect');
+            if (!input || !select) return;
+
+            const val = input.value.trim();
+            if (!val || val.length !== 15) {
+                alert('Vui lòng nhập hoặc quét đúng mã IMEI chuẩn 15 chữ số!');
+                input.focus();
+                return;
+            }
+
+            let found = false;
+            for (let opt of select.options) {
+                if (opt.value === val) {
+                    select.value = val;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                const newOpt = new Option('✓ [Đã quét] ' + val + ' (Mã nhập nhanh)', val, true, true);
+                select.add(newOpt);
+                select.value = val;
+            }
+
+            alert('Đã chọn thành công mã IMEI máy mới: ' + val);
+            input.value = '';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            // Thiết lập trạng thái hiển thị ban đầu theo option đã chọn
+            toggleReplacementPanel();
+
+            const form = document.getElementById('claimForm');
+            if (form) {
+                @if (isProcessed)
+                {
+                    <text>
+                    form.addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        alert('Phiếu bảo hành này đã xử lý xong và đã đóng, không thể thao tác thêm!');
+                        return false;
+                    });
+                    </text>
+                }
+                else
+                {
+                    <text>
+                    form.addEventListener('submit', function (e) {
+                        const optEx = document.getElementById('optExchange');
+                        if (optEx && optEx.checked) {
+                            const select = document.getElementById('newImeiSelect');
+                            if (!select || !select.value || select.value.trim() === '') {
+                                e.preventDefault();
+                                alert('Vui lòng chọn hoặc quét mã IMEI máy mới trong kho để thực hiện 1 Đổi 1!');
+                                if (select) select.focus();
+                                return false;
+                            }
+                        }
+                        return true;
+                    });
+
+                    const scanInput = document.getElementById('quickScanImeiInput');
+                    if (scanInput) {
+                        scanInput.addEventListener('keydown', function (e) {
+                            if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleQuickScanReplacement();
+                            }
+                        });
+                    }
+                    </text>
+                }
+            }
+        });
+    </script>
+}
+

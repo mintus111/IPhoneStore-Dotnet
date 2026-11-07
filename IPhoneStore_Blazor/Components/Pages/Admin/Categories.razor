@@ -1,0 +1,243 @@
+@page "/admin/categories"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin,Manager,Staff")]
+@inject IDbContextFactory<IPhoneStoreDbContext> DbFactory
+
+<PageTitle>Danh Mục Dòng Máy (Series) - Admin</PageTitle>
+
+<div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1">PRODUCT TAXONOMY</span>
+                <span class="text-secondary small">Quản lý các thế hệ iPhone chính hãng</span>
+            </div>
+            <h1 class="fs-3 fw-bold text-dark mb-0">Danh Mục Dòng Máy (Series)</h1>
+        </div>
+        <button type="button" class="apple-cta-primary py-2 px-3 fs-6" @onclick="OpenAdd">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Thêm Dòng Máy Mới</span>
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_alert))
+    {
+        <div class="alert alert-info alert-dismissible fade show border-0 rounded-3 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <span>@_alert</span>
+            </div>
+            <button type="button" class="btn-close" @onclick="() => _alert = null"></button>
+        </div>
+    }
+
+    <!-- Clean Categories Table (Mockup 2) -->
+    <div class="admin-table-container">
+        <div class="admin-table-header">
+            <div>
+                <h3 class="fs-6 fw-bold text-dark mb-0">Danh Sách Dòng Máy Apple (@FilteredCategories.Count dòng)</h3>
+                <div class="text-secondary small">Thứ tự hiển thị trên thanh điều hướng trang chủ</div>
+            </div>
+            <div class="apple-search-pill-container" style="width: 240px;">
+                <svg class="search-icon-inside" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" @bind="_search" @bind:event="oninput" class="apple-search-pill" placeholder="Tìm tên dòng máy..." />
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">ID</th>
+                        <th>Tên dòng máy</th>
+                        <th>Mô tả chi tiết</th>
+                        <th style="width: 100px;">Thứ tự</th>
+                        <th>Số lượng máy</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end" style="width: 160px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in FilteredCategories)
+                    {
+                        <tr @key="c.Id">
+                            <td class="text-secondary fw-bold">#@c.Id</td>
+                            <td><strong class="text-dark fs-6">@c.Name</strong></td>
+                            <td class="text-secondary small">@c.Description</td>
+                            <td><span class="badge bg-light text-dark border">@c.DisplayOrder</span></td>
+                            <td>
+                                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold">@c.Products.Count sản phẩm</span>
+                            </td>
+                            <td>
+                                @if (c.IsActive)
+                                {
+                                    <span class="status-pill success">Hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="status-pill danger">Đang ẩn</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <div class="d-inline-flex gap-2">
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" @onclick="() => OpenEdit(c)">
+                                        Sửa
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" @onclick="() => DeleteAsync(c)">
+                                        Xóa
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination (Mockup 2) -->
+        <div class="p-3 border-top">
+            <nav class="apple-pagination mb-0">
+                <span class="page-item disabled">‹ Trước</span>
+                <span class="page-item active">1</span>
+                <a href="javascript:void(0);" class="page-link">2</a>
+                <a href="javascript:void(0);" class="page-link">Sau ›</a>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- ================= ADD / EDIT CATEGORY MODAL ================= -->
+@if (_showModal)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-3">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-dark mb-0">@(_model.Id == 0 ? "Thêm Dòng Máy iPhone Mới" : $"Chỉnh Sửa Dòng Máy #{_model.Id}")</h5>
+                    <button type="button" class="btn-close" @onclick="() => _showModal = false"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">Tên Dòng Máy (Series): <span class="text-danger">*</span></label>
+                        <input type="text" @bind="_model.Name" class="form-control rounded-3 py-2" placeholder="Ví dụ: iPhone 16 Pro Max, iPhone 16..." />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">Mô Tả Tiếp Thị:</label>
+                        <textarea @bind="_model.Description" class="form-control rounded-3" rows="3" placeholder="Ví dụ: Đỉnh cao công nghệ Titanium cùng chip A18 Pro..."></textarea>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-dark small">Thứ Tự Hiển Thị:</label>
+                            <input type="number" @bind="_model.DisplayOrder" class="form-control rounded-3 py-2" min="1" />
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold text-dark small">Trạng Thái Hiển Thị:</label>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" @bind="_model.IsActive" id="catActive" />
+                                <label class="form-check-label small text-dark" for="catActive">Kích hoạt trên Web</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-2">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" @onclick="() => _showModal = false">Hủy bỏ</button>
+                    <button type="button" class="apple-cta-primary px-4 py-2" @onclick="SaveAsync">
+                        Lưu Thay Đổi
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Category> _categories = new();
+    private Category _model = new();
+    private bool _showModal;
+    private string? _alert;
+    private string _search = "";
+
+    private List<Category> FilteredCategories => _categories
+        .Where(c => string.IsNullOrWhiteSpace(_search) || c.Name.ToLower().Contains(_search.Trim().ToLower()))
+        .ToList();
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _categories = await db.Categories.Include(c => c.Products).OrderBy(c => c.DisplayOrder).ToListAsync();
+    }
+
+    private void OpenAdd()
+    {
+        _model = new Category { IsActive = true, DisplayOrder = _categories.Count + 1 };
+        _showModal = true;
+    }
+
+    private void OpenEdit(Category c)
+    {
+        _model = new Category
+        {
+            Id = c.Id,
+            Name = c.Name,
+            Description = c.Description,
+            DisplayOrder = c.DisplayOrder,
+            IsActive = c.IsActive
+        };
+        _showModal = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.Name))
+        {
+            _alert = "Vui lòng nhập tên dòng máy!";
+            return;
+        }
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        if (_model.Id == 0)
+        {
+            db.Categories.Add(_model);
+            _alert = $"Đã thêm dòng máy: {_model.Name}";
+        }
+        else
+        {
+            var existing = await db.Categories.FindAsync(_model.Id);
+            if (existing != null)
+            {
+                existing.Name = _model.Name;
+                existing.Description = _model.Description;
+                existing.DisplayOrder = _model.DisplayOrder;
+                existing.IsActive = _model.IsActive;
+                _alert = $"Đã cập nhật dòng máy: {existing.Name}";
+            }
+        }
+        await db.SaveChangesAsync();
+        _showModal = false;
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(Category c)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var hasProducts = await db.Products.AnyAsync(p => p.CategoryId == c.Id);
+        if (hasProducts)
+        {
+            _alert = $"Không thể xóa dòng máy '{c.Name}' vì đang có sản phẩm thuộc dòng máy này!";
+            return;
+        }
+
+        var entity = await db.Categories.FindAsync(c.Id);
+        if (entity != null)
+        {
+            db.Categories.Remove(entity);
+            await db.SaveChangesAsync();
+            _alert = $"Đã xóa dòng máy '{c.Name}'";
+            await LoadAsync();
+        }
+    }
+}

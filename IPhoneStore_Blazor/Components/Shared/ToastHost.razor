@@ -1,0 +1,45 @@
+@implements IDisposable
+@inject ToastService Toast
+
+<div id="toast-container">
+    @foreach (var t in _toasts)
+    {
+        <div class="apple-toast" @key="t.Id">
+            @if (t.Type == "success")
+            {
+                <svg width="20" height="20" fill="none" stroke="#30d158" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            }
+            else if (t.Type == "error")
+            {
+                <svg width="20" height="20" fill="none" stroke="#ff453a" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            }
+            else
+            {
+                <svg width="20" height="20" fill="none" stroke="#2997ff" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            }
+            <span>@t.Message</span>
+        </div>
+    }
+</div>
+
+@code {
+    private record ToastItem(Guid Id, string Message, string Type);
+    private readonly List<ToastItem> _toasts = new();
+
+    protected override void OnInitialized() => Toast.OnShow += HandleShow;
+
+    private void HandleShow(string message, string type)
+    {
+        var item = new ToastItem(Guid.NewGuid(), message, type);
+        _ = InvokeAsync(async () =>
+        {
+            _toasts.Add(item);
+            StateHasChanged();
+            await Task.Delay(3200);
+            _toasts.Remove(item);
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose() => Toast.OnShow -= HandleShow;
+}

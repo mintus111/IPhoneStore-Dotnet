@@ -1,0 +1,204 @@
+@model List<ApplicationUser>
+@{
+    string? searchKeyword = ViewBag.SearchKeyword;
+    var userRoles = ViewBag.UserRoles as Dictionary<string, string> ?? new();
+    var successMsg = TempData["Success"] as string;
+    ViewData["Title"] = "11. Nhân Viên & Phân Quyền (RBAC) - Admin";
+}
+
+<div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1">IDENTITY &amp; ACCESS MANAGEMENT (IAM)</span>
+                <span class="text-secondary small">Quản lý nhân sự và ma trận phân quyền RBAC</span>
+            </div>
+            <h1 class="fs-3 fw-bold text-dark mb-0">11. Nhân Viên &amp; Phân Quyền Hệ Thống</h1>
+        </div>
+        <button type="button" class="apple-cta-primary py-2 px-3 fs-6" onclick="alert('Tính năng mời nhân viên mới qua Email SSO đã được thiết lập.')">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>
+            <span>+ Thêm Nhân Viên Mới</span>
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(successMsg))
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 rounded-3 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <strong>Thành công:</strong> @successMsg
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Search Staff & Accounts -->
+    <div class="bg-white border rounded-3 p-3 mb-4 shadow-sm">
+        <form method="get" class="d-flex gap-3">
+            <div class="apple-search-pill-container" style="max-width: 380px;">
+                <svg class="search-icon-inside" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" name="SearchKeyword" value="@searchKeyword" class="apple-search-pill" placeholder="Tìm theo username hoặc email..." />
+            </div>
+            <button type="submit" class="apple-cta-primary btn-sm py-2 px-4">Tìm kiếm</button>
+            <a asp-area="Admin" asp-controller="Admin" asp-action="Accounts" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2">Reset</a>
+        </form>
+    </div>
+
+    <!-- Staff Accounts Table (Mockup 11) -->
+    <div class="admin-table-container mb-4">
+        <div class="admin-table-header">
+            <div>
+                <h3 class="fs-6 fw-bold text-dark mb-0">Danh Sách Tài Khoản Trong Hệ Thống (@Model.Count tài khoản)</h3>
+                <div class="text-secondary small">Phân bổ vai trò Admin, Quản lý kho và Khách hàng</div>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Tên đăng nhập</th>
+                        <th>Vai trò (Role)</th>
+                        <th>Họ và tên</th>
+                        <th>Số điện thoại</th>
+                        <th>Ngày tạo</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end" style="width: 160px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var acc in Model)
+                    {
+                        var role = userRoles.TryGetValue(acc.Id, out var r) ? r : "Customer";
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="user-avatar-circle" style="width:28px;height:28px;">@(acc.UserName?.Substring(0, 1).ToUpper() ?? "U")</span>
+                                    <strong class="text-dark">@acc.UserName</strong>
+                                </div>
+                            </td>
+                            <td>
+                                @if (role == "Admin")
+                                {
+                                    <span class="badge bg-danger text-white fw-bold">Admin Quản Trị</span>
+                                }
+                                else if (role == "Warehouse")
+                                {
+                                    <span class="badge bg-warning text-dark fw-bold">Quản Lý Kho</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-secondary border">Khách Hàng</span>
+                                }
+                            </td>
+                            <td><span class="text-dark small">@(acc.Customer?.FullName ?? "-")</span></td>
+                            <td><span class="text-secondary small">@(acc.Customer?.PhoneNumber ?? "-")</span></td>
+                            <td class="text-secondary small">@acc.CreatedAt.ToString("dd/MM/yyyy")</td>
+                            <td>
+                                @if (acc.IsActive)
+                                {
+                                    <span class="status-pill success">Hoạt động</span>
+                                }
+                                else
+                                {
+                                    <span class="status-pill danger">Đã khóa</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                @if (acc.UserName != "admin")
+                                {
+                                    <div class="d-inline-flex gap-2">
+                                        <form method="post" asp-area="Admin" asp-controller="Admin" asp-action="ToggleLock" asp-route-id="@acc.Id">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-sm @(acc.IsActive ? "btn-outline-warning" : "btn-outline-success") rounded-pill px-3 py-1">
+                                                @(acc.IsActive ? "Khóa" : "Mở")
+                                            </button>
+                                        </form>
+                                        <form method="post" asp-area="Admin" asp-controller="Admin" asp-action="DeleteAccount" asp-route-id="@acc.Id" onsubmit="return confirm('Bạn có chắc muốn xóa tài khoản này?');">
+                                            @Html.AntiForgeryToken()
+                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-2 py-1">Xóa</button>
+                                        </form>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-light text-muted border">Super Admin</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination (Mockup 11) -->
+        <nav class="apple-pagination py-3">
+            <span class="page-item disabled">‹ Trước</span>
+            <span class="page-item active">1</span>
+            <a href="javascript:void(0);" class="page-link">2</a>
+            <a href="javascript:void(0);" class="page-link">Sau ›</a>
+        </nav>
+    </div>
+
+    <!-- ================= MA TRẬN PHÂN QUYỀN RBAC (MOCKUP 11) ================= -->
+    <div class="admin-table-container">
+        <div class="admin-table-header">
+            <div>
+                <h3 class="fs-6 fw-bold text-dark mb-0">Bảng Ma Trận Phân Quyền Chi Tiết (Role-Based Access Control)</h3>
+                <div class="text-secondary small">Quyền hạn truy cập theo từng module nghiệp vụ chuẩn IdentityDbContext</div>
+            </div>
+            <span class="badge bg-success bg-opacity-10 text-success fw-bold">Chuẩn RBAC V2</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="admin-table rbac-table">
+                <thead>
+                    <tr>
+                        <th style="width: 35%;">Module nghiệp vụ chức năng</th>
+                        <th style="width: 20%;">Admin Quản Trị</th>
+                        <th style="width: 20%;">Quản Lý Kho (Warehouse)</th>
+                        <th style="width: 25%;">Khách Hàng (Customer)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1. Dashboard doanh thu &amp; Tổng quan KPI</strong></td>
+                        <td><span class="rbac-check">✓ Đầy đủ</span></td>
+                        <td><span class="text-secondary small">Chỉ xem tồn kho</span></td>
+                        <td><span class="text-muted small">Không</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>2. Quản lý Danh mục &amp; Sản phẩm (CRUD)</strong></td>
+                        <td><span class="rbac-check">✓ Toàn quyền</span></td>
+                        <td><span class="text-secondary small">Xem thông tin</span></td>
+                        <td><span class="text-secondary small">Xem mua hàng</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>3. Nhập lô IMEI hàng loạt (InStock Ingestion)</strong></td>
+                        <td><span class="rbac-check">✓ Thực thi</span></td>
+                        <td><span class="rbac-check">✓ Thực thi</span></td>
+                        <td><span class="text-muted small">Không</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>4. Duyệt đơn hàng &amp; Gán IMEI xuất kho</strong></td>
+                        <td><span class="rbac-check">✓ Thực thi</span></td>
+                        <td><span class="rbac-check">✓ Xuất kho GHN</span></td>
+                        <td><span class="text-secondary small">Đặt &amp; Xem đơn</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>5. Thẩm định bảo hành &amp; Đổi máy 1-to-1</strong></td>
+                        <td><span class="rbac-check">✓ Duyệt đổi</span></td>
+                        <td><span class="rbac-check">✓ Cấp máy mới</span></td>
+                        <td><span class="text-secondary small">Gửi yêu cầu</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>6. Quản lý nhân sự &amp; Nhật ký kiểm toán Audit Log</strong></td>
+                        <td><span class="rbac-check">✓ Toàn quyền</span></td>
+                        <td><span class="text-muted small">Không</span></td>
+                        <td><span class="text-muted small">Không</span></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

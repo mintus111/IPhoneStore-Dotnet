@@ -1,0 +1,464 @@
+@page
+@model IPhoneStore_Razor.Pages.Admin.AuditLogsModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Nhật ký Kiểm toán Hệ thống";
+}
+
+@functions {
+    public static (string Style, string Icon, string FriendlyName) GetActionInfo(string action)
+    {
+        return action switch
+        {
+            "PLACE_ORDER" => ("background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe;", "🛍️", "Đặt hàng"),
+            "FULFILL_ORDER" => ("background:#fffbeb; color:#b45309; border:1px solid #fde68a;", "📦", "Xuất kho / Xử lý"),
+            "CANCEL_ORDER" => ("background:#fef2f2; color:#b91c1c; border:1px solid #fecaca;", "❌", "Hủy đơn hàng"),
+            "CREATE_PRODUCT" => ("background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;", "➕", "Thêm sản phẩm"),
+            "EDIT_PRODUCT" => ("background:#fefce8; color:#a16207; border:1px solid #fef08a;", "✏️", "Sửa sản phẩm"),
+            "BATCH_IMPORT_IMEI" => ("background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;", "📥", "Nhập lô IMEI"),
+            "WARRANTY_REPLACE_1TO1" => ("background:#faf5ff; color:#7e22ce; border:1px solid #e9d5ff;", "🛡️", "Thẩm định 1 Đổi 1"),
+            "CLAIM_EXCHANGE" => ("background:#faf5ff; color:#7e22ce; border:1px solid #e9d5ff;", "🔄", "Đổi máy bảo hành"),
+            "CLAIM_REPAIR" => ("background:#f0fdfa; color:#0f766e; border:1px solid #99f6e4;", "🔧", "Sửa chữa bảo hành"),
+            "CLAIM_REJECT" => ("background:#fef2f2; color:#b91c1c; border:1px solid #fecaca;", "🚫", "Từ chối bảo hành"),
+            "LOCK_USER" => ("background:#fef2f2; color:#b91c1c; border:1px solid #fecaca;", "🔒", "Khóa tài khoản"),
+            "UNLOCK_USER" => ("background:#f0fdf4; color:#15803d; border:1px solid #bbf7d0;", "🔓", "Mở tài khoản"),
+            "RESET_PASSWORD" => ("background:#fff7ed; color:#c2410c; border:1px solid #fed7aa;", "🔑", "Đổi mật khẩu"),
+            "EDIT_CUSTOMER" => ("background:#f8fafc; color:#334155; border:1px solid #cbd5e1;", "👤", "Sửa khách hàng"),
+            _ => ("background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;", "📝", action)
+        };
+    }
+
+    public static string FormatContentSummary(string? newValues, string? oldValues, string action)
+    {
+        var raw = newValues ?? oldValues;
+        if (string.IsNullOrWhiteSpace(raw)) return "Không có nội dung mô tả";
+
+        raw = raw.Trim();
+        if ((raw.StartsWith("{") && raw.EndsWith("}")) || (raw.StartsWith("[") && raw.EndsWith("]")))
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(raw);
+                var root = doc.RootElement;
+                var parts = new List<string>();
+
+                if (root.TryGetProperty("OrderId", out var oId))
+                    parts.Add($"Đơn hàng #{oId}");
+                if (root.TryGetProperty("TotalAmount", out var amt))
+                {
+                    if (amt.TryGetDecimal(out var dAmt))
+                        parts.Add($"Tổng tiền: {dAmt:N0} ₫");
+                    else
+                        parts.Add($"Tổng tiền: {amt}");
+                }
+                if (root.TryGetProperty("PaymentMethod", out var pm))
+                    parts.Add($"PTTT: {pm}");
+                if (root.TryGetProperty("CustomerName", out var cn))
+                    parts.Add($"Khách: {cn}");
+                if (root.TryGetProperty("ProductCount", out var pc))
+                    parts.Add($"{pc} sản phẩm");
+                if (root.TryGetProperty("ImeiCount", out var ic))
+                    parts.Add($"Nhập {ic} IMEI");
+
+                if (parts.Count > 0)
+                    return string.Join(" • ", parts);
+            }
+            catch { }
+        }
+
+        var cleaned = raw
+            .Replace(", Tracking=", "")
+            .Replace("Tracking=", "")
+            .Replace(", Payment=Chưa thanh toán", " • Chưa thanh toán")
+            .Replace("Status=Cancelled", "Trạng thái: Đã hủy (Cancelled)")
+            .Replace("Status=Completed", "Trạng thái: Hoàn tất (Completed)")
+            .Replace("Status=Shipping", "Trạng thái: Đang giao (Shipping)")
+            .Replace("Status=Confirmed", "Trạng thái: Đã xác nhận (Confirmed)")
+            .Replace("Status=Pending", "Trạng thái: Chờ xử lý (Pending)");
+
+        return cleaned;
+    }
+
+    public static string PrettyPrint(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return "Không có dữ liệu";
+        raw = raw.Trim();
+        if ((raw.StartsWith("{") && raw.EndsWith("}")) || (raw.StartsWith("[") && raw.EndsWith("]")))
+        {
+            try
+            {
+                using var doc = System.Text.Json.JsonDocument.Parse(raw);
+                return System.Text.Json.JsonSerializer.Serialize(doc.RootElement, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
+            }
+            catch { }
+        }
+        if (raw.Contains(","))
+        {
+            return string.Join("\n", raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
+        }
+        return raw;
+    }
+}
+
+<style>
+    @@media print {
+        .aar-sidebar, .aar-topbar, .print-hide, .btn, form {
+            display: none !important;
+        }
+        .aar-main {
+            margin-left: 0 !important;
+            padding: 0 !important;
+        }
+        .aar-card {
+            box-shadow: none !important;
+            border: none !important;
+        }
+    }
+</style>
+
+<div class="aar-topbar-title-section mb-4">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <h1 class="h3 fw-bold mb-0">Nhật ký Kiểm toán Hệ thống (Audit Logs)</h1>
+            <p class="text-secondary small mb-0">Lưu vết và giám sát 100% thay đổi dữ liệu phục vụ bảo mật và hậu kiểm chuỗi Apple AAR</p>
+        </div>
+        <div class="print-hide">
+            <button onclick="window.print()" class="aar-btn aar-btn-outline">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="me-1">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Xuất Báo Cáo Kiểm Toán
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- THANH LỌC NHẬT KÝ -->
+<div class="aar-card mb-4 print-hide">
+    <div class="aar-card-body p-3">
+        <form method="get" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <input type="text" name="searchKeyword" value="@Model.Vm.SearchKeyword" class="form-control form-control-sm" placeholder="Tìm theo tên quản trị viên, Record ID, nội dung..." />
+            </div>
+            <div class="col-md-3">
+                <select name="actionFilter" class="form-select form-select-sm">
+                    <option value="">-- Tất cả hành động --</option>
+                    @if (Model.Vm.AvailableActions.Any())
+                    {
+                        @foreach (var act in Model.Vm.AvailableActions)
+                        {
+                            var info = GetActionInfo(act);
+                            <option value="@act" selected="@(Model.Vm.ActionFilter == act)">
+                                @info.Icon @info.FriendlyName (@act)
+                            </option>
+                        }
+                    }
+                    else
+                    {
+                        <option value="PLACE_ORDER" selected="@(Model.Vm.ActionFilter == "PLACE_ORDER")">🛍️ Đặt hàng (PLACE_ORDER)</option>
+                        <option value="FULFILL_ORDER" selected="@(Model.Vm.ActionFilter == "FULFILL_ORDER")">📦 Xuất kho đơn hàng (FULFILL_ORDER)</option>
+                        <option value="CANCEL_ORDER" selected="@(Model.Vm.ActionFilter == "CANCEL_ORDER")">❌ Hủy đơn hàng (CANCEL_ORDER)</option>
+                        <option value="CREATE_PRODUCT" selected="@(Model.Vm.ActionFilter == "CREATE_PRODUCT")">➕ Thêm mới sản phẩm (CREATE_PRODUCT)</option>
+                        <option value="EDIT_PRODUCT" selected="@(Model.Vm.ActionFilter == "EDIT_PRODUCT")">✏️ Sửa sản phẩm (EDIT_PRODUCT)</option>
+                        <option value="BATCH_IMPORT_IMEI" selected="@(Model.Vm.ActionFilter == "BATCH_IMPORT_IMEI")">📥 Nhập lô IMEI (BATCH_IMPORT_IMEI)</option>
+                        <option value="WARRANTY_REPLACE_1TO1" selected="@(Model.Vm.ActionFilter == "WARRANTY_REPLACE_1TO1")">🛡️ Thẩm định 1 Đổi 1 (WARRANTY_REPLACE_1TO1)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="tableFilter" class="form-select form-select-sm">
+                    <option value="">-- Mọi bảng dữ liệu --</option>
+                    @if (Model.Vm.AvailableTables.Any())
+                    {
+                        @foreach (var tbl in Model.Vm.AvailableTables)
+                        {
+                            <option value="@tbl" selected="@(Model.Vm.TableFilter == tbl)">Bảng @tbl</option>
+                        }
+                    }
+                    else
+                    {
+                        <option value="Orders" selected="@(Model.Vm.TableFilter == "Orders")">Bảng Orders (Đơn hàng)</option>
+                        <option value="Products" selected="@(Model.Vm.TableFilter == "Products")">Bảng Products (Sản phẩm)</option>
+                        <option value="ProductImeis" selected="@(Model.Vm.TableFilter == "ProductImeis")">Bảng ProductImeis (Kho IMEI)</option>
+                        <option value="WarrantyClaims" selected="@(Model.Vm.TableFilter == "WarrantyClaims")">Bảng WarrantyClaims (Bảo hành)</option>
+                        <option value="AspNetUsers" selected="@(Model.Vm.TableFilter == "AspNetUsers")">Bảng AspNetUsers (Tài khoản)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="aar-btn aar-btn-outline w-100 btn-sm">Lọc</button>
+                <a asp-page="/Admin/AuditLogs" class="btn btn-sm btn-light border">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- BẢNG NHẬT KÝ KIỂM TOÁN -->
+<div class="aar-card shadow-sm">
+    <div class="aar-card-header d-flex justify-content-between align-items-center">
+        <div>
+            <span class="fw-bold fs-6">Lịch sử Thao tác &amp; Biến động Dữ liệu</span>
+            <span class="badge bg-primary bg-opacity-10 text-primary ms-2 fw-semibold">@Model.Vm.TotalCount bản ghi</span>
+        </div>
+        <span class="small text-secondary font-monospace">Bất biến (Immutable SOC-2 Records)</span>
+    </div>
+    <div class="table-responsive">
+        <table class="aar-table table align-middle mb-0">
+            <thead>
+                <tr>
+                    <th style="width: 150px;">THỜI GIAN</th>
+                    <th style="width: 140px;">NGƯỜI THỰC HIỆN</th>
+                    <th style="width: 180px;">HÀNH ĐỘNG</th>
+                    <th style="width: 130px;">BẢNG / ĐỐI TƯỢNG</th>
+                    <th>CHI TIẾT NỘI DUNG</th>
+                    <th class="text-end" style="width: 120px;">CHI TIẾT / DIFF</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Vm.Logs.Any())
+                {
+                    @foreach (var log in Model.Vm.Logs)
+                    {
+                        var actionInfo = GetActionInfo(log.Action);
+                        bool hasOld = !string.IsNullOrWhiteSpace(log.OldValues);
+                        bool hasNew = !string.IsNullOrWhiteSpace(log.NewValues);
+
+                        <tr>
+                            <td>
+                                <div class="small fw-semibold text-dark">@log.Timestamp.ToString("dd/MM/yyyy")</div>
+                                <div class="text-muted font-monospace" style="font-size: 0.72rem;">@log.Timestamp.ToString("HH:mm:ss")</div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-1">
+                                    <span class="fw-bold text-primary font-monospace small">@(string.IsNullOrEmpty(log.UserName) ? "Hệ thống" : log.UserName)</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge font-monospace px-2 py-1" style="@actionInfo.Style font-size: 0.75rem; border-radius: 6px;">
+                                    <span class="me-1">@actionInfo.Icon</span>@log.Action
+                                </span>
+                            </td>
+                            <td>
+                                <div class="font-monospace text-dark fw-bold small">@log.EntityName</div>
+                                <div class="text-secondary" style="font-size: 0.72rem;">ID: @(log.RecordId ?? "N/A")</div>
+                            </td>
+                            <td>
+                                <div class="small fw-medium text-dark text-truncate" style="max-width: 380px;" title="@(log.NewValues ?? log.OldValues)">
+                                    @FormatContentSummary(log.NewValues, log.OldValues, log.Action)
+                                </div>
+                                @if (!string.IsNullOrEmpty(log.IpAddress))
+                                {
+                                    <div class="text-muted font-monospace" style="font-size: 0.68rem;">IP: @log.IpAddress</div>
+                                }
+                            </td>
+                            <td class="text-end print-hide">
+                                @if (hasOld && hasNew)
+                                {
+                                    <button class="btn btn-sm btn-outline-primary py-1 px-2 fw-semibold" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#diffModal_@log.Id">
+                                        🔍 Xem Diff
+                                    </button>
+                                }
+                                else if (hasNew)
+                                {
+                                    <button class="btn btn-sm btn-outline-secondary py-1 px-2 fw-semibold" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#diffModal_@log.Id">
+                                        📄 Chi tiết
+                                    </button>
+                                }
+                                else if (hasOld)
+                                {
+                                    <button class="btn btn-sm btn-outline-danger py-1 px-2 fw-semibold" style="font-size: 0.75rem;" data-bs-toggle="modal" data-bs-target="#diffModal_@log.Id">
+                                        🗑️ Đã xóa
+                                    </button>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">-</span>
+                                }
+
+                                <!-- MODAL CHI TIẾT & SO SÁNH DIFF -->
+                                @if (hasOld || hasNew)
+                                {
+                                    <div class="modal fade text-start" id="diffModal_@log.Id" tabindex="-1" aria-labelledby="diffModalLabel_@log.Id" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered modal-lg">
+                                            <div class="modal-content border-0 shadow-lg" style="border-radius: 16px;">
+                                                <div class="modal-header border-bottom py-3">
+                                                    <div>
+                                                        <h6 class="modal-title fw-bold text-dark mb-1" id="diffModalLabel_@log.Id">
+                                                            Chi tiết Biến động Dữ liệu <span class="text-primary font-monospace">#LOG-@log.Id</span>
+                                                        </h6>
+                                                        <div class="small text-secondary">
+                                                            <span>Thực hiện bởi: <strong class="text-dark">@(log.UserName ?? "Hệ thống")</strong></span>
+                                                            <span class="mx-1">•</span>
+                                                            <span>Bảng: <strong class="text-dark">@log.EntityName (#@log.RecordId)</strong></span>
+                                                            <span class="mx-1">•</span>
+                                                            <span>@log.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")</span>
+                                                        </div>
+                                                    </div>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body p-4">
+                                                    <div class="mb-3 d-flex align-items-center gap-2">
+                                                        <span class="badge font-monospace px-2 py-1" style="@actionInfo.Style border-radius: 6px;">
+                                                            @actionInfo.Icon @actionInfo.FriendlyName (@log.Action)
+                                                        </span>
+                                                        @if (!string.IsNullOrEmpty(log.IpAddress))
+                                                        {
+                                                            <span class="badge bg-light text-secondary border font-monospace">IP: @log.IpAddress</span>
+                                                        }
+                                                    </div>
+
+                                                    @if (hasOld && hasNew)
+                                                    {
+                                                        <div class="row g-3">
+                                                            <div class="col-md-6">
+                                                                <div class="small fw-bold text-danger mb-2 d-flex align-items-center gap-1">
+                                                                    <span>🔴 Dữ liệu Trước Thay Đổi (Before / Old)</span>
+                                                                </div>
+                                                                <div class="p-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3 font-monospace small text-dark" style="white-space: pre-wrap; word-break: break-all; max-height: 380px; overflow-y: auto; background: #fff5f5;">@PrettyPrint(log.OldValues)</div>
+                                                            </div>
+                                                            <div class="col-md-6">
+                                                                <div class="small fw-bold text-success mb-2 d-flex align-items-center gap-1">
+                                                                    <span>🟢 Dữ liệu Sau Thay Đổi (After / New)</span>
+                                                                </div>
+                                                                <div class="p-3 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 font-monospace small text-dark" style="white-space: pre-wrap; word-break: break-all; max-height: 380px; overflow-y: auto; background: #f0fdf4;">@PrettyPrint(log.NewValues)</div>
+                                                            </div>
+                                                        </div>
+                                                    }
+                                                    else if (hasNew)
+                                                    {
+                                                        <div>
+                                                            <div class="small fw-bold text-success mb-2 d-flex align-items-center gap-1">
+                                                                <span>🟢 Dữ liệu Tạo Mới / Ghi Nhận (New Record)</span>
+                                                            </div>
+                                                            <div class="p-3 bg-success bg-opacity-10 border border-success border-opacity-25 rounded-3 font-monospace small text-dark" style="white-space: pre-wrap; word-break: break-all; max-height: 380px; overflow-y: auto; background: #f0fdf4;">@PrettyPrint(log.NewValues)</div>
+                                                        </div>
+                                                    }
+                                                    else if (hasOld)
+                                                    {
+                                                        <div>
+                                                            <div class="small fw-bold text-danger mb-2 d-flex align-items-center gap-1">
+                                                                <span>🔴 Dữ liệu Trước Khi Xóa (Old Record)</span>
+                                                            </div>
+                                                            <div class="p-3 bg-danger bg-opacity-10 border border-danger border-opacity-25 rounded-3 font-monospace small text-dark" style="white-space: pre-wrap; word-break: break-all; max-height: 380px; overflow-y: auto; background: #fff5f5;">@PrettyPrint(log.OldValues)</div>
+                                                        </div>
+                                                    }
+                                                </div>
+                                                <div class="modal-footer border-top py-2 px-4 bg-light bg-opacity-50">
+                                                    <span class="small text-muted me-auto font-monospace">SOC-2 Type II Certified Audit Trail</span>
+                                                    <button type="button" class="btn btn-sm btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Đóng</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-secondary">
+                            <div class="mb-2">
+                                <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="text-muted"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            </div>
+                            <div class="fw-semibold">Chưa có dữ liệu nhật ký kiểm toán phù hợp với bộ lọc tìm kiếm.</div>
+                            <div class="small text-muted mt-1">Thử xóa bộ lọc hoặc tìm kiếm theo từ khóa khác.</div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- PHÂN TRANG (PAGINATION) -->
+    @if (Model.Vm.TotalPages > 1)
+    {
+        <div class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2 print-hide bg-light bg-opacity-25">
+            <div class="small text-secondary">
+                Hiển thị trang <strong>@Model.Vm.CurrentPage</strong> / <strong>@Model.Vm.TotalPages</strong> (Tổng <strong>@Model.Vm.TotalCount</strong> bản ghi)
+            </div>
+            <nav class="apple-pagination mb-0" style="margin: 0 !important;">
+                @if (Model.Vm.CurrentPage > 1)
+                {
+                    <a asp-page="/Admin/AuditLogs"
+                       asp-route-currentPage="@(Model.Vm.CurrentPage - 1)"
+                       asp-route-actionFilter="@Model.Vm.ActionFilter"
+                       asp-route-tableFilter="@Model.Vm.TableFilter"
+                       asp-route-searchKeyword="@Model.Vm.SearchKeyword"
+                       class="page-link">‹ Trước</a>
+                }
+                else
+                {
+                    <span class="page-item disabled">‹ Trước</span>
+                }
+
+                @{
+                    int startPage = Math.Max(1, Model.Vm.CurrentPage - 2);
+                    int endPage = Math.Min(Model.Vm.TotalPages, Model.Vm.CurrentPage + 2);
+                }
+
+                @if (startPage > 1)
+                {
+                    <a asp-page="/Admin/AuditLogs"
+                       asp-route-currentPage="1"
+                       asp-route-actionFilter="@Model.Vm.ActionFilter"
+                       asp-route-tableFilter="@Model.Vm.TableFilter"
+                       asp-route-searchKeyword="@Model.Vm.SearchKeyword"
+                       class="page-link">1</a>
+                    @if (startPage > 2)
+                    {
+                        <span class="page-item disabled" style="border:none; background:transparent;">...</span>
+                    }
+                }
+
+                @for (int p = startPage; p <= endPage; p++)
+                {
+                    if (p == Model.Vm.CurrentPage)
+                    {
+                        <span class="page-item active">@p</span>
+                    }
+                    else
+                    {
+                        <a asp-page="/Admin/AuditLogs"
+                           asp-route-currentPage="@p"
+                           asp-route-actionFilter="@Model.Vm.ActionFilter"
+                           asp-route-tableFilter="@Model.Vm.TableFilter"
+                           asp-route-searchKeyword="@Model.Vm.SearchKeyword"
+                           class="page-link">@p</a>
+                    }
+                }
+
+                @if (endPage < Model.Vm.TotalPages)
+                {
+                    @if (endPage < Model.Vm.TotalPages - 1)
+                    {
+                        <span class="page-item disabled" style="border:none; background:transparent;">...</span>
+                    }
+                    <a asp-page="/Admin/AuditLogs"
+                       asp-route-currentPage="@Model.Vm.TotalPages"
+                       asp-route-actionFilter="@Model.Vm.ActionFilter"
+                       asp-route-tableFilter="@Model.Vm.TableFilter"
+                       asp-route-searchKeyword="@Model.Vm.SearchKeyword"
+                       class="page-link">@Model.Vm.TotalPages</a>
+                }
+
+                @if (Model.Vm.CurrentPage < Model.Vm.TotalPages)
+                {
+                    <a asp-page="/Admin/AuditLogs"
+                       asp-route-currentPage="@(Model.Vm.CurrentPage + 1)"
+                       asp-route-actionFilter="@Model.Vm.ActionFilter"
+                       asp-route-tableFilter="@Model.Vm.TableFilter"
+                       asp-route-searchKeyword="@Model.Vm.SearchKeyword"
+                       class="page-link">Sau ›</a>
+                }
+                else
+                {
+                    <span class="page-item disabled">Sau ›</span>
+                }
+            </nav>
+        </div>
+    }
+</div>

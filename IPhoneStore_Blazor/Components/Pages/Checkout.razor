@@ -1,0 +1,510 @@
+@page "/checkout"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@implements IDisposable
+@inject IDbContextFactory<IPhoneStoreDbContext> DbFactory
+@inject CartService Cart
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthProvider
+
+<PageTitle>Thanh Toán Đơn Hàng - BomChelsea</PageTitle>
+
+<div class="container py-4">
+    <!-- Stepper (Mockup 07) -->
+    <div class="apple-stepper">
+        <div class="stepper-line">
+            <div class="stepper-line-progress" style="width: 70%;"></div>
+        </div>
+        <div class="stepper-step completed">
+            <div class="step-circle">✓</div>
+            <div class="step-label">Giỏ hàng</div>
+        </div>
+        <div class="stepper-step completed">
+            <div class="step-circle">✓</div>
+            <div class="step-label">Tài khoản</div>
+        </div>
+        <div class="stepper-step active">
+            <div class="step-circle">3</div>
+            <div class="step-label">Thanh toán</div>
+        </div>
+        <div class="stepper-step">
+            <div class="step-circle">4</div>
+            <div class="step-label">Đặt hàng</div>
+        </div>
+    </div>
+
+    @if (!Cart.IsLoaded)
+    {
+        <div class="text-center py-5 text-secondary"><span class="spinner-border spinner-border-sm me-2"></span>Đang tải...</div>
+    }
+    else if (Cart.GetCart().Count == 0)
+    {
+        <div class="bg-white border rounded-3 p-5 text-center shadow-sm">
+            <h4 class="fw-bold text-dark">Giỏ hàng của bạn đang trống</h4>
+            <a href="/" class="apple-cta-primary mt-3">Tiếp tục mua sắm</a>
+        </div>
+    }
+    else
+    {
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <div class="alert alert-danger py-2 px-3 small rounded-3 mb-4">@_error</div>
+        }
+
+        <form @onsubmit="PlaceOrder" @onsubmit:preventDefault>
+            <div class="row g-4">
+                <!-- Left: 3 Checkout Steps (Mockup 07) -->
+                <div class="col-lg-7">
+                    <!-- Section 1: Thông tin người nhận -->
+                    <div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="badge bg-primary text-white rounded-circle p-2" style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;">1</span>
+                            <h2 class="fs-5 fw-bold text-dark mb-0">Thông Tin Người Nhận Hàng</h2>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-dark">Họ và tên người nhận <span class="text-danger">*</span></label>
+                            <input type="text" @bind="_fullName" class="form-control rounded-3 py-2 px-3" placeholder="Nguyễn Văn A" required />
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-dark">Số điện thoại <span class="text-danger">*</span></label>
+                                <input type="tel" @bind="_phone" class="form-control rounded-3 py-2 px-3" placeholder="0901234567" required />
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label small fw-bold text-dark">Email nhận hóa đơn VAT</label>
+                                <input type="email" @bind="_email" class="form-control rounded-3 py-2 px-3" placeholder="email@gmail.com" />
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-dark">Địa chỉ nhận hàng (Chi tiết) <span class="text-danger">*</span></label>
+                            <input type="text" @bind="_address" class="form-control rounded-3 py-2 px-3" placeholder="Số nhà, ngõ, tên đường, phường/xã, quận/huyện..." required />
+                        </div>
+
+                        <div class="mb-0">
+                            <label class="form-label small fw-bold text-dark">Ghi chú giao hàng</label>
+                            <textarea @bind="_notes" class="form-control rounded-3" rows="2" placeholder="Ví dụ: Giao giờ hành chính, gọi trước khi đến..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Section 2: Hình thức nhận hàng -->
+                    <div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="badge bg-primary text-white rounded-circle p-2" style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;">2</span>
+                            <h2 class="fs-5 fw-bold text-dark mb-0">Hình Thức Nhận Hàng</h2>
+                        </div>
+
+                        <div class="d-flex flex-column gap-2">
+                            <label class="p-3 border rounded-3 d-flex align-items-center justify-content-between" style="cursor: pointer; background: #fbfbfd;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <input type="radio" name="shippingType" value="delivery" checked class="form-check-input" />
+                                    <div>
+                                        <div class="fw-bold text-dark small">Giao hàng hỏa tốc tận nhà (GHN Express)</div>
+                                        <div class="text-secondary small">Giao hàng trong vòng 2 giờ tại khu vực nội thành</div>
+                                    </div>
+                                </div>
+                                <span class="badge bg-success text-white small">Miễn phí 0₫</span>
+                            </label>
+
+                            <label class="p-3 border rounded-3 d-flex align-items-center justify-content-between" style="cursor: pointer;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <input type="radio" name="shippingType" value="store" class="form-check-input" />
+                                    <div>
+                                        <div class="fw-bold text-dark small">Nhận tại cửa hàng BomChelsea</div>
+                                        <div class="text-secondary small">Hỗ trợ kích hoạt máy & dán màn hình miễn phí</div>
+                                    </div>
+                                </div>
+                                <span class="badge bg-light text-dark small">120 Shop</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Section 3: Phương thức thanh toán (Mockup 07 & 08) -->
+                    <div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <span class="badge bg-primary text-white rounded-circle p-2" style="width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center;">3</span>
+                            <h2 class="fs-5 fw-bold text-dark mb-0">Phương Thức Thanh Toán</h2>
+                        </div>
+
+                        <div class="d-flex flex-column gap-3 mb-4">
+                            <!-- VietQR -->
+                            <label class="p-3 border rounded-3 d-flex align-items-center justify-content-between @(_payment == "VietQR" ? "border-primary bg-primary bg-opacity-10" : "")" style="cursor: pointer;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <input type="radio" name="paymentMethod" value="VietQR" checked="@(_payment == "VietQR")" @onchange='() => _payment = "VietQR"' class="form-check-input" />
+                                    <div>
+                                        <div class="fw-bold text-dark small d-flex align-items-center gap-2">
+                                            <span>Chuyển khoản VietQR Pro (Napas 247)</span>
+                                            <span class="badge bg-danger text-white" style="font-size:0.65rem;">Khuyên dùng</span>
+                                        </div>
+                                        <div class="text-secondary small">Quét mã QR tự động xác nhận đơn hàng trong 3 giây</div>
+                                    </div>
+                                </div>
+                                <span class="badge bg-light text-dark border">Giảm 500k</span>
+                            </label>
+
+                            <!-- COD -->
+                            <label class="p-3 border rounded-3 d-flex align-items-center justify-content-between @(_payment == "COD" ? "border-primary bg-primary bg-opacity-10" : "")" style="cursor: pointer;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <input type="radio" name="paymentMethod" value="COD" checked="@(_payment == "COD")" @onchange='() => _payment = "COD"' class="form-check-input" />
+                                    <div>
+                                        <div class="fw-bold text-dark small">Thanh toán khi nhận hàng (COD)</div>
+                                        <div class="text-secondary small">Kiểm tra ngoại quan máy nguyên seal trước khi thanh toán tiền mặt</div>
+                                    </div>
+                                </div>
+                                <span class="badge bg-light text-dark border">Tiền mặt</span>
+                            </label>
+
+                            <!-- Apple Pay / Credit Card -->
+                            <label class="p-3 border rounded-3 d-flex align-items-center justify-content-between @(_payment == "Card" ? "border-primary bg-primary bg-opacity-10" : "")" style="cursor: pointer;">
+                                <div class="d-flex align-items-center gap-3">
+                                    <input type="radio" name="paymentMethod" value="Card" checked="@(_payment == "Card")" @onchange='() => _payment = "Card"' class="form-check-input" />
+                                    <div>
+                                        <div class="fw-bold text-dark small">Thẻ Quốc Tế Visa / Master / JCB / Apple Pay</div>
+                                        <div class="text-secondary small">Hỗ trợ trả góp 0% lãi suất với 25 ngân hàng liên kết</div>
+                                    </div>
+                                </div>
+                                <span class="badge bg-light text-dark border">0% Lãi suất</span>
+                            </label>
+                        </div>
+
+                        <!-- ================= VIETQR PAYMENT BOX (MOCKUP 08) ================= -->
+                        @if (_payment == "VietQR")
+                        {
+                            <div class="vietqr-box" id="vietQrSection">
+                                <div class="d-flex justify-content-between align-items-center pb-2 border-bottom border-primary border-opacity-25 mb-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span class="badge bg-primary text-white">VietQR</span>
+                                        <strong class="text-dark small">Cổng Chuyển Khoản Tự Động BomChelsea</strong>
+                                    </div>
+                                    <div class="qr-countdown-badge">
+                                        ⏱ Mã hết hạn sau: <span class="fw-bold">14:59</span>
+                                    </div>
+                                </div>
+
+                                <div class="row align-items-center g-3">
+                                    <div class="col-sm-5 text-center">
+                                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=00020101021238540010A00000072701240006970422011009012345675204601153037045408349900005802VN62150811BomChelsea16PRO6304"
+                                             alt="Mã QR Chuyển Khoản" class="img-fluid border rounded-3 p-2 bg-white shadow-sm" style="max-width: 170px;" />
+                                        <div class="text-secondary small mt-1" style="font-size: 0.72rem;">Mở app Ngân hàng hoặc MoMo quét mã</div>
+                                    </div>
+                                    <div class="col-sm-7">
+                                        <div class="qr-bank-details d-flex flex-column gap-2 small">
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-secondary">Ngân hàng:</span>
+                                                <strong class="text-dark">MB Bank (Quân Đội)</strong>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-secondary">Số tài khoản:</span>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <strong class="text-primary font-monospace fs-6">090123456789</strong>
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 small" onclick="navigator.clipboard.writeText('090123456789')">Copy</button>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-secondary">Chủ tài khoản:</span>
+                                                <strong class="text-dark">CTY BomChelsea VIET NAM</strong>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-secondary">Số tiền:</span>
+                                                <strong class="text-primary fs-6">@Cart.GetTotalAmount().ToString("N0") ₫</strong>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-secondary">Nội dung CK:</span>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <strong class="badge bg-warning text-dark font-monospace">BomChelsea-@(DateTime.Now.ToString("HHmm"))</strong>
+                                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 small" onclick="navigator.clipboard.writeText('BomChelsea-IPHONE')">Copy</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Right: Order Summary Sidebar -->
+                <div class="col-lg-5">
+                    <div class="bg-white border rounded-3 p-4 shadow-sm mb-3">
+                        <h3 class="fs-5 fw-bold text-dark mb-3">Tóm Tắt Đơn Hàng (@Cart.GetCount() máy)</h3>
+
+                        <div class="d-flex flex-column gap-3 mb-4">
+                            @foreach (var item in Cart.GetCart())
+                            {
+                                <div class="d-flex align-items-center justify-content-between pb-3 border-bottom gap-2" @key="item.ProductId">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <img src="@(string.IsNullOrEmpty(item.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : item.ImageUrl)"
+                                             alt="@item.ProductName" style="width: 48px; height: 48px; object-fit: contain;" />
+                                        <div>
+                                            <div class="fw-bold text-dark small">@item.ProductName</div>
+                                            <div class="text-secondary" style="font-size: 0.75rem;">@item.Color · @item.Storage · SL: @item.Quantity</div>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fw-bold text-dark small">@item.TotalPrice.ToString("N0") ₫</div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="d-flex justify-content-between py-2 border-bottom small text-secondary">
+                            <span>Tạm tính tiền hàng:</span>
+                            <span class="text-dark fw-semibold">@Cart.GetTotalAmount().ToString("N0") ₫</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between py-2 border-bottom small text-secondary">
+                            <span>Phí vận chuyển hỏa tốc:</span>
+                            <span class="text-success fw-semibold">Miễn phí 0₫</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between py-2 border-bottom small text-secondary">
+                            <span>Gói quà tặng kèm:</span>
+                            <span class="text-success fw-semibold">Củ sạc Apple 20W</span>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-baseline py-3 my-2">
+                            <span class="fw-bold text-dark fs-6">Tổng thanh toán:</span>
+                            <span class="fs-4 fw-bold text-primary">@Cart.GetTotalAmount().ToString("N0") ₫</span>
+                        </div>
+
+                        <button type="submit" class="apple-cta-primary w-100 py-3 fs-5 text-center mb-3" disabled="@_busy">
+                            @if (_busy)
+                            {
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                <span>Đang xử lý đơn hàng...</span>
+                            }
+                            else
+                            {
+                                <span>Hoàn Tất Đặt Hàng &rarr;</span>
+                            }
+                        </button>
+
+                        <div class="text-secondary small text-center" style="font-size: 0.75rem;">
+                            Bằng việc nhấn đặt hàng, bạn đồng ý với Điều khoản mua hàng và Chính sách bảo hành điện tử chính hãng của BomChelsea.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    }
+</div>
+
+@code {
+    private string _fullName = "";
+    private string _phone = "";
+    private string _email = "";
+    private string _address = "";
+    private string _notes = "";
+    private string _payment = "VietQR";
+    private string? _error;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        var user = state.User;
+        if (user.Identity?.IsAuthenticated == true &&
+            (user.IsInRole("Admin") || user.IsInRole("Manager") || user.IsInRole("Staff") || user.IsInRole("Cashier") || user.IsInRole("Shipper")) &&
+            !user.IsInRole("Customer"))
+        {
+            Nav.NavigateTo("/cart?error=" + Uri.EscapeDataString("Tài khoản nội bộ không được phép mua hàng. Vui lòng đăng xuất để dùng tài khoản Khách hàng!"), forceLoad: true);
+            return;
+        }
+
+        Cart.Changed += OnChanged;
+        await PrefillCustomerAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await Cart.EnsureLoadedAsync();
+    }
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    private async Task PrefillCustomerAsync()
+    {
+        var userId = await GetUserIdAsync();
+        if (string.IsNullOrEmpty(userId)) return;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var c = await db.Customers.FirstOrDefaultAsync(x => x.UserId == userId);
+        if (c == null) return;
+        _fullName = c.FullName;
+        _phone = c.PhoneNumber;
+        _email = c.Email ?? "";
+        _address = c.Address;
+    }
+
+    private async Task<string?> GetUserIdAsync()
+    {
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        return state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    }
+
+    private async Task PlaceOrder()
+    {
+        _error = null;
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        var authUser = state.User;
+        if (authUser.Identity?.IsAuthenticated == true &&
+            (authUser.IsInRole("Admin") || authUser.IsInRole("Manager") || authUser.IsInRole("Staff") || authUser.IsInRole("Cashier") || authUser.IsInRole("Shipper")) &&
+            !authUser.IsInRole("Customer"))
+        {
+            _error = "Tài khoản quản trị viên / nhân sự nội bộ không được phép đặt mua hàng!";
+            return;
+        }
+
+        var items = Cart.GetCart().ToList();
+        if (items.Count == 0) return;
+
+        if (string.IsNullOrWhiteSpace(_fullName) || string.IsNullOrWhiteSpace(_phone) || string.IsNullOrWhiteSpace(_address))
+        {
+            _error = "Vui lòng nhập đầy đủ thông tin người nhận!";
+            return;
+        }
+
+        _busy = true;
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            Customer? customer = null;
+            var userId = await GetUserIdAsync();
+            if (string.IsNullOrEmpty(userId))
+            {
+                _error = "Vui lòng đăng nhập tài khoản để tiến hành đặt hàng và kích hoạt bảo hành chính hãng!";
+                return;
+            }
+
+            customer = await db.Customers.FirstOrDefaultAsync(c => c.UserId == userId);
+
+            if (customer == null)
+            {
+                customer = new Customer
+                {
+                    UserId = userId,
+                    FullName = _fullName.Trim(),
+                    PhoneNumber = _phone.Trim(),
+                    Email = string.IsNullOrWhiteSpace(_email) ? null : _email.Trim(),
+                    Address = _address.Trim(),
+                    CreatedAt = DateTime.Now
+                };
+                db.Customers.Add(customer);
+                await db.SaveChangesAsync();
+            }
+            else
+            {
+                customer.FullName = _fullName.Trim();
+                customer.PhoneNumber = _phone.Trim();
+                if (!string.IsNullOrWhiteSpace(_email)) customer.Email = _email.Trim();
+                customer.Address = _address.Trim();
+            }
+
+            // Kiểm tra tồn kho thực tế qua số mã IMEI InStock sẵn sàng trong kho
+            var reservedImeisForOrder = new Dictionary<int, List<ProductImei>>();
+
+            foreach (var item in items)
+            {
+                var p = await db.Products.FindAsync(item.ProductId);
+                if (p == null || !p.IsActive)
+                {
+                    _error = $"Sản phẩm '{item.ProductName}' không còn kinh doanh!";
+                    return;
+                }
+
+                // Lấy danh sách IMEI thực tế có sẵn (Status = 'InStock')
+                var availableImeis = await db.ProductImeis
+                    .Where(pi => pi.ProductId == item.ProductId && pi.Status == "InStock")
+                    .Take(item.Quantity)
+                    .ToListAsync();
+
+                if (availableImeis.Count < item.Quantity)
+                {
+                    // Tự động đồng bộ lại Products.Quantity thực tế trong CSDL
+                    p.Quantity = await db.ProductImeis.CountAsync(pi => pi.ProductId == item.ProductId && pi.Status == "InStock");
+                    await db.SaveChangesAsync();
+
+                    _error = $"Sản phẩm '{p.Name}' hiện không đủ mã IMEI trong kho để bán (Chỉ còn {availableImeis.Count} máy sẵn sàng)!";
+                    return;
+                }
+
+                p.Quantity -= item.Quantity;
+                reservedImeisForOrder[item.ProductId] = availableImeis;
+            }
+
+            var order = new Order
+            {
+                CustomerId = customer.Id,
+                OrderDate = DateTime.Now,
+                TotalAmount = items.Sum(i => i.TotalPrice),
+                OrderStatus = "Pending",
+                PaymentMethod = _payment,
+                ShippingAddress = _address.Trim(),
+                Notes = string.IsNullOrWhiteSpace(_notes) ? null : _notes.Trim()
+            };
+            db.Orders.Add(order);
+            await db.SaveChangesAsync();
+
+            order.OrderCode = $"#IPS{order.Id:D6}";
+            await db.SaveChangesAsync();
+
+            foreach (var item in items)
+            {
+                var detail = new OrderDetail
+                {
+                    OrderId = order.Id,
+                    ProductId = item.ProductId,
+                    Quantity = item.Quantity,
+                    UnitPrice = item.Price,
+                    TotalPrice = item.TotalPrice
+                };
+
+                // Giữ chỗ các mã IMEI thực tế cho đơn hàng này để Admin có sẵn IMEI gán xuất kho
+                if (reservedImeisForOrder.TryGetValue(item.ProductId, out var imeis) && imeis.Count > 0)
+                {
+                    var firstImei = imeis.First();
+                    detail.ProductImeiId = firstImei.Id;
+                    detail.ImeiNumber = firstImei.Imei;
+
+                    foreach (var imei in imeis)
+                    {
+                        imei.Status = "Reserved";
+                        imei.OrderId = order.Id;
+                    }
+                }
+
+                db.OrderDetails.Add(detail);
+            }
+
+            // Ghi AuditLog
+            db.AuditLogs.Add(new AuditLog
+            {
+                UserId = userId,
+                UserName = customer.FullName,
+                Action = "PLACE_ORDER",
+                EntityName = "Orders",
+                RecordId = order.Id.ToString(),
+                NewValues = $"{{\"OrderId\":{order.Id},\"PaymentMethod\":\"{order.PaymentMethod}\",\"TotalAmount\":{order.TotalAmount}}}",
+                Timestamp = DateTime.Now
+            });
+
+            await db.SaveChangesAsync();
+
+            await Cart.ClearCartAsync();
+            Nav.NavigateTo($"/order-success/{order.Id}");
+        }
+        catch (Exception ex)
+        {
+            _error = "Không thể đặt hàng: " + ex.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    public void Dispose() => Cart.Changed -= OnChanged;
+}
+

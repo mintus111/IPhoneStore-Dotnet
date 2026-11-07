@@ -1,0 +1,82 @@
+﻿@model Order
+@{
+    ViewData["Title"] = "Đặt Hàng Thành Công - BomChelsea";
+}
+
+<div class="container py-4" style="max-width: 720px;">
+    <!-- Stepper (All Completed - Mockup 09) -->
+    <div class="apple-stepper mb-4">
+        <div class="stepper-line">
+            <div class="stepper-line-progress" style="width: 100%;"></div>
+        </div>
+        <div class="stepper-step completed">
+            <div class="step-circle">✓</div>
+            <div class="step-label">Giỏ hàng</div>
+        </div>
+        <div class="stepper-step completed">
+            <div class="step-circle">✓</div>
+            <div class="step-label">Tài khoản</div>
+        </div>
+        <div class="stepper-step completed">
+            <div class="step-circle">✓</div>
+            <div class="step-label">Thanh toán</div>
+        </div>
+        <div class="stepper-step completed">
+            <div class="step-circle">✓</div>
+            <div class="step-label">Đặt hàng</div>
+        </div>
+    </div>
+
+    <!-- Success Card -->
+    <div class="bg-white border rounded-3 p-4 p-md-5 text-center shadow-sm">
+        <div class="mb-3">
+            <div style="width: 72px; height: 72px; background: #eafaf1; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #1b873f;">
+                <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+            </div>
+        </div>
+
+        <h2 class="fs-3 fw-bold text-dark mb-2">Đặt Hàng Thành Công!</h2>
+        <p class="text-secondary small mb-4">
+            Cảm ơn bạn đã lựa chọn mua sắm thiết bị Apple chính hãng tại <strong>BomChelsea</strong>.<br />
+            Mã đơn hàng chính thức của bạn là: <strong class="text-primary fs-5">#IPS@(Model.Id.ToString("D6"))</strong>
+        </p>
+
+        <!-- Receipt Card -->
+        <div class="p-4 bg-light rounded-3 text-start border mb-4">
+            <div class="d-flex justify-content-between py-2 border-bottom">
+                <span class="text-secondary small">Trạng thái đơn:</span>
+                <span class="status-pill warning">Đang chuẩn bị hàng</span>
+            </div>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+                <span class="text-secondary small">Người nhận hàng:</span>
+                <strong class="text-dark small">@Model.Customer?.FullName</strong>
+            </div>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+                <span class="text-secondary small">Số điện thoại:</span>
+                <span class="text-dark small">@Model.Customer?.PhoneNumber</span>
+            </div>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+                <span class="text-secondary small">Địa chỉ nhận hàng:</span>
+                <span class="text-dark small text-end">@Model.ShippingAddress</span>
+            </div>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+                <span class="text-secondary small">Phương thức thanh toán:</span>
+                <strong class="text-dark small">@Model.PaymentMethod</strong>
+            </div>
+            <div class="d-flex justify-content-between pt-3">
+                <span class="fw-bold text-dark">Tổng tiền thanh toán:</span>
+                <strong class="fs-5 text-primary">@Model.TotalAmount.ToString("N0") ₫</strong>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-3 justify-content-center">
+            <a asp-controller="Order" asp-action="MyOrders" class="apple-cta-primary px-4 py-3">
+                Theo dõi đơn hàng của tôi &rarr;
+            </a>
+            <a asp-controller="Home" asp-action="Index" class="apple-cta-secondary px-4 py-3">
+                Tiếp tục mua sắm
+            </a>
+        </div>
+    </div>
+</div>
+

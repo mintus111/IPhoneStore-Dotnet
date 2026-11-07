@@ -1,0 +1,376 @@
+﻿@page
+@model IPhoneStore_Razor.Pages.IndexModel
+@{
+    ViewData["Title"] = "BomChelsea - Cửa Hàng Apple Chính Hãng VN/A (Razor)";
+}
+
+<div class="container py-3">
+    <!-- ================= 1. HERO BANNER (MOCKUP 1: 1.Trang chủ.png) ================= -->
+    <!-- ================= 1. HERO BANNER (MOCKUP 1: 1.Trang chủ.png) ================= -->
+    <section class="apple-hero-banner" style="background: radial-gradient(ellipse at 85% 30%, #2e2e33 0%, #17171a 55%, #0d0d0f 100%); border-radius: 28px; padding: 48px 40px; color: #fff; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.4); margin-bottom: 2rem;">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <div class="hero-content">
+                    <div class="d-inline-flex align-items-center gap-2 mb-3" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 20px; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; padding: 6px 14px;">
+                        <span>✨</span> Titan Sa Mạc • Đỉnh Cao Công Nghệ
+                    </div>
+                    <h1 class="hero-title" style="font-size: 3.2rem; font-weight: 800; color: #fff; letter-spacing: -0.03em; margin: 10px 0;">iPhone 16 Pro Max</h1>
+                    <p class="hero-subtitle" style="color: #a1a1aa; line-height: 1.6; max-width: 540px; font-size: 1.05rem; margin-bottom: 1.5rem;">
+                        Sức mạnh chip Apple A18 Pro, Nút Điều khiển Camera (Camera Control) hoàn toàn mới cùng thời lượng pin tốt nhất từng có trên iPhone.
+                    </p>
+                    <div class="hero-price mb-4" style="color: #fff; font-size: 1.8rem; font-weight: 800;">
+                        Từ 34.990.000 ₫ <span class="fs-6 fw-normal text-secondary ms-2 text-decoration-line-through">36.990.000 ₫</span>
+                        <span class="badge bg-danger ms-2 fs-6 fw-bold">-6%</span>
+                    </div>
+                    <div class="hero-actions d-flex flex-wrap gap-3">
+                        <a asp-page="/ProductDetail" asp-route-id="@(Model.Products.FirstOrDefault()?.Id ?? 1)" class="apple-cta-primary px-4 py-3 fs-6">
+                            Mua ngay
+                        </a>
+                        <a href="#danh-sach-iphone" class="btn btn-outline-light rounded-pill px-4 py-3 fs-6 fw-semibold" style="border-width: 1.5px; backdrop-filter: blur(8px);">
+                            Khám phá tất cả dòng máy &darr;
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5 text-center mt-4 mt-lg-0">
+                <img src="~/images/hero-iphone16.jpg"
+                     alt="iPhone 16 Pro Max Titan Sa Mạc"
+                     class="img-fluid rounded-4 shadow-lg"
+                     style="max-height: 380px; object-fit: cover; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 20px 40px rgba(0,0,0,0.6);" />
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= 2. TRUST BADGES GRID (3 TIÊU CHUẨN VÀNG) ================= -->
+    <section class="trust-badges-grid">
+        <div class="trust-badge-card">
+            <div class="trust-icon-box">
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <div>
+                <div class="trust-title">100% Chính Hãng Apple VN</div>
+                <p class="trust-desc">Bảo hành 12 tháng tại các trung tâm uỷ quyền Apple AASP toàn quốc.</p>
+            </div>
+        </div>
+        <div class="trust-badge-card">
+            <div class="trust-icon-box">
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <div>
+                <div class="trust-title">Giao Siêu Tốc 2 Giờ</div>
+                <p class="trust-desc">Miễn phí giao hàng nội thành TP.HCM & Hà Nội, giữ chỗ máy ngay lập tức.</p>
+            </div>
+        </div>
+        <div class="trust-badge-card">
+            <div class="trust-icon-box">
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            </div>
+            <div>
+                <div class="trust-title">1 Đổi 1 Trong 30 Ngày</div>
+                <p class="trust-desc">Lỗi phần cứng từ nhà sản xuất được đổi ngay máy mới nguyên seal.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= 3. CATEGORY CARDS GRID ================= -->
+    <div class="d-flex align-items-center justify-content-between mb-3">
+        <h2 class="fs-4 fw-bold text-dark mb-0">Danh Mục Sản Phẩm Apple</h2>
+        <span class="text-secondary small">Chuẩn máy mới 100% VN/A</span>
+    </div>
+    <section class="category-cards-grid">
+        <a href="/?categoryId=1#danh-sach-iphone" class="category-card text-decoration-none">
+            <img src="https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" alt="iPhone 16 Series" class="category-img" />
+            <div class="category-name">iPhone 16 Series</div>
+            <div class="category-count">Titan Sa Mạc, Pro & Plus</div>
+        </a>
+        <a href="/?categoryId=2#danh-sach-iphone" class="category-card text-decoration-none">
+            <img src="https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-15-finish-select-202309-6-1inch-blue?wid=5120&hei=2880&fmt=p-jpg" alt="iPhone 15 Series" class="category-img" />
+            <div class="category-name">iPhone 15 Series</div>
+            <div class="category-count">Dynamic Island, USB-C</div>
+        </a>
+        <a href="/?categoryId=3#danh-sach-iphone" class="category-card text-decoration-none">
+            <img src="https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-14-finish-select-202209-6-1inch-blue?wid=5120&hei=2880&fmt=p-jpg" alt="iPhone 14 Series" class="category-img" />
+            <div class="category-name">iPhone 14 Series</div>
+            <div class="category-count">Bền bỉ, hiệu năng cao</div>
+        </a>
+        <a href="/?categoryId=4#danh-sach-iphone" class="category-card text-decoration-none">
+            <img src="https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MTJV3?wid=1144&hei=1144&fmt=jpeg" alt="iPhone 13 & Cũ" class="category-img" />
+            <div class="category-name">iPhone 13 & Cũ</div>
+            <div class="category-count">Giá tốt, pin trâu, mượt mà</div>
+        </a>
+    </section>
+
+    <!-- ================= 4. MAIN CATALOG (MOCKUP 2: 2.Danh sách iphone.png) ================= -->
+    <div id="danh-sach-iphone" class="pt-4">
+        <!-- Series Filter Pills Bar & Dropdowns (Ảnh 4: Bộ Lọc xổ ra kế bên Sắp xếp) -->
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4 pb-3 border-bottom">
+            <!-- Left: Category Pills (Giữ nguyên tại chỗ không nhảy về đầu trang) -->
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <a href="/?categoryId=0&storageFilter=@Model.StorageFilter&sortBy=@Model.SortBy#danh-sach-iphone"
+                   class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(Model.CategoryId == 0 ? "btn-primary" : "btn-light text-dark")">
+                    Tất cả iPhone
+                </a>
+                @foreach (var cat in Model.Categories)
+                {
+                    <a href="/?categoryId=@cat.Id&storageFilter=@Model.StorageFilter&sortBy=@Model.SortBy#danh-sach-iphone"
+                       class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(Model.CategoryId == cat.Id ? "btn-primary" : "btn-light text-dark")">
+                        @cat.Name
+                    </a>
+                }
+            </div>
+
+            <!-- Right: Filter Dropdown (Xổ ra) + Sort Dropdown -->
+            <div class="d-flex align-items-center gap-2">
+                <!-- Dropdown Bộ Lọc (Xổ ra kế bên Sắp xếp theo yêu cầu 4) -->
+                <div class="dropdown">
+                    <button class="btn btn-sm rounded-pill px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1 @(!string.IsNullOrEmpty(Model.StorageFilter) ? "btn-primary text-white" : "btn-outline-secondary")"
+                            type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                        Bộ Lọc @(!string.IsNullOrEmpty(Model.StorageFilter) ? $"({Model.StorageFilter})" : "")
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-3 rounded-4" style="min-width: 260px;">
+                        <h6 class="dropdown-header px-0 text-dark fw-bold mb-2">Dung lượng bộ nhớ</h6>
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <a href="/?categoryId=@Model.CategoryId&sortBy=@Model.SortBy#danh-sach-iphone"
+                               class="btn btn-sm rounded-pill @(string.IsNullOrEmpty(Model.StorageFilter) ? "btn-dark" : "btn-light border")" style="font-size: 0.8rem;">
+                                Tất cả
+                            </a>
+                            @foreach (var s in new[] { "128GB", "256GB", "512GB", "1TB" })
+                            {
+                                <a href="/?categoryId=@Model.CategoryId&storageFilter=@s&sortBy=@Model.SortBy#danh-sach-iphone"
+                                   class="btn btn-sm rounded-pill @(Model.StorageFilter == s ? "btn-primary" : "btn-light border")" style="font-size: 0.8rem;">
+                                    @s
+                                </a>
+                            }
+                        </div>
+                        @if (!string.IsNullOrEmpty(Model.StorageFilter) || Model.CategoryId > 0 || !string.IsNullOrEmpty(Model.SearchKeyword))
+                        {
+                            <div class="border-top pt-2">
+                                <a href="/#danh-sach-iphone" class="btn btn-outline-danger btn-sm w-100 rounded-pill" style="font-size:0.75rem;">
+                                    Xóa tất cả bộ lọc
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+
+                <!-- Sort By Dropdown -->
+                <form action="/#danh-sach-iphone" method="get" class="d-flex align-items-center gap-2 mb-0">
+                    @if (Model.CategoryId > 0) { <input type="hidden" name="categoryId" value="@Model.CategoryId" /> }
+                    @if (!string.IsNullOrEmpty(Model.SearchKeyword)) { <input type="hidden" name="searchKeyword" value="@Model.SearchKeyword" /> }
+                    @if (!string.IsNullOrEmpty(Model.StorageFilter)) { <input type="hidden" name="storageFilter" value="@Model.StorageFilter" /> }
+                    <span class="text-secondary small d-none d-sm-inline">Sắp xếp:</span>
+                    <select name="sortBy" class="form-select form-select-sm rounded-pill px-3" style="width: auto;" onchange="this.form.submit()">
+                        <option value="" selected="@(Model.SortBy == "" ? "selected" : null)">Mới nhất</option>
+                        <option value="price_asc" selected="@(Model.SortBy == "price_asc" ? "selected" : null)">Giá thấp đến cao</option>
+                        <option value="price_desc" selected="@(Model.SortBy == "price_desc" ? "selected" : null)">Giá cao đến thấp</option>
+                        <option value="name" selected="@(Model.SortBy == "name" ? "selected" : null)">Tên máy A-Z</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+
+        <!-- Full-Width Products Grid (Sản phẩm chiếm trọn chiều ngang, bỏ sidebar lọc cũ) -->
+        <div class="w-100">
+            <!-- Active Filters Bar -->
+            @if (!string.IsNullOrEmpty(Model.SearchKeyword) || !string.IsNullOrEmpty(Model.StorageFilter) || Model.CategoryId > 0)
+            {
+                <div class="active-filters-bar mb-3">
+                    <span class="text-secondary small fw-semibold">Đang lọc theo:</span>
+                    @if (Model.CategoryId > 0)
+                    {
+                        var activeCat = Model.Categories.FirstOrDefault(c => c.Id == Model.CategoryId);
+                        <span class="filter-tag">
+                            Dòng: @(activeCat?.Name ?? $"ID {Model.CategoryId}")
+                            <a href="/?storageFilter=@Model.StorageFilter&searchKeyword=@Model.SearchKeyword&sortBy=@Model.SortBy#danh-sach-iphone" class="filter-tag-remove">×</a>
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.StorageFilter))
+                    {
+                        <span class="filter-tag">
+                            Dung lượng: @Model.StorageFilter
+                            <a href="/?categoryId=@Model.CategoryId&searchKeyword=@Model.SearchKeyword&sortBy=@Model.SortBy#danh-sach-iphone" class="filter-tag-remove">×</a>
+                        </span>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.SearchKeyword))
+                    {
+                        <span class="filter-tag">
+                            Từ khóa: "@Model.SearchKeyword"
+                            <a href="/?categoryId=@Model.CategoryId&storageFilter=@Model.StorageFilter&sortBy=@Model.SortBy#danh-sach-iphone" class="filter-tag-remove">×</a>
+                        </span>
+                    }
+                </div>
+            }
+
+            <!-- Product Grid: 4 columns on desktop, 3 on tablet, 2 on mobile -->
+            @if (Model.Products.Any())
+            {
+                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3 g-md-4">
+                    @foreach (var p in Model.Products)
+                    {
+                        <div class="col">
+                            <div class="apple-card h-100 d-flex flex-column">
+                                <a asp-page="/ProductDetail" asp-route-id="@p.Id" class="product-img-wrap text-decoration-none">
+                                    <img src="@(string.IsNullOrEmpty(p.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : p.ImageUrl)"
+                                         alt="@p.Name" class="product-card-img" />
+                                </a>
+
+                                <span class="product-series-tag">@(p.ModelSeries ?? p.Category?.Name ?? "Apple VN/A")</span>
+                                <h3 class="product-title flex-grow-1">
+                                    <a asp-page="/ProductDetail" asp-route-id="@p.Id" class="text-dark text-decoration-none">
+                                        @p.Name
+                                    </a>
+                                </h3>
+
+                                <!-- Color Preview Dots -->
+                                <div class="color-dots-row">
+                                    <span class="color-dot" style="background-color: #c9b19e;" title="Titan Sa Mạc"></span>
+                                    <span class="color-dot" style="background-color: #9f9b96;" title="Titan Tự Nhiên"></span>
+                                    <span class="color-dot" style="background-color: #f2f1ed;" title="Titan Trắng"></span>
+                                    <span class="color-dot" style="background-color: #3c3b3e;" title="Titan Đen"></span>
+                                </div>
+
+                                <!-- Storage Pills -->
+                                <div class="storage-pills-row">
+                                    <span class="storage-mini-pill">@(string.IsNullOrEmpty(p.Storage) ? "256GB" : p.Storage)</span>
+                                    <span class="storage-mini-pill">VN/A</span>
+                                    <span class="storage-mini-pill">12 Tháng</span>
+                                </div>
+
+                                <!-- Price Row -->
+                                <div class="product-price-row mt-2">
+                                    <span class="price-current">@p.Price.ToString("N0") ₫</span>
+                                    <span class="price-old">@((p.Price * 1.06m).ToString("N0")) ₫</span>
+                                    <span class="badge-discount">-6%</span>
+                                </div>
+
+                                <!-- Action Buttons -->
+                                <div class="product-actions-row mt-3">
+                                    <a asp-page="/ProductDetail" asp-route-id="@p.Id" class="btn-detail-link w-100 text-center">
+                                        Xem chi tiết & Mua
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Pagination (Mockup 2) -->
+                @if (Model.TotalPages > 1)
+                {
+                    <nav class="apple-pagination mt-5">
+                        @if (Model.CurrentPage > 1)
+                        {
+                            <a class="page-link prev" href="/?currentPage=@(Model.CurrentPage - 1)&categoryId=@Model.CategoryId&searchKeyword=@Model.SearchKeyword&storageFilter=@Model.StorageFilter&sortBy=@Model.SortBy#danh-sach-iphone">‹ Trước</a>
+                        }
+                        else
+                        {
+                            <span class="page-item disabled">‹ Trước</span>
+                        }
+
+                        @for (int i = 1; i <= Model.TotalPages; i++)
+                        {
+                            if (i == Model.CurrentPage)
+                            {
+                                <span class="page-item active">@i</span>
+                            }
+                            else
+                            {
+                                <a class="page-link" href="/?currentPage=@i&categoryId=@Model.CategoryId&searchKeyword=@Model.SearchKeyword&storageFilter=@Model.StorageFilter&sortBy=@Model.SortBy#danh-sach-iphone">@i</a>
+                            }
+                        }
+
+                        @if (Model.CurrentPage < Model.TotalPages)
+                        {
+                            <a class="page-link next" href="/?currentPage=@(Model.CurrentPage + 1)&categoryId=@Model.CategoryId&searchKeyword=@Model.SearchKeyword&storageFilter=@Model.StorageFilter&sortBy=@Model.SortBy#danh-sach-iphone">Sau ›</a>
+                        }
+                        else
+                        {
+                            <span class="page-item disabled">Sau ›</span>
+                        }
+                    </nav>
+                }
+            }
+            else
+            {
+                <div class="text-center py-5 bg-white rounded-3 border">
+                    <svg width="48" height="48" fill="none" stroke="#86868b" viewBox="0 0 24 24" class="mb-3"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    <h4 class="fw-bold text-dark">Không tìm thấy sản phẩm phù hợp</h4>
+                    <p class="text-secondary mb-3">Vui lòng thử tìm kiếm với từ khóa khác hoặc điều chỉnh lại bộ lọc.</p>
+                    <a href="/#danh-sach-iphone" class="apple-cta-secondary">Xem tất cả iPhone</a>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- ================= 5. DARK CAMERA HIGHLIGHT BANNER ================= -->
+    <section class="apple-camera-banner">
+        <div class="camera-banner-inner">
+            <div>
+                <div class="camera-badge">Hệ Thống Camera Đột Phá</div>
+                <h2 class="camera-heading">Rất Pro. Từ những chi tiết nhỏ nhất.</h2>
+                <p class="camera-desc">
+                    Camera Fusion 48MP với cảm biến Quad-pixel thế hệ 2 cho độ trễ màn trập bằng 0. Khả năng quay video chuẩn điện ảnh 4K Dolby Vision 120fps kết hợp nút Điều Khiển Camera (Camera Control) chạm cảm ứng lực.
+                </p>
+                <div class="camera-specs-pills">
+                    <span class="camera-spec-pill">📸 Camera Fusion 48MP</span>
+                    <span class="camera-spec-pill">🔘 Phím Camera Control</span>
+                    <span class="camera-spec-pill">🎬 4K 120 fps Dolby Vision</span>
+                    <span class="camera-spec-pill">🚀 Chip Apple A18 Pro 3nm</span>
+                </div>
+            </div>
+            <div class="text-center">
+                <img src="~/images/camera-iphone16.jpg"
+                     alt="iPhone 16 Pro Camera"
+                     class="img-fluid rounded-4 shadow-lg"
+                     style="max-height: 340px; margin: 0 auto; object-fit: cover; border: 1px solid rgba(255,255,255,0.15);" />
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= 6. THREE COMMITMENT CARDS ================= -->
+    <section class="trust-badges-grid">
+        <div class="trust-badge-card">
+            <div class="trust-icon-box" style="background:#eef6ff; color:#0071e3;">
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+                <div class="trust-title">Bảo Hành Điện Tử Qua IMEI</div>
+                <p class="trust-desc">Tự động kích hoạt khi nhận máy, tra cứu dễ dàng 24/7 trực tuyến.</p>
+            </div>
+        </div>
+        <div class="trust-badge-card">
+            <div class="trust-icon-box" style="background:#eafaf1; color:#1b873f;">
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <div>
+                <div class="trust-title">Trung Tâm Uỷ Quyền AASP</div>
+                <p class="trust-desc">Tiếp nhận bảo hành tại Care1, Thakral One, Viettel Store toàn quốc.</p>
+            </div>
+        </div>
+        <div class="trust-badge-card">
+            <div class="trust-icon-box" style="background:#fff8eb; color:#b26a00;">
+                <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+                <div class="trust-title">Thu Cũ Đổi Mới Trợ Giá 3Tr</div>
+                <p class="trust-desc">Định giá máy cũ nhanh chóng trong 5 phút, lên đời iPhone 16 siêu dễ.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- ================= 7. SUPPORT HOTLINE BANNER ================= -->
+    <section class="apple-support-banner">
+        <div>
+            <div class="support-text-title">Bạn cần hỗ trợ chọn máy hay kiểm tra hàng sẵn kho?</div>
+            <p class="support-text-desc">Đội ngũ chuyên viên tư vấn sản phẩm Apple sẵn sàng hỗ trợ bạn 24/7 qua tổng đài miễn phí.</p>
+        </div>
+        <div>
+            <a href="tel:19006789" class="apple-cta-primary text-decoration-none">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                Gọi 1900.6789
+            </a>
+        </div>
+    </section>
+</div>
+

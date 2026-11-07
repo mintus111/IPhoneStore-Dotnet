@@ -1,0 +1,326 @@
+@model BatchImportViewModel
+@{
+    ViewData["Title"] = "Nhập kho lô IMEI (InStock Ingestion)";
+}
+
+<style>
+    /* ================= BATCH IMPORT PREVIEW & BADGE STYLING ================= */
+    .imei-preview-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.5rem 0.8rem;
+        margin-bottom: 0.4rem;
+        border-radius: 8px;
+        font-size: 0.83rem;
+        transition: all 0.15s ease;
+        border: 1px solid transparent;
+    }
+    .imei-preview-item:last-child {
+        margin-bottom: 0;
+    }
+    .imei-preview-valid {
+        background-color: #f0fdf4 !important;
+        border-color: #bbf7d0 !important;
+        color: #14532d !important;
+    }
+    .imei-preview-duplicate {
+        background-color: #fffbeb !important;
+        border-color: #fde68a !important;
+        color: #78350f !important;
+    }
+    .imei-preview-invalid {
+        background-color: #fef2f2 !important;
+        border-color: #fecaca !important;
+        color: #991b1b !important;
+    }
+
+    .imei-status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 9999px;
+        font-size: 0.76rem;
+        font-weight: 700;
+        line-height: 1.2;
+        border: 1px solid transparent;
+        white-space: nowrap;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+    .imei-badge-valid {
+        background-color: #dcfce7 !important;
+        color: #15803d !important;
+        border-color: #86efac !important;
+    }
+    .imei-badge-duplicate {
+        background-color: #fef3c7 !important;
+        color: #b45309 !important;
+        border-color: #fcd34d !important;
+    }
+    .imei-badge-invalid {
+        background-color: #fee2e2 !important;
+        color: #b91c1c !important;
+        border-color: #fca5a5 !important;
+    }
+
+    .imei-number-text {
+        font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+        font-weight: 600;
+        letter-spacing: 0.03em;
+    }
+</style>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a asp-area="Admin" asp-controller="Admin" asp-action="Inventory" class="text-decoration-none text-muted small">
+                &larr; Quay lại kho IMEI
+            </a>
+        </div>
+        <h1 class="h3 fw-bold text-dark mb-1">Nhập kho lô IMEI (InStock Ingestion)</h1>
+        <p class="text-muted small mb-0">Nhập hàng loạt định danh thiết bị từ các nhà phân phối ủy quyền Apple chính thức tại Việt Nam.</p>
+    </div>
+</div>
+
+<!-- ================= 3-STEP STEPPER ================= -->
+<div class="aar-stepper mb-4">
+    <div class="aar-stepper-line"></div>
+    <div class="aar-step completed" id="step1Indicator">
+        <div class="aar-step-num">✓</div>
+        <span>Bước 1: Chọn Model &amp; Nhà PP</span>
+    </div>
+    <div class="aar-step active" id="step2Indicator">
+        <div class="aar-step-num">2</div>
+        <span>Bước 2: Quét / Dán danh sách IMEI</span>
+    </div>
+    <div class="aar-step" id="step3Indicator">
+        <div class="aar-step-num">3</div>
+        <span>Bước 3: Xác thực &amp; Lưu kho</span>
+    </div>
+</div>
+
+<form asp-area="Admin" asp-controller="Admin" asp-action="BatchImport" method="post" id="batchForm">
+    @Html.AntiForgeryToken()
+
+    <div class="row g-4">
+        <!-- ================= CỘT TRÁI (INPUT FORM - 7 COLS) ================= -->
+        <div class="col-lg-7">
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">
+                        Thông tin lô hàng &amp; Nhà cung cấp Apple
+                    </h3>
+                </div>
+                <div class="aar-card-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Dòng sản phẩm iPhone tiếp nhận <span class="text-danger">*</span></label>
+                        <select name="productId" id="selectProduct" class="form-select" required>
+                            <option value="">-- Chọn chính xác SKU / Model iPhone --</option>
+                            @foreach (var p in Model.Products)
+                            {
+                                <option value="@p.Id" data-sku="@p.Sku" data-name="@p.Name">
+                                    [@(p.Sku ?? "IP-" + p.Id)] @p.Name (@p.Storage - @p.Color)
+                                </option>
+                            }
+                        </select>
+                        <div class="form-text small">Tất cả IMEI nhập trong lô này sẽ được tự động gắn với model đã chọn.</div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Nhà phân phối ủy quyền Apple</label>
+                            <select name="vendor" class="form-select">
+                                <option value="Synnex FPT">Synnex FPT (FPT Distribution)</option>
+                                <option value="Digiworld">Digiworld (DGW Apple Division)</option>
+                                <option value="Viettel Distribution">Viettel Distribution</option>
+                                <option value="Apple Vietnam Direct">Apple Vietnam Co., Ltd (Direct)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Số hóa đơn / Phiếu xuất kho NPP</label>
+                            <input type="text" name="note" class="form-control" placeholder="VD: PO-FPT-202410-09" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold d-flex justify-content-between align-items-center">
+                            <span>Danh sách mã IMEI tiếp nhận <span class="text-danger">*</span></span>
+                            <span class="text-muted small">15 chữ số mỗi mã (phân tách xuống dòng)</span>
+                        </label>
+                        <textarea name="imeisText" id="imeisInput" class="form-control font-monospace" rows="9" 
+                                  placeholder="Dán hoặc quét mã IMEI tại đây. Ví dụ:&#10;354890123456789&#10;354890123456790&#10;354890123456791" required></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center pt-2">
+                        <button type="button" class="btn btn-outline-secondary btn-sm px-3 rounded-pill" onclick="loadSampleImeis()">
+                            📋 Dán dữ liệu mẫu
+                        </button>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold rounded-pill shadow-sm">
+                            Xác nhận ghi nhận vào kho &rarr;
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= CỘT PHẢI (LIVE VALIDATION PANEL - 5 COLS) ================= -->
+        <div class="col-lg-5">
+            <div class="aar-card mb-4 shadow-sm border">
+                <div class="aar-card-header bg-white py-3">
+                    <h3 class="aar-card-title mb-0">
+                        Bộ kiểm tra tính hợp lệ dữ liệu
+                    </h3>
+                    <span class="badge bg-light text-dark border px-2 py-1">Realtime</span>
+                </div>
+                <div class="aar-card-body">
+                    <div class="row g-2 mb-3 text-center">
+                        <div class="col-4">
+                            <div class="p-2 border rounded" style="background:#f8fafc; border-color:#e2e8f0 !important;">
+                                <div class="text-muted small fw-bold" style="font-size:0.75rem;">ĐÃ NHẬP</div>
+                                <div class="h5 fw-bold text-dark mb-0 mt-1" id="statTotal">0</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 border rounded" style="background:#ecfdf5; border-color:#a7f3d0 !important;">
+                                <div class="text-success small fw-bold" style="font-size:0.75rem;">HỢP LỆ</div>
+                                <div class="h5 fw-bold text-success mb-0 mt-1" id="statValid">0</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-2 border rounded" style="background:#fef2f2; border-color:#fecaca !important;">
+                                <div class="text-danger small fw-bold" style="font-size:0.75rem;">KHÔNG HỢP LỆ</div>
+                                <div class="h5 fw-bold text-danger mb-0 mt-1" id="statInvalid">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="small fw-bold text-muted text-uppercase" style="letter-spacing:0.05em; font-size:0.75rem;">
+                            XEM TRƯỚC DANH SÁCH PHÂN TÍCH:
+                        </div>
+                    </div>
+
+                    <div id="previewList" class="p-2 border rounded bg-white" style="max-height: 270px; overflow-y: auto;">
+                        <div class="text-center py-4 text-muted fst-italic small">
+                            Vui lòng nhập hoặc dán danh sách IMEI để xem phân tích...
+                        </div>
+                    </div>
+
+                    <div class="mt-3 p-3 rounded-3" style="background: #eff6ff; border: 1px solid #bfdbfe;">
+                        <div class="d-flex align-items-center gap-2 text-primary small fw-bold mb-1">
+                            <span>🛡️</span>
+                            <span>Quy chuẩn chất lượng Apple AAR:</span>
+                        </div>
+                        <ul class="text-muted small mb-0 ps-3" style="line-height:1.5;">
+                            <li>IMEI bắt buộc có đúng 15 ký tự số.</li>
+                            <li>Hệ thống tự động phát hiện và loại bỏ mã trùng lặp trong nội bộ lô.</li>
+                            <li>Tất cả IMEI hợp lệ sẽ được sinh tự động Serial Number tương ứng.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        const textarea = document.getElementById('imeisInput');
+        const statTotal = document.getElementById('statTotal');
+        const statValid = document.getElementById('statValid');
+        const statInvalid = document.getElementById('statInvalid');
+        const previewList = document.getElementById('previewList');
+
+        function analyzeImeis() {
+            const raw = textarea.value;
+            const lines = raw.split(/[\r\n,;]+/).map(s => s.trim()).filter(s => s.length > 0);
+
+            statTotal.innerText = lines.length;
+
+            if (lines.length === 0) {
+                statValid.innerText = "0";
+                statInvalid.innerText = "0";
+                previewList.innerHTML = '<div class="text-center py-4 text-muted fst-italic small">Vui lòng nhập hoặc dán danh sách IMEI để xem phân tích...</div>';
+                return;
+            }
+
+            let validCount = 0;
+            let invalidCount = 0;
+            let html = '';
+            const seen = new Set();
+
+            lines.forEach((imei, idx) => {
+                const isOnlyDigits = /^\d+$/.test(imei);
+                const is15Digits = isOnlyDigits && imei.length === 15;
+                const isDuplicate = seen.has(imei);
+                seen.add(imei);
+
+                if (is15Digits && !isDuplicate) {
+                    validCount++;
+                    html += `<div class="imei-preview-item imei-preview-valid">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted fw-bold" style="font-size:0.75rem;">#${idx+1}</span>
+                            <span class="imei-number-text text-success">${imei}</span>
+                        </div>
+                        <span class="imei-status-badge imei-badge-valid">
+                            <span>✓</span>
+                            <span>Chuẩn 15 số</span>
+                        </span>
+                    </div>`;
+                } else if (isDuplicate) {
+                    invalidCount++;
+                    html += `<div class="imei-preview-item imei-preview-duplicate">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted fw-bold" style="font-size:0.75rem;">#${idx+1}</span>
+                            <span class="imei-number-text text-warning">${imei}</span>
+                        </div>
+                        <span class="imei-status-badge imei-badge-duplicate">
+                            <span>⚠️</span>
+                            <span>Trùng lặp</span>
+                        </span>
+                    </div>`;
+                } else {
+                    invalidCount++;
+                    let reason = '';
+                    if (!isOnlyDigits) {
+                        reason = 'Có ký tự chữ';
+                    } else if (imei.length < 15) {
+                        reason = `Sai (${imei.length}/15 số)`;
+                    } else {
+                        reason = `Thừa (${imei.length}/15 số)`;
+                    }
+                    html += `<div class="imei-preview-item imei-preview-invalid">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-muted fw-bold" style="font-size:0.75rem;">#${idx+1}</span>
+                            <span class="imei-number-text text-danger">${imei}</span>
+                        </div>
+                        <span class="imei-status-badge imei-badge-invalid">
+                            <span>❌</span>
+                            <span>${reason}</span>
+                        </span>
+                    </div>`;
+                }
+            });
+
+            statValid.innerText = validCount;
+            statInvalid.innerText = invalidCount;
+            previewList.innerHTML = html;
+        }
+
+        textarea.addEventListener('input', analyzeImeis);
+
+        function loadSampleImeis() {
+            const prefix = "35" + Math.floor(100000 + Math.random() * 900000);
+            const sample = [
+                prefix + "100101",
+                prefix + "100102",
+                prefix + "100103",
+                prefix + "100104",
+                prefix + "100105"
+            ].join('\n');
+            textarea.value = sample;
+            analyzeImeis();
+        }
+    </script>
+}

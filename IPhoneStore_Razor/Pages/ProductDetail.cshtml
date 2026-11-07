@@ -1,0 +1,335 @@
+﻿@page "{id:int}"
+@model IPhoneStore_Razor.Pages.ProductDetailModel
+@{
+    ViewData["Title"] = Model.Product?.Name ?? "Chi Tiết iPhone - BomChelsea";
+}
+
+<div class="container py-4">
+    @if (!string.IsNullOrEmpty(Model.AlertMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show rounded-3 border-0 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <strong>Thành công:</strong> @Model.AlertMessage
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Breadcrumb -->
+    <nav class="mb-4">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a asp-page="/Index" class="text-secondary text-decoration-none">Trang chủ</a></li>
+            <li class="breadcrumb-item"><a asp-page="/Index" asp-route-CategoryId="@Model.Product?.CategoryId" class="text-secondary text-decoration-none">@(Model.Product?.Category?.Name ?? "iPhone")</a></li>
+            <li class="breadcrumb-item active text-dark fw-semibold" aria-current="page">@Model.Product?.Name</li>
+        </ol>
+    </nav>
+
+    @if (Model.Product != null)
+    {
+        <div class="row g-5 mb-5">
+            <!-- Left Column: Image Showcase & Gallery (Mockup 3) -->
+            <div class="col-lg-6">
+                <div class="product-showcase-box">
+                    <img id="main-product-img"
+                         src="@(string.IsNullOrEmpty(Model.Product.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : Model.Product.ImageUrl)"
+                         alt="@Model.Product.Name" class="product-showcase-img" />
+                </div>
+                <!-- Thumbnails Gallery -->
+                <div class="gallery-thumbs-row justify-content-center">
+                    <img src="@(string.IsNullOrEmpty(Model.Product.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : Model.Product.ImageUrl)"
+                         class="gallery-thumb active" onclick="changeThumb(this)" />
+                    <img src="https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-naturaltitanium?wid=940&hei=1112&fmt=png-alpha"
+                         class="gallery-thumb" onclick="changeThumb(this)" />
+                    <img src="https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-whitetitanium?wid=940&hei=1112&fmt=png-alpha"
+                         class="gallery-thumb" onclick="changeThumb(this)" />
+                    <img src="https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-blacktitanium?wid=940&hei=1112&fmt=png-alpha"
+                         class="gallery-thumb" onclick="changeThumb(this)" />
+                </div>
+            </div>
+
+            <!-- Right Column: Specs, Swatches & CTA (Mockup 3) -->
+            <div class="col-lg-6">
+                <span class="product-series-tag mb-2">@(Model.Product.ModelSeries ?? "iPhone Series") - Chính Hãng VN/A</span>
+                <h1 class="fs-2 fw-bold text-dark mb-2">@Model.Product.Name</h1>
+
+                <!-- Stock & Guarantee Badges -->
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    @if (Model.Product.IsInStock)
+                    {
+                        <span class="status-pill success">
+                            Còn hàng (@Model.Product.Quantity máy sẵn kho) · Giao nhanh 2h
+                        </span>
+                    }
+                    else
+                    {
+                        <span class="status-pill danger">Tạm hết hàng</span>
+                    }
+                    <span class="text-secondary small">Bảo hành <strong>@Model.Product.WarrantyMonths tháng Apple VN</strong></span>
+                </div>
+
+                <!-- Price Block -->
+                <div class="p-3 bg-white border rounded-3 mb-4 d-flex align-items-center justify-content-between shadow-sm">
+                    <div>
+                        <div class="text-secondary small">Giá ưu đãi đặc quyền:</div>
+                        <span class="fs-2 fw-bold text-dark">@Model.Product.Price.ToString("N0") ₫</span>
+                        <span class="text-secondary text-decoration-line-through ms-2">@((Model.Product.Price * 1.06m).ToString("N0")) ₫</span>
+                        <span class="discount-pill">-6%</span>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-primary bg-opacity-10 text-primary p-2 fw-bold">TRẢ GÓP 0%</span>
+                    </div>
+                </div>
+
+                <!-- Color Swatches -->
+                <div class="swatch-group">
+                    <div class="swatch-label">Màu sắc: <strong id="selected-color-label">@(Model.Product.Color ?? "Mặc định")</strong></div>
+                    <div class="swatches-row">
+                        @{
+                            var allVariants = Model.Variants.Count > 0 ? Model.Variants : new List<Product> { Model.Product };
+                            var colorOptions = allVariants.GroupBy(v => v.Color).Select(g => g.First()).ToList();
+                            string GetColorHex(string? color) => color?.ToLower() switch
+                            {
+                                var c when c != null && c.Contains("sa mạc") => "#c9b19e",
+                                var c when c != null && c.Contains("tự nhiên") => "#9f9b96",
+                                var c when c != null && c.Contains("trắng") => "#f2f1ed",
+                                var c when c != null && (c.Contains("đen") || c.Contains("black")) => "#3c3b3e",
+                                var c when c != null && (c.Contains("xanh lá") || c.Contains("pastel") || c.Contains("green")) => "#b9d9c3",
+                                var c when c != null && (c.Contains("hồng") || c.Contains("pink")) => "#fbd1d7",
+                                var c when c != null && (c.Contains("xanh dương") || c.Contains("blue") || c.Contains("teal")) => "#a5c4db",
+                                var c when c != null && c.Contains("vàng") => "#f8ebb0",
+                                _ => "#0071e3"
+                            };
+                        }
+                        @foreach (var cOpt in colorOptions)
+                        {
+                            <a asp-page="/ProductDetail" asp-route-id="@cOpt.Id" 
+                               class="swatch-btn @(cOpt.Color == Model.Product.Color ? "active" : "")" 
+                               style="background:@GetColorHex(cOpt.Color); display:inline-block; border-radius:50%;" 
+                               title="@cOpt.Color"></a>
+                        }
+                    </div>
+                </div>
+
+                <!-- Storage Pills -->
+                <div class="swatch-group">
+                    <div class="swatch-label">Dung lượng bộ nhớ: <strong>@(Model.Product.Storage ?? "128GB")</strong></div>
+                    <div class="storage-selector-grid">
+                        @{
+                            var storageOpts = allVariants.GroupBy(v => v.Storage)
+                                                         .Select(g => g.First())
+                                                         .OrderBy(v => v.Storage == "128GB" ? 1 : (v.Storage == "256GB" ? 2 : (v.Storage == "512GB" ? 3 : (v.Storage == "1TB" ? 4 : 5))))
+                                                         .ToList();
+                        }
+                        @foreach (var opt in storageOpts)
+                        {
+                            <a asp-page="/ProductDetail" asp-route-id="@opt.Id" 
+                               class="storage-btn text-decoration-none @(opt.Storage == Model.Product.Storage ? "active" : "")">
+                                <div class="storage-capacity">@opt.Storage</div>
+                                <div class="storage-price">@(opt.Storage == "128GB" ? "Tiêu chuẩn" : (opt.Storage == "256GB" ? "Phổ biến nhất" : (opt.Storage == "512GB" ? "Chuyên nghiệp" : "Đỉnh cao")))</div>
+                            </a>
+                        }
+                    </div>
+                </div>
+
+                <!-- Quantity & Actions -->
+                @if (Model.Product.IsInStock)
+                {
+                    <form method="post" asp-page-handler="AddToCart" asp-route-id="@Model.Product.Id" class="mb-4">
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <span class="fw-semibold text-secondary small">Số lượng:</span>
+                            <div class="qty-stepper">
+                                <button type="button" class="qty-btn" onclick="stepDown()">-</button>
+                                <input type="number" id="qty" name="Quantity" value="1" min="1" max="@Model.Product.Quantity" class="qty-val" readonly />
+                                <button type="button" class="qty-btn" onclick="stepUp(@Model.Product.Quantity)">+</button>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <button type="submit" class="apple-cta-primary flex-fill py-3 fs-6">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                                Mua ngay
+                            </button>
+                            <a asp-page="/Cart" class="apple-cta-secondary py-3 px-4">
+                                Xem giỏ hàng
+                            </a>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <button class="btn btn-secondary btn-lg w-100 py-3 disabled rounded-pill mb-4" disabled>Sản Phẩm Tạm Hết Hàng</button>
+                }
+
+                <!-- AppleCare Trade-in Promo Callout -->
+                <div class="p-3 rounded-3 border bg-white shadow-sm">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge bg-warning text-dark fw-bold">ƯU ĐÃI THU CŨ</span>
+                        <span class="fw-bold text-dark small">Thu cũ đổi mới trợ giá lên tới 3.000.000₫</span>
+                    </div>
+                    <ul class="text-secondary small mb-0 ps-3">
+                        <li>Bảo hành chính hãng 12 tháng tại Apple Authorized Service Provider (AASP).</li>
+                        <li>1 đổi 1 trong 30 ngày nếu phát hiện lỗi phần cứng do nhà sản xuất.</li>
+                        <li>Tặng gói bảo dưỡng thiết bị & vệ sinh máy trọn đời tại hệ thống BomChelsea.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3 Tabs: Highlights, Specs, Warranty (Mockup 3) -->
+        <div class="bg-white border rounded-3 p-4 mb-5 shadow-sm">
+            <ul class="nav nav-pills mb-4 gap-2 border-bottom pb-3" id="productTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="btn btn-sm rounded-pill px-4 py-2 fw-bold btn-primary" id="highlights-tab" data-bs-toggle="pill" data-bs-target="#highlights" type="button">
+                        Điểm Nổi Bật
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="btn btn-sm rounded-pill px-4 py-2 fw-bold btn-light text-dark" id="specs-tab" data-bs-toggle="pill" data-bs-target="#specs" type="button">
+                        Thông Số Kỹ Thuật
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="btn btn-sm rounded-pill px-4 py-2 fw-bold btn-light text-dark" id="warranty-tab" data-bs-toggle="pill" data-bs-target="#warranty" type="button">
+                        Chính Sách Bảo Hành
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="productTabsContent">
+                <!-- Tab 1: Highlights -->
+                <div class="tab-pane fade show active" id="highlights" role="tabpanel">
+                    <div class="row g-4 align-items-center">
+                        <div class="col-md-7">
+                            <h3 class="fw-bold text-dark mb-3">Mô Tả & Trải Nghiệm Sản Phẩm</h3>
+                            <p class="text-secondary" style="line-height:1.8;">
+                                @(string.IsNullOrEmpty(Model.Product.Description) ? "iPhone thế hệ mới trang bị khung titan bền bỉ, mỏng nhẹ đỉnh cao với thiết kế viền mỏng ấn tượng nhất từ trước đến nay. Nút Điều Khiển Camera hoàn toàn mới giúp bạn ghi lại những thước phim và bức ảnh tuyệt đẹp chỉ bằng một cử chỉ chạm." : Model.Product.Description)
+                            </p>
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <span class="badge bg-light text-dark border p-2">Titan Cấp Hàng Không Vũ Trụ</span>
+                                <span class="badge bg-light text-dark border p-2">Màn Hình Super Retina XDR</span>
+                                <span class="badge bg-light text-dark border p-2">Camera Fusion 48MP</span>
+                                <span class="badge bg-light text-dark border p-2">Apple Intelligence Ready</span>
+                            </div>
+                        </div>
+                        <div class="col-md-5 text-center">
+                            <img src="@(string.IsNullOrEmpty(Model.Product.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : Model.Product.ImageUrl)"
+                                 alt="@Model.Product.Name" style="max-height: 280px; margin: 0 auto;" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Specs Table -->
+                <div class="tab-pane fade" id="specs" role="tabpanel">
+                    <h4 class="fw-bold text-dark mb-3">Bảng Thông Số Kỹ Thuật Chi Tiết</h4>
+                    <table class="apple-specs-table">
+                        <tbody>
+                            <tr>
+                                <td>Màn hình:</td>
+                                <td>Super Retina XDR OLED, 120Hz ProMotion, Always-On display, 2000 nits</td>
+                            </tr>
+                            <tr>
+                                <td>Bộ vi xử lý:</td>
+                                <td>Chip Apple A18 Pro (CPU 6 lõi, GPU 6 lõi, Neural Engine 16 lõi)</td>
+                            </tr>
+                            <tr>
+                                <td>Camera sau:</td>
+                                <td>Fusion 48MP (ƒ/1.78) + Ultra Wide 48MP + Telephoto 5x 12MP chống rung quang học cảm biến</td>
+                            </tr>
+                            <tr>
+                                <td>Camera trước:</td>
+                                <td>TrueDepth 12MP (ƒ/1.9), tự động lấy nét với Focus Pixels</td>
+                            </tr>
+                            <tr>
+                                <td>Dung lượng lưu trữ:</td>
+                                <td>@(Model.Product.Storage ?? "256GB") NVMe tốc độ cao</td>
+                            </tr>
+                            <tr>
+                                <td>Màu sắc phiên bản:</td>
+                                <td>@(Model.Product.Color ?? "Titan Sa Mạc (Desert Titanium)")</td>
+                            </tr>
+                            <tr>
+                                <td>Chất liệu khung viền:</td>
+                                <td>Khung Titanium cao cấp mài xước, mặt lưng kính nhám Ceramic Shield thế hệ mới</td>
+                            </tr>
+                            <tr>
+                                <td>Kháng nước, bụi:</td>
+                                <td>Chuẩn IP68 (chịu nước ở độ sâu 6m trong tối đa 30 phút theo IEC 60529)</td>
+                            </tr>
+                            <tr>
+                                <td>Cổng kết nối & Sạc:</td>
+                                <td>USB-C hỗ trợ USB 3 (lên đến 10Gb/s), sạc không dây MagSafe 25W</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Tab 3: Warranty Policy -->
+                <div class="tab-pane fade" id="warranty" role="tabpanel">
+                    <h4 class="fw-bold text-dark mb-3">Chính Sách Bảo Hành & Đổi Trả Chính Hãng</h4>
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border h-100">
+                                <h6 class="fw-bold text-dark">🛡️ Bảo Hành 12 Tháng Tại Apple AASP</h6>
+                                <p class="text-secondary small mb-0">
+                                    Sản phẩm được bảo hành toàn diện trong 12 tháng kể từ ngày kích hoạt tại tất cả các Trung Tâm Bảo Hành Uỷ Quyền của Apple (AASP) trên lãnh thổ Việt Nam. Mọi linh kiện thay thế đều là linh kiện chính hãng do Apple cung cấp.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border h-100">
+                                <h6 class="fw-bold text-dark">🔄 Chính Sách 1 Đổi 1 Trong 30 Ngày</h6>
+                                <p class="text-secondary small mb-0">
+                                    Trong vòng 30 ngày đầu tiên nếu máy phát sinh lỗi phần cứng do nhà sản xuất (Màn hình sọc, nguồn không lên, camera lỗi phần cứng), khách hàng được đổi ngay một thân máy mới tương đương nguyên seal.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function selectColor(colorName, btn) {
+            document.querySelectorAll('.swatch-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('selected-color-label').innerText = colorName;
+        }
+
+        function changeThumb(imgEl) {
+            document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
+            imgEl.classList.add('active');
+            document.getElementById('main-product-img').src = imgEl.src;
+        }
+
+        function stepDown() {
+            var el = document.getElementById('qty');
+            var val = parseInt(el.value) || 1;
+            if (val > 1) el.value = val - 1;
+        }
+
+        function stepUp(max) {
+            var el = document.getElementById('qty');
+            var val = parseInt(el.value) || 1;
+            if (val < max) el.value = val + 1;
+        }
+
+        // Tab click handling
+        document.addEventListener('DOMContentLoaded', function() {
+            var tabBtns = document.querySelectorAll('#productTabs button');
+            tabBtns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    tabBtns.forEach(b => {
+                        b.classList.remove('btn-primary');
+                        b.classList.add('btn-light', 'text-dark');
+                    });
+                    btn.classList.remove('btn-light', 'text-dark');
+                    btn.classList.add('btn-primary');
+                });
+            });
+        });
+    </script>
+}
+

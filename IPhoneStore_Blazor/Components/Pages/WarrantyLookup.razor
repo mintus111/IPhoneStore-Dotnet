@@ -1,0 +1,208 @@
+@page "/warranty"
+@inject IDbContextFactory<IPhoneStoreDbContext> DbFactory
+@inject AuthenticationStateProvider AuthProvider
+
+<PageTitle>Tra Cứu Bảo Hành Điện Tử Apple - BomChelsea</PageTitle>
+
+<div class="container py-5" style="max-width: 860px;">
+    <!-- Hero Title (Mockup 12) -->
+    <div class="text-center mb-4">
+        <div class="d-inline-flex align-items-center gap-2 px-3 py-1 bg-primary bg-opacity-10 text-primary rounded-pill mb-2 fw-semibold small">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            HỆ THỐNG TRA CỨU APPLE CARE VIỆT NAM
+        </div>
+        <h1 class="fs-2 fw-bold text-dark mb-2">Tra Cứu Thông Tin Bảo Hành Điện Tử Chính Hãng</h1>
+        <p class="text-secondary small mb-4">
+            Nhập mã <strong>IMEI (15 chữ số)</strong> hoặc <strong>Số điện thoại</strong> đã đăng ký khi mua máy tại BomChelsea.
+        </p>
+
+        <!-- Search Input Bar -->
+        <div class="bg-white border rounded-pill p-2 shadow-sm max-w-lg mx-auto" style="max-width: 650px;">
+            <div class="d-flex align-items-center">
+                <div class="px-3 text-secondary">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <input type="text" @bind="_searchQuery" @bind:event="oninput" @onkeyup="HandleKeyUp"
+                       class="form-control border-0 shadow-none px-2" placeholder="Nhập mã IMEI (VD: 358912345678900) hoặc SĐT..." />
+                <button type="button" class="apple-cta-primary px-4 py-2 fs-6" @onclick="SearchAsync">
+                    Tra cứu ngay
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick suggestion pills -->
+        <div class="mt-3 d-flex align-items-center justify-content-center gap-2 small text-secondary">
+            <span>💡 Mã IMEI mẫu:</span>
+            <button type="button" class="badge bg-light text-primary border text-decoration-none border-0" @onclick='() => QuickSearch("358912345678900")'>358912345678900</button>
+            <button type="button" class="badge bg-light text-primary border text-decoration-none border-0" @onclick='() => QuickSearch("0901234567")'>0901234567</button>
+        </div>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="text-center py-4 text-secondary"><span class="spinner-border spinner-border-sm me-2"></span>Đang kiểm tra dữ liệu bảo hành...</div>
+    }
+    else if (_warranties.Count > 0)
+    {
+        <div class="d-flex flex-column gap-4">
+            @foreach (var w in _warranties)
+            {
+                var remainingDays = (w.EndDate - DateTime.Now).Days;
+                var isActive = w.Status == "Active" && remainingDays >= 0;
+
+                <div class="warranty-cert-card" @key="w.Id">
+                    <div class="row align-items-center g-4">
+                        <div class="col-md-4 text-center">
+                            <img src="@(string.IsNullOrEmpty(w.Product?.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : w.Product?.ImageUrl)"
+                                 alt="@w.Product?.Name" style="max-height: 220px; object-fit: contain; margin: 0 auto;" />
+                            <div class="fw-bold text-dark mt-2">@(w.Product?.Name ?? "Apple iPhone")</div>
+                            <div class="text-secondary small">@(w.Product?.Color ?? "Titan Sa Mạc") · @(w.Product?.Storage ?? "256GB")</div>
+                        </div>
+
+                        <div class="col-md-8">
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pb-3 border-bottom mb-3">
+                                <div>
+                                    <div class="text-secondary small">Trạng thái bảo hành:</div>
+                                    @if (isActive)
+                                    {
+                                        <span class="status-pill success fs-6 mt-1">🟢 Đang bảo hành chính hãng Apple VN</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-pill danger fs-6 mt-1">Hết hạn bảo hành</span>
+                                    }
+                                </div>
+                                <div class="text-end">
+                                    @if (isActive)
+                                    {
+                                        <span class="warranty-days-pill">
+                                            Còn @remainingDays ngày
+                                        </span>
+                                    }
+                                </div>
+                            </div>
+
+                            <div class="row g-2 small mb-3">
+                                <div class="col-6">
+                                    <span class="text-secondary">Mã IMEI:</span><br />
+                                    <strong class="text-dark fs-6 font-monospace">@w.Imei</strong>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-secondary">Chủ sở hữu:</span><br />
+                                    <strong class="text-dark">@(w.Customer?.FullName ?? "Khách hàng BomChelsea")</strong>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-secondary">Ngày kích hoạt:</span><br />
+                                    <span class="text-dark">@w.StartDate.ToString("dd/MM/yyyy")</span>
+                                </div>
+                                <div class="col-6">
+                                    <span class="text-secondary">Ngày hết hạn:</span><br />
+                                    <span class="text-dark">@w.EndDate.ToString("dd/MM/yyyy")</span>
+                                </div>
+                            </div>
+
+                            <!-- 30-Day Policy Alert -->
+                            <div class="p-3 bg-light rounded-3 border mb-3">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="badge bg-success text-white small">1 ĐỔI 1</span>
+                                    <strong class="text-dark small">Chính sách đổi mới 30 ngày:</strong>
+                                </div>
+                                <p class="text-secondary small mb-0">
+                                    Thiết bị đủ điều kiện 1 đổi 1 thân máy mới nếu phát hiện lỗi phần cứng do nhà sản xuất (Màn hình sọc, camera lỗi, nguồn hỏng) trong thời hạn 30 ngày đầu tiên.
+                                </p>
+                            </div>
+
+                            <!-- AASP Support Centers -->
+                            <div class="small text-secondary">
+                                📍 <strong>Địa điểm bảo hành uỷ quyền:</strong> Care1, Thakral One, TopCare, Viettel Store trên toàn quốc.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else if (_searched)
+    {
+        <div class="bg-white border rounded-3 p-5 text-center shadow-sm">
+            <svg width="48" height="48" fill="none" stroke="#ff453a" viewBox="0 0 24 24" class="mb-3"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            <h4 class="fw-bold text-dark">Không tìm thấy thông tin bảo hành</h4>
+            <p class="text-secondary small mb-3">Không có thiết bị nào khớp với mã IMEI hoặc SĐT: <strong>@_searchQuery</strong>.</p>
+            <div class="text-secondary small">Vui lòng kiểm tra lại số IMEI in trên hộp máy hoặc gọi tổng đài 1900.6789 để được hỗ trợ.</div>
+        </div>
+    }
+
+    <!-- Guide Box (Mockup 12) -->
+    <div class="bg-white border rounded-3 p-4 shadow-sm mt-4">
+        <h3 class="fs-6 fw-bold text-dark mb-2">💡 Hướng dẫn lấy mã IMEI / Serial trên iPhone của bạn:</h3>
+        <ul class="text-secondary small mb-0 ps-3" style="line-height:1.8;">
+            <li><strong>Cách 1:</strong> Mở bàn phím gọi điện thoại và bấm cú pháp <code>*#06#</code>. Màn hình sẽ ngay lập tức hiển thị mã IMEI 15 chữ số.</li>
+            <li><strong>Cách 2:</strong> Vào <strong>Cài đặt &gt; Cài đặt chung &gt; Giới thiệu</strong>, kéo xuống mục IMEI hoặc Số Serial để sao chép.</li>
+            <li><strong>Cách 3:</strong> Xem trực tiếp trên vỏ hộp đựng máy hoặc khay SIM của iPhone.</li>
+        </ul>
+    </div>
+</div>
+
+@code {
+    private string _searchQuery = "";
+    private bool _loading = false;
+    private bool _searched = false;
+    private List<Warranty> _warranties = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        var userId = state.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var customer = await db.Customers.FirstOrDefaultAsync(c => c.UserId == userId);
+            if (customer != null)
+            {
+                _warranties = await db.Warranties
+                    .Include(w => w.Product)
+                    .Where(w => w.CustomerId == customer.Id)
+                    .OrderByDescending(w => w.StartDate)
+                    .ToListAsync();
+            }
+        }
+    }
+
+    private async Task SearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_searchQuery)) return;
+        _loading = true;
+        _searched = true;
+
+        try
+        {
+            var q = _searchQuery.Trim();
+            await using var db = await DbFactory.CreateDbContextAsync();
+            _warranties = await db.Warranties
+                .Include(w => w.Product)
+                .Include(w => w.Customer)
+                .Where(w => w.Imei == q || (w.Customer != null && w.Customer.PhoneNumber == q))
+                .OrderByDescending(w => w.StartDate)
+                .ToListAsync();
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private async Task QuickSearch(string val)
+    {
+        _searchQuery = val;
+        await SearchAsync();
+    }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchAsync();
+        }
+    }
+}
+

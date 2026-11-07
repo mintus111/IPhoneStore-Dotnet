@@ -1,0 +1,514 @@
+@page
+@model IPhoneStore_Razor.Pages.MyOrdersModel
+@{
+    ViewData["Title"] = "Đơn Hàng Của Tôi - BomChelsea";
+}
+
+<div class="container py-4">
+@if (Model.IsGuest)
+{
+    <div class="text-center py-5 bg-white rounded-4 border shadow-sm mx-auto p-4 p-md-5 my-4" style="max-width: 620px;">
+        <div class="user-avatar-circle mx-auto mb-3" style="width: 72px; height: 72px; background: #f0f7ff; color: #0071e3; font-size: 2rem;">
+            <svg width="36" height="36" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+        </div>
+        <h3 class="fw-bold text-dark mb-2">Vui lòng đăng nhập để xem đơn hàng</h3>
+        <p class="text-secondary mb-4" style="line-height: 1.6;">
+            Bạn cần đăng nhập tài khoản BomChelsea để tra cứu chi tiết lộ trình vận chuyển, thông tin bảo hành điện tử và mã IMEI thiết bị của bạn.
+        </p>
+        <div class="d-flex justify-content-center gap-3">
+            <button type="button" class="btn btn-primary rounded-pill px-4 py-2 fw-semibold" data-bs-toggle="modal" data-bs-target="#authModal">
+                Đăng nhập ngay
+            </button>
+            <a asp-page="/Index" class="btn btn-outline-secondary rounded-pill px-4 py-2">
+                Tiếp tục mua sắm
+            </a>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row g-4">
+        <!-- Left: Customer Profile Sidebar (Mockup 10) -->
+        <div class="col-lg-3">
+            <div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
+                <div class="text-center pb-3 border-bottom mb-3">
+                    <div class="user-avatar-circle mx-auto mb-2" style="width: 58px; height: 58px; font-size: 1.5rem;">
+                        @(User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")
+                    </div>
+                    <h3 class="fs-5 fw-bold text-dark mb-0">@(Model.Customer?.FullName ?? User.Identity?.Name)</h3>
+                    <div class="text-secondary small">Thành viên VIP BomChelsea</div>
+                </div>
+
+                <div class="d-flex flex-column gap-1">
+                    <a href="javascript:void(0);" class="admin-nav-item" data-bs-toggle="modal" data-bs-target="#profileModal">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                        <span>Thông tin cá nhân</span>
+                    </a>
+                    <a asp-page="/MyOrders" class="admin-nav-item active">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                        <span>Đơn hàng của tôi</span>
+                        <span class="badge bg-primary text-white rounded-pill ms-auto">@Model.Orders.Count</span>
+                    </a>
+                    <a asp-page="/Warranty" class="admin-nav-item">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        <span>Bảo hành thiết bị</span>
+                    </a>
+                    <hr class="my-2" />
+                    <a asp-page="/Account/Logout" class="admin-nav-item text-danger">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                        <span>Đăng xuất</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Order History & Status Tabs -->
+        <div class="col-lg-9">
+            @if (TempData["SuccessMessage"] != null)
+            {
+                <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm d-flex align-items-center gap-2 mb-4" role="alert">
+                    <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    <div><strong>Thành công:</strong> @TempData["SuccessMessage"]</div>
+                    <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert"></button>
+                </div>
+            }
+
+            <div class="bg-white border rounded-3 p-4 shadow-sm mb-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+                    <div>
+                        <h2 class="fs-4 fw-bold text-dark mb-1">Đơn Hàng Của Tôi</h2>
+                        <div class="text-secondary small">Quản lý và tra cứu trạng thái giao hàng, IMEI thiết bị</div>
+                    </div>
+                    <div class="apple-search-pill-container" style="width: 260px;">
+                        <svg class="search-icon-inside" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        <input type="text" id="orderSearchInput" class="apple-search-pill" placeholder="Tìm theo mã đơn..." onkeyup="filterOrders()" />
+                    </div>
+                </div>
+
+                <!-- Status Filter Tabs -->
+                <div class="d-flex flex-wrap gap-2 border-bottom pb-3 mb-4">
+                    <button class="btn btn-sm rounded-pill px-3 py-2 fw-semibold btn-primary" onclick="filterStatus('all', this)">Tất cả (@Model.Orders.Count)</button>
+                    <button class="btn btn-sm rounded-pill px-3 py-2 fw-semibold btn-light text-dark" onclick="filterStatus('Pending', this)">Chờ duyệt (@Model.Orders.Count(o => o.OrderStatus == "Pending" || o.OrderStatus == "Chờ duyệt"))</button>
+                    <button class="btn btn-sm rounded-pill px-3 py-2 fw-semibold btn-light text-dark" onclick="filterStatus('Confirmed', this)">Đã xác nhận (@Model.Orders.Count(o => o.OrderStatus == "Confirmed"))</button>
+                    <button class="btn btn-sm rounded-pill px-3 py-2 fw-semibold btn-light text-dark" onclick="filterStatus('Shipping', this)">Đang giao (@Model.Orders.Count(o => o.OrderStatus == "Shipping"))</button>
+                    <button class="btn btn-sm rounded-pill px-3 py-2 fw-semibold btn-light text-dark" onclick="filterStatus('Completed', this)">Hoàn tất (@Model.Orders.Count(o => o.OrderStatus == "Completed"))</button>
+                    <button class="btn btn-sm rounded-pill px-3 py-2 fw-semibold btn-light text-dark" onclick="filterStatus('Cancelled', this)">Đã hủy (@Model.Orders.Count(o => o.OrderStatus == "Cancelled"))</button>
+                </div>
+
+                @if (Model.Orders.Count == 0)
+                {
+                    <div class="text-center py-5">
+                        <svg width="48" height="48" fill="none" stroke="#86868b" viewBox="0 0 24 24" class="mb-3"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                        <h4 class="fw-bold text-dark">Bạn chưa có đơn hàng nào</h4>
+                        <p class="text-secondary small mb-3">Các đơn hàng iPhone bạn đặt mua sẽ hiển thị chi tiết tại đây.</p>
+                        <a asp-page="/Index" class="apple-cta-primary">Khám phá iPhone ngay</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="d-flex flex-column gap-3" id="ordersContainer">
+                        @foreach (var order in Model.Orders)
+                        {
+                            <div class="border rounded-3 p-3 p-md-4 order-card" data-status="@order.OrderStatus" data-code="@($"#IPS{order.Id:D6}")">
+                                <div class="d-flex flex-wrap justify-content-between align-items-center pb-3 border-bottom gap-2">
+                                    <div>
+                                        <span class="fw-bold text-dark fs-6">Mã đơn: <span class="text-primary">#IPS@(order.Id.ToString("D6"))</span></span>
+                                        <span class="text-secondary small ms-2">Ngày đặt: @order.OrderDate.ToString("dd/MM/yyyy HH:mm")</span>
+                                    </div>
+                                    <div>
+                                        @if (order.OrderStatus == "Completed")
+                                        {
+                                            <span class="status-pill success">Hoàn tất nhận hàng</span>
+                                        }
+                                        else if (order.OrderStatus == "Shipping")
+                                        {
+                                            <span class="status-pill info">Đang giao hàng (GHN)</span>
+                                        }
+                                        else if (order.OrderStatus == "Confirmed")
+                                        {
+                                            <span class="status-pill warning">Đã xác nhận & Gán kho</span>
+                                        }
+                                        else if (order.OrderStatus == "Cancelled")
+                                        {
+                                            <span class="status-pill danger">Đã hủy đơn hàng</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="status-pill warning">Chờ xác nhận</span>
+                                        }
+                                    </div>
+                                </div>
+
+                                <!-- Items Preview -->
+                                <div class="py-3 border-bottom">
+                                    @foreach (var d in order.OrderDetails)
+                                    {
+                                        <div class="d-flex align-items-center justify-content-between py-2">
+                                            <div class="d-flex align-items-center gap-3">
+                                                <img src="@(string.IsNullOrEmpty(d.Product?.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : d.Product?.ImageUrl)"
+                                                     alt="@d.Product?.Name" style="width: 48px; height: 48px; object-fit: contain;" />
+                                                <div>
+                                                    <div class="fw-bold text-dark small">@d.Product?.Name</div>
+                                                    <div class="text-secondary" style="font-size: 0.75rem;">@d.Product?.Color · @d.Product?.Storage · Số lượng: @d.Quantity</div>
+                                                </div>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="fw-bold text-dark small">@d.TotalPrice.ToString("N0") ₫</div>
+                                                <div class="text-secondary" style="font-size: 0.75rem;">@d.UnitPrice.ToString("N0") ₫/máy</div>
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+
+                                <!-- Footer Actions & Total -->
+                                <div class="d-flex flex-wrap justify-content-between align-items-center pt-3 gap-2">
+                                    <div>
+                                        <span class="text-secondary small">Thanh toán: <strong class="text-dark">@order.PaymentMethod</strong></span>
+                                        @if (order.PaymentStatus == "Paid" || order.PaymentStatus == "Đã thanh toán")
+                                        {
+                                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 ms-1" style="font-size:0.72rem;">Đã thanh toán</span>
+                                        }
+                                        else if (order.PaymentStatus == "Chờ hoàn tiền")
+                                        {
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 ms-1" style="font-size:0.72rem;">Chờ hoàn tiền</span>
+                                        }
+                                        else if (order.PaymentStatus == "Đã hoàn tiền")
+                                        {
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 ms-1" style="font-size:0.72rem;">Đã hoàn tiền</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-warning bg-opacity-10 text-warning text-dark border border-warning border-opacity-25 ms-1" style="font-size:0.72rem;">Chưa thanh toán</span>
+                                        }
+                                        <div class="text-secondary small">Nơi nhận: @order.ShippingAddress</div>
+                                    </div>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div>
+                                            <span class="text-secondary small">Tổng tiền:</span>
+                                            <span class="fw-bold text-primary fs-5 ms-1">@order.TotalAmount.ToString("N0") ₫</span>
+                                        </div>
+                                        <button type="button" class="btn btn-primary btn-sm rounded-pill px-3"
+                                                data-bs-toggle="modal" data-bs-target="#orderModal-@order.Id">
+                                            🚚 Chi tiết đơn hàng & tiến trình &rarr;
+                                        </button>
+                                        @if (order.OrderStatus == "Pending" || order.OrderStatus == "Chờ duyệt")
+                                        {
+                                            <form method="post" asp-page-handler="Cancel" asp-route-id="@order.Id" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này không?');">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                                                    Hủy đơn
+                                                </button>
+                                            </form>
+                                        }
+                                        else if (order.OrderStatus == "Cancelled")
+                                        {
+                                            <span class="badge bg-danger bg-opacity-10 text-danger p-2 rounded-pill small fw-semibold">
+                                                ✕ Đã hủy đơn
+                                            </span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ================= MODAL CHI TIẾT ĐƠN HÀNG & TIẾN TRÌNH GIAO ================= -->
+                            <div class="modal fade" id="orderModal-@order.Id" tabindex="-1">
+                                <div class="modal-dialog modal-lg modal-dialog-centered">
+                                    <div class="modal-content border-0 shadow-lg" style="border-radius:20px; overflow:hidden;">
+                                        <div class="modal-header border-bottom py-3 px-4 bg-light">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <h5 class="modal-title fw-bold text-dark mb-0">Chi Tiết Đơn Hàng <span class="text-primary">#IPS@(order.Id.ToString("D6"))</span></h5>
+                                                @if (order.OrderStatus == "Completed")
+                                                {
+                                                    <span class="status-pill success">Đã giao thành công</span>
+                                                }
+                                                else if (order.OrderStatus == "Shipping")
+                                                {
+                                                    <span class="status-pill info">Đang giao hàng</span>
+                                                }
+                                                else if (order.OrderStatus == "Confirmed")
+                                                {
+                                                    <span class="status-pill warning">Đã duyệt & Đóng gói</span>
+                                                }
+                                                else if (order.OrderStatus == "Cancelled")
+                                                {
+                                                    <span class="status-pill danger">Đã hủy</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="status-pill warning">Chờ xác nhận</span>
+                                                }
+                                            </div>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body p-4">
+                                            @if (order.OrderStatus == "Cancelled")
+                                            {
+                                                <div class="alert alert-danger border-0 rounded-3 p-3 mb-4 d-flex align-items-center gap-3">
+                                                    <div class="rounded-circle bg-danger bg-opacity-10 text-danger d-flex align-items-center justify-content-center" style="width: 44px; height: 44px; flex-shrink: 0; font-size: 1.3rem;">
+                                                        ✕
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-bold text-danger">Đơn hàng này đã được hủy</div>
+                                                        <div class="small text-secondary">Đơn hàng đã dừng xử lý. Toàn bộ số lượng sản phẩm và mã IMEI liên quan đã được giải phóng về kho sẵn sàng bán.</div>
+                                                    </div>
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <!-- Stepper Delivery Timeline -->
+                                                <div class="apple-stepper mb-4">
+                                                    <div class="stepper-line">
+                                                        <div class="stepper-line-progress" style="width: @(order.OrderStatus == "Completed" ? "100%" : (order.OrderStatus == "Shipping" ? "75%" : (order.OrderStatus == "Confirmed" ? "45%" : "15%")));"></div>
+                                                    </div>
+                                                    <div class="stepper-step completed">
+                                                        <div class="step-circle">✓</div>
+                                                        <div class="step-label">Đặt hàng thành công</div>
+                                                    </div>
+                                                    <div class="stepper-step @(order.OrderStatus == "Confirmed" || order.OrderStatus == "Shipping" || order.OrderStatus == "Completed" ? "completed" : "")">
+                                                        <div class="step-circle">@(order.OrderStatus == "Confirmed" || order.OrderStatus == "Shipping" || order.OrderStatus == "Completed" ? "✓" : "2")</div>
+                                                        <div class="step-label">Đã duyệt & Xuất kho</div>
+                                                    </div>
+                                                    <div class="stepper-step @(order.OrderStatus == "Shipping" ? "active" : (order.OrderStatus == "Completed" ? "completed" : ""))">
+                                                        <div class="step-circle">@(order.OrderStatus == "Completed" ? "✓" : "3")</div>
+                                                        <div class="step-label">Đang giao hàng (GHN 2H)</div>
+                                                    </div>
+                                                    <div class="stepper-step @(order.OrderStatus == "Completed" ? "completed" : "")">
+                                                        <div class="step-circle">@(order.OrderStatus == "Completed" ? "✓" : "4")</div>
+                                                        <div class="step-label">Hoàn tất nhận máy</div>
+                                                    </div>
+                                                </div>
+                                            }
+
+                                            <!-- Thông tin giao nhận -->
+                                            <div class="row g-3 mb-4">
+                                                <div class="col-md-6">
+                                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                                        <div class="fw-bold text-dark small mb-2">🚚 Trạng Thái Vận Chuyển</div>
+                                                        <div class="small text-secondary mb-1">Đơn vị: <strong>Giao Hàng Nhanh Express</strong></div>
+                                                        <div class="small text-secondary mb-1">Mã vận đơn: <strong class="text-primary font-monospace">GHN-@order.Id.ToString("D4")8921</strong></div>
+                                                        <div class="small text-secondary mb-1">Thời gian đặt: <strong>@order.OrderDate.ToString("dd/MM/yyyy HH:mm")</strong></div>
+                                                        <div class="small text-secondary">
+                                                            Thanh toán: <strong class="text-dark">@order.PaymentMethod</strong>
+                                                            @if (order.PaymentStatus == "Paid" || order.PaymentStatus == "Đã thanh toán")
+                                                            {
+                                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 ms-1">Đã thanh toán</span>
+                                                            }
+                                                            else if (order.PaymentStatus == "Chờ hoàn tiền")
+                                                            {
+                                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 ms-1">Chờ hoàn tiền</span>
+                                                            }
+                                                            else if (order.PaymentStatus == "Đã hoàn tiền")
+                                                            {
+                                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 ms-1">Đã hoàn tiền</span>
+                                                            }
+                                                            else
+                                                            {
+                                                                <span class="badge bg-warning bg-opacity-10 text-warning text-dark border border-warning border-opacity-25 ms-1">Chưa thanh toán</span>
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="p-3 bg-light rounded-3 border h-100">
+                                                        <div class="fw-bold text-dark small mb-2">📍 Địa Chỉ & Người Nhận</div>
+                                                        <div class="small text-secondary mb-1">Địa chỉ giao: <strong>@order.ShippingAddress</strong></div>
+                                                        <div class="small text-secondary mb-1">Ghi chú: @(string.IsNullOrEmpty(order.Notes) ? "Không có" : order.Notes)</div>
+                                                        <div class="small text-secondary">Quyền lợi: <strong>Miễn phí kích hoạt & dán màn hình</strong></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- Bảng thiết bị xuất kho kèm mã IMEI -->
+                                            <div class="p-3 border rounded-3 bg-white">
+                                                <div class="fw-bold text-dark small mb-2">📱 Danh Sách Thiết Bị & Mã IMEI/Serial Đã Gán Kho:</div>
+                                                <div class="table-responsive">
+                                                    <table class="table align-middle mb-0">
+                                                        <thead class="bg-light small">
+                                                            <tr>
+                                                                <th>Sản phẩm</th>
+                                                                <th>Số lượng</th>
+                                                                <th>Mã IMEI / Serial cụ thể</th>
+                                                                <th>Đơn giá</th>
+                                                                <th class="text-end">Thành tiền</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            @foreach (var d in order.OrderDetails)
+                                                            {
+                                                                <tr>
+                                                                    <td>
+                                                                        <div class="d-flex align-items-center gap-2">
+                                                                            <img src="@(string.IsNullOrEmpty(d.Product?.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : d.Product?.ImageUrl)"
+                                                                                 style="width: 36px; height: 36px; object-fit: contain;" />
+                                                                            <div>
+                                                                                <div class="fw-bold small text-dark">@d.Product?.Name</div>
+                                                                                <div class="text-secondary" style="font-size:0.75rem;">@d.Product?.Color · @d.Product?.Storage</div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td class="small fw-semibold">x@d.Quantity</td>
+                                                                    <td>
+                                                                        @if (!string.IsNullOrEmpty(d.ImeiNumber))
+                                                                        {
+                                                                            <span class="badge bg-dark text-white font-monospace p-2">
+                                                                                IMEI: @d.ImeiNumber
+                                                                            </span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="badge bg-secondary bg-opacity-25 text-dark small">
+                                                                                Đang gán mã IMEI khi xuất kho
+                                                                            </span>
+                                                                        }
+                                                                    </td>
+                                                                    <td class="small">@d.UnitPrice.ToString("N0") ₫</td>
+                                                                    <td class="small fw-bold text-primary text-end">@d.TotalPrice.ToString("N0") ₫</td>
+                                                                </tr>
+                                                            }
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer border-top py-2 px-4 bg-light d-flex justify-content-between">
+                                            <div>
+                                                <span class="text-secondary small">Tổng thanh toán: </span>
+                                                <strong class="text-primary fs-5">@order.TotalAmount.ToString("N0") ₫</strong>
+                                            </div>
+                                            <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div id="noStatusOrders" class="text-center py-5 bg-light rounded-3 border mt-3 d-none">
+                        <svg width="48" height="48" fill="none" stroke="#86868b" viewBox="0 0 24 24" class="mb-3"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                        <h5 class="fw-bold text-dark mb-1">Không có đơn hàng nào</h5>
+                        <p class="text-secondary small mb-0">Không tìm thấy đơn hàng nào ở trạng thái này.</p>
+                    </div>
+
+                    <!-- Pagination -->
+                    <nav class="apple-pagination mt-4" id="ordersPagination">
+                        <span class="page-item active">1</span>
+                    </nav>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= PROFILE MODAL ================= -->
+    <div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header border-0 bg-light pb-0">
+                    <h5 class="modal-title fw-bold text-dark" id="profileModalLabel">Thông Tin Cá Nhân</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="text-center pb-3 border-bottom mb-3">
+                        <div class="user-avatar-circle mx-auto mb-2" style="width: 64px; height: 64px; font-size: 1.6rem;">
+                            @(User.Identity?.Name?.Substring(0, 1).ToUpper() ?? "U")
+                        </div>
+                        <h4 class="fw-bold text-dark mb-0">@(Model.Customer?.FullName ?? User.Identity?.Name)</h4>
+                        <span class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-1 mt-1 fw-semibold">Thành viên VIP BomChelsea</span>
+                    </div>
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-secondary small">Tên tài khoản:</span>
+                            <span class="fw-semibold text-dark small">@User.Identity?.Name</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-secondary small">Họ và tên:</span>
+                            <span class="fw-semibold text-dark small">@(Model.Customer?.FullName ?? "Chưa cập nhật")</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-secondary small">Số điện thoại:</span>
+                            <span class="fw-semibold text-dark small">@(Model.Customer?.PhoneNumber ?? "Chưa cập nhật")</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-secondary small">Email:</span>
+                            <span class="fw-semibold text-dark small">@(Model.Customer?.Email ?? "Chưa cập nhật")</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                            <span class="text-secondary small">Địa chỉ nhận hàng:</span>
+                            <span class="fw-semibold text-dark small text-end" style="max-width: 60%;">@(Model.Customer?.Address ?? "Chưa cập nhật")</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center py-2">
+                            <span class="text-secondary small">Tổng đơn hàng:</span>
+                            <span class="badge bg-success bg-opacity-10 text-success fw-bold">@Model.Orders.Count đơn</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light">
+                    <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+</div>
+
+@section Scripts {
+    <script>
+        function filterStatus(status, btn) {
+            document.querySelectorAll('.btn-sm.rounded-pill').forEach(b => {
+                b.classList.remove('btn-primary');
+                b.classList.add('btn-light', 'text-dark');
+            });
+            btn.classList.remove('btn-light', 'text-dark');
+            btn.classList.add('btn-primary');
+
+            var cards = document.querySelectorAll('.order-card');
+            var visibleCount = 0;
+            cards.forEach(card => {
+                if (status === 'all' || card.getAttribute('data-status') === status) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            var noOrders = document.getElementById('noStatusOrders');
+            var pagination = document.getElementById('ordersPagination');
+            if (noOrders) {
+                if (visibleCount === 0) {
+                    noOrders.classList.remove('d-none');
+                    if (pagination) pagination.classList.add('d-none');
+                } else {
+                    noOrders.classList.add('d-none');
+                    if (pagination) pagination.classList.remove('d-none');
+                }
+            }
+        }
+
+        function filterOrders() {
+            var val = document.getElementById('orderSearchInput').value.trim().toLowerCase();
+            var cards = document.querySelectorAll('.order-card');
+            var visibleCount = 0;
+            cards.forEach(card => {
+                var code = (card.getAttribute('data-code') || '').toLowerCase();
+                if (code.includes(val)) {
+                    card.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+
+            var noOrders = document.getElementById('noStatusOrders');
+            var pagination = document.getElementById('ordersPagination');
+            if (noOrders) {
+                if (visibleCount === 0) {
+                    noOrders.classList.remove('d-none');
+                    if (pagination) pagination.classList.add('d-none');
+                } else {
+                    noOrders.classList.add('d-none');
+                    if (pagination) pagination.classList.remove('d-none');
+                }
+            }
+        }
+    </script>
+}
+

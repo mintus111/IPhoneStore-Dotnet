@@ -1,0 +1,260 @@
+@model List<Product>
+@{
+    ViewData["Title"] = "Sản phẩm & Biến thể iPhone";
+    var categories = ViewBag.Categories as List<Category> ?? new List<Category>();
+    string? currentStatus = ViewBag.StatusFilter as string;
+    string? currentSearch = ViewBag.SearchKeyword as string;
+    int? currentCatId = ViewBag.CategoryId as int?;
+    string? currentStorage = ViewBag.StorageFilter as string;
+}
+
+<style>
+    .product-action-btn {
+        width: 74px;
+        height: 31px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.78rem;
+        font-weight: 600;
+        white-space: nowrap;
+        border-radius: 6px;
+        padding: 0;
+        line-height: 1;
+        text-decoration: none;
+        transition: all 0.15s ease-in-out;
+    }
+</style>
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h1 class="h3 fw-bold text-dark mb-1">Sản phẩm &amp; Biến thể iPhone</h1>
+        <p class="text-muted small mb-0">Quản lý mã SKU, kiểm soát giá niêm yết chính hãng, màu sắc, dung lượng và luồng tồn kho.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-area="Admin" asp-controller="Admin" asp-action="BatchImport" class="btn btn-outline-secondary btn-sm px-3 rounded-pill fw-semibold">
+            📥 Nhập lô IMEI
+        </a>
+        <a asp-area="Admin" asp-controller="Admin" asp-action="EditProduct" class="btn btn-primary btn-sm px-3 rounded-pill fw-semibold shadow-sm">
+            + Thêm sản phẩm mới
+        </a>
+    </div>
+</div>
+
+<!-- ================= STATUS TABS ================= -->
+<div class="d-flex align-items-center gap-2 border-bottom mb-4 pb-2">
+    <a asp-area="Admin" asp-controller="Admin" asp-action="Products" 
+       asp-route-statusFilter="" asp-route-searchKeyword="@currentSearch" asp-route-categoryId="@currentCatId" asp-route-storageFilter="@currentStorage"
+       class="btn btn-sm @(string.IsNullOrEmpty(currentStatus) ? "btn-dark fw-bold" : "btn-light text-muted") rounded-pill px-3">
+        Tất cả (@(ViewBag.AllCount ?? Model.Count))
+    </a>
+    <a asp-area="Admin" asp-controller="Admin" asp-action="Products" 
+       asp-route-statusFilter="active" asp-route-searchKeyword="@currentSearch" asp-route-categoryId="@currentCatId" asp-route-storageFilter="@currentStorage"
+       class="btn btn-sm @(currentStatus == "active" ? "btn-dark fw-bold" : "btn-light text-muted") rounded-pill px-3">
+        Đang kinh doanh (@(ViewBag.ActiveCount ?? 0))
+    </a>
+    <a asp-area="Admin" asp-controller="Admin" asp-action="Products" 
+       asp-route-statusFilter="out_of_stock" asp-route-searchKeyword="@currentSearch" asp-route-categoryId="@currentCatId" asp-route-storageFilter="@currentStorage"
+       class="btn btn-sm @(currentStatus == "out_of_stock" ? "btn-dark fw-bold" : "btn-light text-muted") rounded-pill px-3">
+        Hết hàng (@(ViewBag.OutOfStockCount ?? 0))
+    </a>
+    <a asp-area="Admin" asp-controller="Admin" asp-action="Products" 
+       asp-route-statusFilter="hidden" asp-route-searchKeyword="@currentSearch" asp-route-categoryId="@currentCatId" asp-route-storageFilter="@currentStorage"
+       class="btn btn-sm @(currentStatus == "hidden" ? "btn-dark fw-bold" : "btn-light text-muted") rounded-pill px-3">
+        Tạm ẩn (@(ViewBag.HiddenCount ?? 0))
+    </a>
+</div>
+
+<!-- ================= SEARCH & FILTERS BAR ================= -->
+<div class="aar-card p-3 mb-4">
+    <form asp-area="Admin" asp-controller="Admin" asp-action="Products" method="get" class="row g-2 align-items-center">
+        <input type="hidden" name="statusFilter" value="@currentStatus" />
+
+        <div class="col-lg-4 col-md-6">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light border-end-0">🔍</span>
+                <input type="text" name="searchKeyword" value="@currentSearch" class="form-control border-start-0" placeholder="Tìm theo tên sản phẩm, SKU..." />
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-3">
+            <select name="categoryId" class="form-select form-select-sm">
+                <option value="">-- Tất cả thế hệ iPhone --</option>
+                @foreach (var c in categories)
+                {
+                    <option value="@c.Id" selected="@(currentCatId == c.Id)">@c.Name</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-lg-2 col-md-3">
+            <select name="storageFilter" class="form-select form-select-sm">
+                <option value="">-- Dung lượng --</option>
+                <option value="128GB" selected="@(currentStorage == "128GB")">128GB</option>
+                <option value="256GB" selected="@(currentStorage == "256GB")">256GB</option>
+                <option value="512GB" selected="@(currentStorage == "512GB")">512GB</option>
+                <option value="1TB" selected="@(currentStorage == "1TB")">1TB</option>
+            </select>
+        </div>
+
+        <div class="col-lg-3 col-md-12 d-flex gap-2 justify-content-end">
+            <button type="submit" class="btn btn-primary btn-sm px-3 fw-semibold">Áp dụng</button>
+            <a asp-area="Admin" asp-controller="Admin" asp-action="Products" class="btn btn-light btn-sm px-3">Đặt lại</a>
+        </div>
+    </form>
+</div>
+
+<!-- ================= PRODUCTS TABLE ================= -->
+<div class="aar-card">
+    <div class="table-responsive">
+        <table class="aar-table">
+            <thead>
+                <tr>
+                    <th style="width: 320px;">Sản phẩm &amp; SKU</th>
+                    <th>Dòng máy</th>
+                    <th>Dung lượng &amp; Màu</th>
+                    <th>Giá niêm yết</th>
+                    <th>Giá bán AAR</th>
+                    <th>Tồn kho</th>
+                    <th>Trạng thái</th>
+                    <th style="text-align: right; width: 250px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Any())
+                {
+                    foreach (var p in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="@(string.IsNullOrEmpty(p.ImageUrl) ? "/images/products/iphone16promax.png" : p.ImageUrl)" 
+                                         alt="@p.Name" 
+                                         style="width: 44px; height: 44px; object-fit: contain; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 2px;" />
+                                    <div>
+                                        <div class="fw-bold text-dark fs-6">@p.Name</div>
+                                        <div class="d-flex align-items-center gap-2 mt-1">
+                                            <span class="badge bg-light text-dark border font-monospace small">
+                                                SKU: @(p.Sku ?? "IP-" + p.Id)
+                                            </span>
+                                            <span class="text-muted small">ID: #@p.Id</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary bg-opacity-10 text-dark fw-semibold">
+                                    @(p.Category?.Name ?? p.ModelSeries)
+                                </span>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">@p.Storage</div>
+                                <div class="text-muted small">@p.Color</div>
+                            </td>
+                            <td>
+                                @if (p.ListedPrice.HasValue)
+                                {
+                                    <span class="text-muted text-decoration-line-through small">
+                                        @p.ListedPrice.Value.ToString("N0") ₫
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">-</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="fw-bold text-primary">
+                                    @p.Price.ToString("N0") ₫
+                                </div>
+                            </td>
+                            <td>
+                                @if (p.Quantity == 0)
+                                {
+                                    <span class="aar-pill aar-pill-red">Hết hàng</span>
+                                }
+                                else if (p.Quantity <= 5)
+                                {
+                                    <span class="aar-pill aar-pill-amber">Còn @p.Quantity máy</span>
+                                }
+                                else
+                                {
+                                    <span class="aar-pill aar-pill-green">@p.Quantity máy</span>
+                                }
+                            </td>
+                            <td>
+                                @if (p.IsActive)
+                                {
+                                    <span class="badge bg-success bg-opacity-10 text-success fw-semibold">Kinh doanh</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary fw-semibold">Tạm ẩn</span>
+                                }
+                            </td>
+                            <td style="text-align: right;">
+                                <div class="d-inline-flex align-items-center justify-content-end gap-1">
+                                    <a asp-area="Admin" asp-controller="Admin" asp-action="EditProduct" asp-route-id="@p.Id" 
+                                       class="btn btn-outline-secondary btn-sm product-action-btn" title="Chỉnh sửa sản phẩm">
+                                        Sửa
+                                    </a>
+                                    <a asp-area="Admin" asp-controller="Admin" asp-action="Inventory" asp-route-skuFilter="@p.Sku" 
+                                       class="btn btn-outline-primary btn-sm product-action-btn" title="Xem danh sách IMEI của máy này">
+                                        Kho IMEI
+                                    </a>
+                                    <form asp-area="Admin" asp-controller="Admin" asp-action="ToggleProductStatus" method="post" class="d-inline m-0">
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="id" value="@p.Id" />
+                                        <button type="submit" 
+                                                class="btn @(p.IsActive ? "btn-outline-warning" : "btn-outline-success") btn-sm product-action-btn" 
+                                                title="@(p.IsActive ? "Ẩn khỏi cửa hàng" : "Mở bán lại")">
+                                            @(p.IsActive ? "Ẩn" : "Hiện")
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <div class="h5 mb-2">Không tìm thấy sản phẩm nào</div>
+                            <p class="small">Thử điều chỉnh lại bộ lọc hoặc từ khóa tìm kiếm.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    @{
+        int currentPage = ViewBag.CurrentPage ?? 1;
+        int totalPages = ViewBag.TotalPages ?? 1;
+    }
+    @if (totalPages > 1)
+    {
+        <div class="aar-card-header bg-light d-flex justify-content-between align-items-center">
+            <span class="small text-muted">Hiển thị trang @currentPage / @totalPages (Tổng @ViewBag.TotalCount sản phẩm)</span>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(currentPage <= 1 ? "disabled" : "")">
+                    <a class="page-link" asp-area="Admin" asp-controller="Admin" asp-action="Products"
+                       asp-route-currentPage="@(currentPage - 1)" asp-route-statusFilter="@currentStatus" asp-route-searchKeyword="@currentSearch" asp-route-categoryId="@currentCatId" asp-route-storageFilter="@currentStorage">Trước</a>
+                </li>
+                @for (int p = 1; p <= totalPages; p++)
+                {
+                    <li class="page-item @(p == currentPage ? "active" : "")">
+                        <a class="page-link" asp-area="Admin" asp-controller="Admin" asp-action="Products"
+                           asp-route-currentPage="@p" asp-route-statusFilter="@currentStatus" asp-route-searchKeyword="@currentSearch" asp-route-categoryId="@currentCatId" asp-route-storageFilter="@currentStorage">@p</a>
+                    </li>
+                }
+                <li class="page-item @(currentPage >= totalPages ? "disabled" : "")">
+                    <a class="page-link" asp-area="Admin" asp-controller="Admin" asp-action="Products"
+                       asp-route-currentPage="@(currentPage + 1)" asp-route-statusFilter="@currentStatus" asp-route-searchKeyword="@currentSearch" asp-route-categoryId="@currentCatId" asp-route-storageFilter="@currentStorage">Sau</a>
+                </li>
+            </ul>
+        </div>
+    }
+</div>

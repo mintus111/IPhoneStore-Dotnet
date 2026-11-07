@@ -1,0 +1,280 @@
+@page "/admin/batch-import"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin,Manager,Staff")]
+@inject IDbContextFactory<IPhoneStoreDbContext> DbFactory
+@inject NavigationManager Nav
+
+<PageTitle>Nhập Lô IMEI Kho Hàng - BomChelsea Admin</PageTitle>
+
+<div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1">INBOUND SHIPMENT</span>
+                <span class="text-secondary small">Quét mã vạch hoặc nạp danh sách 15 số IMEI vào kho</span>
+            </div>
+            <h1 class="fs-3 fw-bold text-dark mb-0">Nhập Lô Hàng IMEI Mới</h1>
+        </div>
+        <div>
+            <a href="/admin/inventory" class="btn btn-outline-secondary rounded-pill px-3 py-2 text-decoration-none">
+                &larr; Xem Kho IMEI Hiện Tại
+            </a>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_alert))
+    {
+        <div class="alert alert-@_alertType alert-dismissible fade show border-0 rounded-3 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                @if (_alertType == "success")
+                {
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                }
+                else
+                {
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                }
+                <span>@_alert</span>
+            </div>
+            <button type="button" class="btn-close" @onclick="() => _alert = null"></button>
+        </div>
+    }
+
+    <div class="row g-4">
+        <!-- Input Form -->
+        <div class="col-lg-7">
+            <div class="bg-white border rounded-3 p-4 shadow-sm">
+                <h5 class="fw-bold text-dark mb-3">Thông Tin Lô Hàng Apple VN/A</h5>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-dark">Sản Phẩm &amp; Biến Thể Nhập Kho: <span class="text-danger">*</span></label>
+                    <select @bind="_productId" class="form-select rounded-3 py-2">
+                        <option value="0">-- Chọn chính xác SKU nhập kho --</option>
+                        @foreach (var p in _products)
+                        {
+                            <option value="@p.Id">@p.Name (Hiện có: @p.Quantity máy)</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-dark">Nhà Phân Phối / Nguồn Nhập: <span class="text-danger">*</span></label>
+                        <select @bind="_vendor" class="form-select rounded-3 py-2">
+                            <option value="Apple Vietnam (AAR Direct)">Apple Vietnam (AAR Direct)</option>
+                            <option value="Synnex FPT Distribution">Synnex FPT Distribution</option>
+                            <option value="Digiworld (DGW)">Digiworld (DGW)</option>
+                            <option value="Viettel Commerce">Viettel Commerce</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold small text-dark">Số Lô / PO Vận Đơn:</label>
+                        <input type="text" @bind="_batchNote" class="form-control rounded-3 py-2" placeholder="Ví dụ: PO-VN-2026-1025" />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label fw-bold small text-dark mb-0">Danh Sách Mã IMEI 15 Số: <span class="text-danger">*</span></label>
+                        <span class="text-secondary small">Mỗi dòng 1 mã IMEI (hoặc cách nhau bằng dấu phẩy)</span>
+                    </div>
+                    <textarea @bind="_imeiInput" class="form-control font-monospace rounded-3" rows="9" placeholder="358912345678901&#10;358912345678902&#10;358912345678903..."></textarea>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center pt-2">
+                    <div class="text-secondary small">
+                        Hệ thống tự động cộng dồn số lượng tồn kho <code>Quantity</code> tương ứng.
+                    </div>
+                    <button type="button" class="apple-cta-primary px-4 py-2 fs-6" @onclick="ProcessBatchImportAsync" disabled="@_isProcessing">
+                        @if (_isProcessing)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            <span>Đang kiểm tra...</span>
+                        }
+                        else
+                        {
+                            <span>Xác Nhận Nhập Kho &rarr;</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions & Guidelines Card -->
+        <div class="col-lg-5">
+            <div class="p-4 bg-light rounded-3 border mb-4">
+                <h6 class="fw-bold text-dark mb-2">Quy Trình Nhập Kho Đạt Chuẩn Apple</h6>
+                <ul class="text-secondary small ps-3 mb-0" style="line-height: 1.8;">
+                    <li>Mỗi mã IMEI bắt buộc có <strong>đúng 15 chữ số</strong> tiêu chuẩn quốc tế TAC/FAC/SNR.</li>
+                    <li>Mã IMEI không được trùng lặp với bất kỳ mã nào đã có trong kho hoặc đã từng bán ra.</li>
+                    <li>Sau khi nhập thành công, thân máy chuyển sang trạng thái <code>InStock</code>, sẵn sàng gán vào đơn đặt hàng của khách.</li>
+                    <li>Hành động nhập lô được ghi vết tự động vào <strong>Audit Logs</strong> với tài khoản nhân viên phụ trách.</li>
+                </ul>
+            </div>
+
+            @if (_importResult != null)
+            {
+                <div class="p-4 bg-white rounded-3 border shadow-sm">
+                    <h6 class="fw-bold text-dark mb-3">Kết Quả Phân Tích Lô Hàng:</h6>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-secondary small">Tổng mã nhập vào:</span>
+                        <strong class="text-dark">@_importResult.TotalParsed</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-success small fw-semibold">Hợp lệ &amp; Đã lưu kho:</span>
+                        <strong class="text-success">@_importResult.ValidInserted</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-danger small">Trùng trong cơ sở dữ liệu:</span>
+                        <strong class="text-danger">@_importResult.DbDuplicates</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                        <span class="text-warning small">Không đúng 15 số:</span>
+                        <strong class="text-warning">@_importResult.InvalidFormat</strong>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Product> _products = new();
+    private int _productId;
+    private string _vendor = "Apple Vietnam (AAR Direct)";
+    private string _batchNote = "";
+    private string _imeiInput = "";
+
+    private bool _isProcessing;
+    private string? _alert;
+    private string _alertType = "success";
+    private ImportResult? _importResult;
+
+    private class ImportResult
+    {
+        public int TotalParsed { get; set; }
+        public int ValidInserted { get; set; }
+        public int DbDuplicates { get; set; }
+        public int InvalidFormat { get; set; }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _products = await db.Products.Where(p => p.IsActive).OrderBy(p => p.Name).ToListAsync();
+        _productId = _products.FirstOrDefault()?.Id ?? 0;
+    }
+
+    private async Task ProcessBatchImportAsync()
+    {
+        if (_productId <= 0)
+        {
+            _alert = "Vui lòng chọn sản phẩm / SKU trước khi nhập kho!";
+            _alertType = "danger";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_imeiInput))
+        {
+            _alert = "Vui lòng nhập hoặc dán ít nhất 1 mã IMEI!";
+            _alertType = "danger";
+            return;
+        }
+
+        _isProcessing = true;
+        _alert = null;
+
+        try
+        {
+            var rawLines = _imeiInput
+                .Split(new[] { '\r', '\n', ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .Where(s => !string.IsNullOrEmpty(s))
+                .Distinct()
+                .ToList();
+
+            var result = new ImportResult { TotalParsed = rawLines.Count };
+            var validImeis = new List<string>();
+
+            foreach (var im in rawLines)
+            {
+                if (System.Text.RegularExpressions.Regex.IsMatch(im, @"^\d{15}$"))
+                {
+                    validImeis.Add(im);
+                }
+                else
+                {
+                    result.InvalidFormat++;
+                }
+            }
+
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var existingImeis = await db.ProductImeis
+                .Where(i => validImeis.Contains(i.Imei))
+                .Select(i => i.Imei)
+                .ToListAsync();
+
+            result.DbDuplicates = existingImeis.Count;
+            var toInsert = validImeis.Except(existingImeis).ToList();
+            result.ValidInserted = toInsert.Count;
+
+            if (toInsert.Count > 0)
+            {
+                var now = DateTime.Now;
+                var note = $"Nhập từ: {_vendor}" + (!string.IsNullOrEmpty(_batchNote) ? $" | Lô: {_batchNote}" : "");
+
+                foreach (var imeiStr in toInsert)
+                {
+                    db.ProductImeis.Add(new ProductImei
+                    {
+                        ProductId = _productId,
+                        Imei = imeiStr,
+                        SerialNumber = "APL" + imeiStr.Substring(imeiStr.Length - 8),
+                        Status = "InStock",
+                        ImportDate = now,
+                        Notes = note
+                    });
+                }
+
+                var prod = await db.Products.FindAsync(_productId);
+                if (prod != null)
+                {
+                    prod.Quantity += toInsert.Count;
+                }
+
+                // Ghi vết Audit Log
+                db.AuditLogs.Add(new AuditLog
+                {
+                    Action = "BATCH_IMPORT_IMEI",
+                    EntityName = "ProductImei",
+                    RecordId = _productId.ToString(),
+                    NewValues = $"Nhập thành công {toInsert.Count} mã IMEI cho SKU #{_productId} ({prod?.Name}) từ {_vendor}.",
+                    Timestamp = now,
+                    UserName = "Admin"
+                });
+
+                await db.SaveChangesAsync();
+
+                _alert = $"Thành công: Đã nhập thêm {toInsert.Count} máy iPhone vào kho InStock!";
+                _alertType = "success";
+                _imeiInput = "";
+            }
+            else
+            {
+                _alert = "Không có mã IMEI nào được thêm mới (tất cả bị trùng hoặc không đúng 15 chữ số)!";
+                _alertType = "warning";
+            }
+
+            _importResult = result;
+        }
+        catch (Exception ex)
+        {
+            _alert = $"Lỗi khi lưu kho: {ex.Message}";
+            _alertType = "danger";
+        }
+        finally
+        {
+            _isProcessing = false;
+        }
+    }
+}

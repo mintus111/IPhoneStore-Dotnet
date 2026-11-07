@@ -1,0 +1,456 @@
+@page
+@model IPhoneStore_Razor.Pages.Admin.WarrantyModel
+@{
+    Layout = "_AdminLayout";
+    ViewData["Title"] = "Trung tâm Bảo hành Apple Authorized";
+}
+
+<div class="aar-topbar-title-section mb-4">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h3 fw-bold mb-0">Trung tâm Bảo hành &amp; Tiếp nhận Kỹ thuật AAR</h1>
+            <p class="text-secondary small mb-0">Hệ thống kích hoạt bảo hành điện tử và xử lý quy trình 1 Đổi 1 trong 30 ngày chuẩn Apple</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary fw-semibold shadow-sm px-3 py-2 d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#createClaimModal">
+                <span>➕</span> Tiếp nhận bảo hành mới
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.SuccessMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-4" role="alert">
+        <span>✅</span>
+        <div>@Model.SuccessMessage</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(Model.ErrorMessage))
+{
+    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 mb-4" role="alert">
+        <span>⚠️</span>
+        <div>@Model.ErrorMessage</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- 4 THẺ CHỈ SỐ BẢO HÀNH -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="aar-card p-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-secondary small fw-medium">Bảo hành còn hiệu lực</span>
+                <span class="aar-pill aar-pill-success">Active</span>
+            </div>
+            <div class="h2 fw-bold text-success mb-0">@Model.Vm.ActiveWarrantiesCount.ToString("N0")</div>
+            <div class="text-muted small" style="font-size: 0.72rem;">iPhone đã kích hoạt trên Apple GSX</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="aar-card p-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-secondary small fw-medium">Phiếu chờ thẩm định</span>
+                <span class="aar-pill aar-pill-warning">Chờ xử lý</span>
+            </div>
+            <div class="h2 fw-bold text-warning mb-0">@Model.Vm.PendingClaimsCount</div>
+            <div class="text-muted small" style="font-size: 0.72rem;">Cần kỹ thuật viên Apple kiểm tra</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="aar-card p-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-secondary small fw-medium">Đã đổi mới tháng này</span>
+                <span class="aar-pill aar-pill-primary">1 Đổi 1</span>
+            </div>
+            <div class="h2 fw-bold text-primary mb-0">@Model.Vm.ReplacedCountMonth</div>
+            <div class="text-muted small" style="font-size: 0.72rem;">Chính sách lỗi nhà sản xuất</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="aar-card p-3">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="text-secondary small fw-medium">Tỷ lệ sự cố bảo hành</span>
+                <span class="aar-pill aar-pill-info">AAR Tiêu chuẩn</span>
+            </div>
+            <div class="h2 fw-bold text-info mb-0">@Model.Vm.WarrantyRatio%</div>
+            <div class="text-muted small" style="font-size: 0.72rem;">Nằm trong ngưỡng an toàn &lt; 2.5%</div>
+        </div>
+    </div>
+</div>
+
+<!-- TABS ĐIỀU HƯỚNG -->
+<ul class="nav nav-tabs mb-4 border-bottom">
+    <li class="nav-item">
+        <a class="nav-link @(Model.Vm.ActiveTab == "claims" ? "active fw-bold text-primary border-bottom border-primary border-2" : "text-secondary")" 
+           asp-page="/Admin/Warranty" asp-route-tab="claims">
+            Hàng đợi Phiếu Tiếp nhận (@Model.Vm.Claims.Count)
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(Model.Vm.ActiveTab == "devices" ? "active fw-bold text-primary border-bottom border-primary border-2" : "text-secondary")" 
+           asp-page="/Admin/Warranty" asp-route-tab="devices">
+            Sổ Tra cứu Bảo hành Thiết bị (@Model.Vm.Warranties.Count)
+        </a>
+    </li>
+</ul>
+
+@if (Model.Vm.ActiveTab == "claims")
+{
+    <!-- BẢNG PHIẾU TIẾP NHẬN BẢO HÀNH -->
+    <div class="aar-card">
+        <div class="aar-card-header">
+            <div class="fw-bold fs-6">Danh sách Hồ sơ Yêu cầu Bảo hành &amp; Đổi trả</div>
+            <span class="small text-secondary">Được quản lý theo quy trình AAR Việt Nam</span>
+        </div>
+        <div class="table-responsive">
+            <table class="aar-table table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 140px;">MÃ PHIẾU</th>
+                        <th>THIẾT BỊ / SẢN PHẨM</th>
+                        <th>KHÁCH HÀNG</th>
+                        <th>TRIỆU CHỨNG LỖI</th>
+                        <th>NGÀY TẠO</th>
+                        <th>TRẠNG THÁI</th>
+                        <th class="text-end">THAO TÁC</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Vm.Claims.Any())
+                    {
+                        @foreach (var c in Model.Vm.Claims)
+                        {
+                            <tr>
+                                <td>
+                                    <span class="font-monospace fw-bold text-primary">@(c.ClaimCode ?? $"BH-{c.Id:D4}")</span>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">@(c.Warranty?.Product?.Name ?? "Thiết bị iPhone")</div>
+                                    <div class="small font-monospace text-secondary">IMEI: @(c.Warranty?.Imei ?? "N/A")</div>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold text-dark">@(c.Warranty?.Customer?.FullName ?? "Khách hàng")</div>
+                                    <div class="small text-secondary">@(c.Warranty?.Customer?.PhoneNumber ?? "N/A")</div>
+                                </td>
+                                <td>
+                                    <div class="text-truncate" style="max-width: 250px;" title="@c.IssueDescription">
+                                        @c.IssueDescription
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="small">@c.ClaimDate.ToString("dd/MM/yyyy")</div>
+                                    <div class="text-muted" style="font-size: 0.72rem;">@c.ClaimDate.ToString("HH:mm")</div>
+                                </td>
+                                <td>
+                                    @switch (c.Status)
+                                    {
+                                        case "Pending":
+                                        case "Tiếp nhận":
+                                            <span class="aar-pill aar-pill-warning">Tiếp nhận máy</span>
+                                            break;
+                                        case "Inspecting":
+                                        case "Đang kiểm tra":
+                                            <span class="aar-pill aar-pill-info">KTV Đang thẩm định</span>
+                                            break;
+                                        case "Approved":
+                                        case "Đủ điều kiện đổi":
+                                            <span class="aar-pill aar-pill-success">Chấp thuận 1 Đổi 1</span>
+                                            break;
+                                        case "Rejected":
+                                        case "Từ chối":
+                                            <span class="aar-pill aar-pill-danger">Từ chối bảo hành</span>
+                                            break;
+                                        case "Completed":
+                                        case "Hoàn tất":
+                                            <span class="aar-pill aar-pill-primary">Đã giao máy mới</span>
+                                            break;
+                                        default:
+                                            <span class="aar-pill aar-pill-secondary">@c.Status</span>
+                                            break;
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <a asp-page="/Admin/WarrantyClaimDetail" asp-route-id="@c.Id" class="aar-btn aar-btn-outline btn-sm py-1 px-2">
+                                        Thẩm định hồ sơ
+                                    </a>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-secondary">
+                                Hiện không có phiếu yêu cầu bảo hành nào cần xử lý.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else
+{
+    <!-- BẢNG TRA CỨU BẢO HÀNH THIẾT BỊ -->
+    <div class="aar-card">
+        <div class="aar-card-header">
+            <div class="fw-bold fs-6">Sổ Quản lý Bảo hành Điện tử Apple (@Model.Vm.Warranties.Count thiết bị gần nhất)</div>
+        </div>
+        <div class="table-responsive">
+            <table class="aar-table table mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 170px;">MÃ IMEI (15 SỐ)</th>
+                        <th>SERIAL NUMBER</th>
+                        <th>DÒNG MÁY / THIẾT BỊ</th>
+                        <th>CHỦ SỞ HỮU</th>
+                        <th>HẠN BẢO HÀNH</th>
+                        <th>TRẠNG THÁI</th>
+                        <th class="text-end">THAO TÁC</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var w in Model.Vm.Warranties)
+                    {
+                        var isExpired = w.EndDate < DateTime.Now;
+                        var daysLeft = (w.EndDate - DateTime.Now).Days;
+
+                        <tr>
+                            <td>
+                                <span class="font-monospace fw-bold text-primary">@w.Imei</span>
+                            </td>
+                            <td>
+                                <span class="font-monospace text-secondary">@(string.IsNullOrEmpty(w.SerialNumber) ? "N/A" : w.SerialNumber)</span>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">@(w.Product?.Name ?? "Thiết bị iPhone")</div>
+                                <div class="small text-secondary font-monospace">SKU: @(w.Product?.Sku ?? "N/A")</div>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">@(w.Customer?.FullName ?? "Khách lẻ")</div>
+                                <div class="small text-secondary">@(w.Customer?.PhoneNumber ?? "N/A")</div>
+                            </td>
+                            <td>
+                                <div class="small fw-semibold">@w.EndDate.ToString("dd/MM/yyyy")</div>
+                                @if (isExpired)
+                                {
+                                    <div class="text-danger small" style="font-size: 0.72rem;">Đã hết hạn bảo hành</div>
+                                }
+                                else
+                                {
+                                    <div class="text-success small" style="font-size: 0.72rem;">Còn @daysLeft ngày hiệu lực</div>
+                                }
+                            </td>
+                            <td>
+                                @if (isExpired)
+                                {
+                                    <span class="aar-pill aar-pill-secondary">Hết hạn</span>
+                                }
+                                else
+                                {
+                                    <span class="aar-pill aar-pill-success">Hiệu lực Apple Care</span>
+                                }
+                            </td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-outline-primary btn-sm py-1 px-2 open-claim-btn" data-imei="@w.Imei">
+                                    🛠️ Tiếp nhận
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+<!-- MODAL TIẾP NHẬN BẢO HÀNH MỚI -->
+<div class="modal fade" id="createClaimModal" tabindex="-1" aria-labelledby="createClaimModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0 rounded-4">
+            <form method="post" asp-page-handler="CreateClaim">
+                <div class="modal-header border-bottom px-4 py-3 bg-light rounded-top-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fs-4">🛠️</span>
+                        <div>
+                            <h5 class="modal-title fw-bold mb-0" id="createClaimModalLabel">Tiếp nhận Thiết bị Bảo hành &amp; Thẩm định Apple</h5>
+                            <span class="text-secondary small">Áp dụng quy trình kiểm định phần cứng và chính sách 1 Đổi 1 trong 30 ngày</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Bước 1: Tra cứu IMEI -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Số IMEI Thiết bị (15 số) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="text" id="modalImeiInput" name="imei" class="form-control font-monospace" placeholder="Nhập hoặc quét mã vạch IMEI (vd: 356891234567890)" required maxlength="18">
+                            <button type="button" id="btnVerifyImei" class="btn btn-primary px-3 fw-medium">
+                                🔍 Kiểm tra thông tin
+                            </button>
+                        </div>
+                        <div class="form-text small">Kỹ thuật viên đối chiếu IMEI trên thân máy / khay SIM hoặc trong Cài đặt chung của iOS.</div>
+                    </div>
+
+                    <!-- Thẻ thông tin tra cứu AJAX -->
+                    <div id="imeiInfoCard" class="card border border-2 rounded-3 mb-3 p-3 bg-light d-none">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-primary" id="infoProductName">iPhone Model</span>
+                            <span id="info1to1Badge" class="badge bg-success px-2 py-1">Đủ điều kiện 1 Đổi 1</span>
+                        </div>
+                        <div class="row g-2 small">
+                            <div class="col-6">
+                                <span class="text-secondary">Chủ máy:</span> <strong id="infoCustomerName">Nguyễn Văn A</strong> (<span id="infoPhone">0901234567</span>)
+                            </div>
+                            <div class="col-6">
+                                <span class="text-secondary">Hạn bảo hành:</span> <strong id="infoEndDate">31/12/2026</strong> (<span id="infoDaysLeft">còn 300 ngày</span>)
+                            </div>
+                            <div class="col-12 text-muted" id="infoDaysSinceStart" style="font-size: 0.75rem;">
+                                Ngày kích hoạt: 01/01/2026 (Đã mua 10 ngày)
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="imeiErrorAlert" class="alert alert-danger py-2 small d-none" role="alert">
+                    </div>
+
+                    <!-- Bước 2: Nhập triệu chứng lỗi -->
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Triệu chứng lỗi kỹ thuật ghi nhận <span class="text-danger">*</span></label>
+                        <textarea name="issueDescription" class="form-control" rows="3" placeholder="Mô tả hiện trạng lỗi phần cứng (vd: Mất nguồn đột ngột, sọc màn hình, camera không lấy nét...)" required></textarea>
+                        <div class="d-flex gap-2 mt-2 flex-wrap">
+                            <button type="button" class="btn btn-sm btn-outline-secondary symptom-tag" data-text="Mất nguồn không rõ nguyên nhân, sạc không báo tín hiệu.">⚡ Mất nguồn</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary symptom-tag" data-text="Màn hình xuất hiện sọc xanh/hồng, cảm ứng loạn vùng viền.">📱 Sọc màn hình</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary symptom-tag" data-text="Camera chính rung lắc liên tục, phát tiếng rè khi quay video.">📷 Lỗi Camera</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary symptom-tag" data-text="Loa trong rè khi đàm thoại, micro chập chờn.">🔊 Âm thanh rè</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary symptom-tag" data-text="Không nhận diện được khuôn mặt Face ID sau khi khởi động.">👤 Hỏng Face ID</button>
+                        </div>
+                    </div>
+
+                    <!-- Bước 3: Ghi chú kỹ thuật ban đầu -->
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold text-secondary small">Ghi chú ngoại quan &amp; tình trạng tiếp nhận máy</label>
+                        <textarea name="technicianNotes" class="form-control form-control-sm" rows="2" placeholder="Tình trạng ngoại quan (trầy xước, cấn móp, tem ốc, phụ kiện đi kèm theo máy...)"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light px-4 py-3 rounded-bottom-4">
+                    <button type="button" class="btn btn-secondary px-3" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" id="btnSubmitClaim" class="btn btn-primary px-4 fw-bold">
+                        📋 Mở hồ sơ tiếp nhận
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const modalImeiInput = document.getElementById("modalImeiInput");
+        const btnVerify = document.getElementById("btnVerifyImei");
+        const imeiInfoCard = document.getElementById("imeiInfoCard");
+        const imeiErrorAlert = document.getElementById("imeiErrorAlert");
+        const infoProductName = document.getElementById("infoProductName");
+        const info1to1Badge = document.getElementById("info1to1Badge");
+        const infoCustomerName = document.getElementById("infoCustomerName");
+        const infoPhone = document.getElementById("infoPhone");
+        const infoEndDate = document.getElementById("infoEndDate");
+        const infoDaysLeft = document.getElementById("infoDaysLeft");
+        const infoDaysSinceStart = document.getElementById("infoDaysSinceStart");
+        const issueDescription = document.querySelector('textarea[name="issueDescription"]');
+        const modalElement = document.getElementById("createClaimModal");
+        const modalInstance = new bootstrap.Modal(modalElement);
+
+        function verifyImei(imei) {
+            if (!imei || imei.trim() === '') {
+                imeiErrorAlert.textContent = "Vui lòng nhập số IMEI.";
+                imeiErrorAlert.classList.remove('d-none');
+                imeiInfoCard.classList.add('d-none');
+                return;
+            }
+
+            btnVerify.disabled = true;
+            btnVerify.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span> Đang kiểm tra...';
+            imeiErrorAlert.classList.add('d-none');
+
+            fetch(`?handler=CheckImei&imei=${encodeURIComponent(imei.trim())}`)
+                .then(res => res.json())
+                .then(data => {
+                    btnVerify.disabled = false;
+                    btnVerify.textContent = '🔍 Kiểm tra thông tin';
+
+                    if (!data.success) {
+                        imeiErrorAlert.textContent = data.message;
+                        imeiErrorAlert.classList.remove('d-none');
+                        imeiInfoCard.classList.add('d-none');
+                    } else {
+                        infoProductName.textContent = `${data.productName} (${data.sku})`;
+                        infoCustomerName.textContent = data.customerName;
+                        infoPhone.textContent = data.phoneNumber;
+                        infoEndDate.textContent = data.endDate;
+                        infoDaysLeft.textContent = data.isExpired ? 'ĐÃ HẾT HẠN' : `còn ${data.daysLeft} ngày`;
+
+                        infoDaysSinceStart.textContent = `Ngày kích hoạt: ${data.startDate} (Đã dùng ${data.daysSinceStart} ngày)`;
+
+                        if (data.isWithin30Days && !data.isExpired) {
+                            info1to1Badge.className = 'badge bg-success px-2 py-1';
+                            info1to1Badge.textContent = '🌟 Trong diện 1 ĐỔI 1 (<= 30 ngày)';
+                        } else if (!data.isExpired) {
+                            info1to1Badge.className = 'badge bg-info text-dark px-2 py-1';
+                            info1to1Badge.textContent = '🛡️ Bảo hành sửa chữa Apple (> 30 ngày)';
+                        } else {
+                            info1to1Badge.className = 'badge bg-danger px-2 py-1';
+                            info1to1Badge.textContent = '⚠️ Đã hết hạn bảo hành';
+                        }
+
+                        imeiInfoCard.classList.remove('d-none');
+                    }
+                })
+                .catch(err => {
+                    btnVerify.disabled = false;
+                    btnVerify.textContent = '🔍 Kiểm tra thông tin';
+                    imeiErrorAlert.textContent = "Lỗi kết nối máy chủ khi tra cứu IMEI.";
+                    imeiErrorAlert.classList.remove('d-none');
+                });
+        }
+
+        btnVerify.addEventListener('click', function () {
+            verifyImei(modalImeiInput.value);
+        });
+
+        modalImeiInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                verifyImei(modalImeiInput.value);
+            }
+        });
+
+        // Quick symptom tags
+        document.querySelectorAll('.symptom-tag').forEach(tag => {
+            tag.addEventListener('click', function () {
+                const text = this.getAttribute('data-text');
+                if (issueDescription.value) {
+                    issueDescription.value += ' ' + text;
+                } else {
+                    issueDescription.value = text;
+                }
+            });
+        });
+
+        // Click on "Tiếp nhận" from table
+        document.querySelectorAll('.open-claim-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                const imei = this.getAttribute('data-imei');
+                modalImeiInput.value = imei;
+                modalInstance.show();
+                verifyImei(imei);
+            });
+        });
+    });
+</script>
+}

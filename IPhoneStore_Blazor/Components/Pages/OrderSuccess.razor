@@ -1,0 +1,95 @@
+﻿@page "/order-success/{OrderId:int}"
+@inject IDbContextFactory<IPhoneStoreDbContext> DbFactory
+
+<PageTitle>Đặt Hàng Thành Công - BomChelsea</PageTitle>
+
+<div class="container py-4" style="max-width: 760px;">
+    <!-- Stepper (Mockup 09 - Step 4 Completed) -->
+    <div class="apple-stepper">
+        <div class="stepper-line">
+            <div class="stepper-line-progress" style="width: 100%;"></div>
+        </div>
+        <div class="stepper-step completed">
+            <div class="step-circle">✓</div>
+            <div class="step-label">Giỏ hàng</div>
+        </div>
+        <div class="stepper-step completed">
+            <div class="step-circle">✓</div>
+            <div class="step-label">Tài khoản</div>
+        </div>
+        <div class="stepper-step completed">
+            <div class="step-circle">✓</div>
+            <div class="step-label">Thanh toán</div>
+        </div>
+        <div class="stepper-step completed">
+            <div class="step-circle">✓</div>
+            <div class="step-label">Đặt hàng</div>
+        </div>
+    </div>
+
+    <div class="bg-white border rounded-3 p-4 p-md-5 text-center shadow-sm">
+        <div class="mb-3">
+            <div style="width: 72px; height: 72px; background: rgba(48, 209, 88, 0.12); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: #30d158;">
+                <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+            </div>
+        </div>
+
+        <h1 class="fs-3 fw-bold text-dark mb-2">Đặt Hàng Apple Thành Công!</h1>
+        <p class="text-secondary small mb-4">
+            Cảm ơn bạn đã lựa chọn BomChelsea. Đơn hàng của bạn đã được chuyển tới trung tâm điều phối kho Apple để chuẩn bị xuất máy.
+        </p>
+
+        @if (_order != null)
+        {
+            <!-- Receipt breakdown card -->
+            <div class="p-4 bg-light rounded-3 border text-start mb-4">
+                <div class="d-flex justify-content-between pb-2 border-bottom mb-3">
+                    <span class="text-secondary small">Mã đơn hàng:</span>
+                    <strong class="text-primary font-monospace fs-6">#IPS@_order.Id.ToString("D6")</strong>
+                </div>
+
+                <div class="d-flex justify-content-between py-1 small">
+                    <span class="text-secondary">Khách hàng nhận:</span>
+                    <strong class="text-dark">@_order.Customer?.FullName</strong>
+                </div>
+                <div class="d-flex justify-content-between py-1 small">
+                    <span class="text-secondary">Số điện thoại:</span>
+                    <span class="text-dark">@_order.Customer?.PhoneNumber</span>
+                </div>
+                <div class="d-flex justify-content-between py-1 small">
+                    <span class="text-secondary">Địa chỉ giao:</span>
+                    <span class="text-dark">@_order.ShippingAddress</span>
+                </div>
+                <div class="d-flex justify-content-between py-1 small">
+                    <span class="text-secondary">Phương thức thanh toán:</span>
+                    <strong class="text-dark">@_order.PaymentMethod</strong>
+                </div>
+                <div class="d-flex justify-content-between pt-2 border-top mt-2">
+                    <span class="text-secondary small">Tổng thanh toán:</span>
+                    <strong class="text-primary fs-5">@_order.TotalAmount.ToString("N0") ₫</strong>
+                </div>
+            </div>
+        }
+
+        <div class="d-flex flex-wrap gap-3 justify-content-center">
+            <a href="/my-orders" class="btn btn-outline-primary rounded-pill px-4 py-2 fw-semibold">
+                Xem tiến trình đơn hàng &rarr;
+            </a>
+            <a href="/" class="apple-cta-primary px-4 py-2">
+                Tiếp tục khám phá iPhone
+            </a>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int OrderId { get; set; }
+    private Order? _order;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _order = await db.Orders.Include(o => o.Customer).FirstOrDefaultAsync(o => o.Id == OrderId);
+    }
+}
+

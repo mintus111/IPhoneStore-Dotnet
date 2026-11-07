@@ -1,0 +1,658 @@
+@page "/admin/audit-logs"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin,Manager")]
+@using System.Text.Json
+@using Microsoft.EntityFrameworkCore
+@using IPhoneStore_Blazor.Data
+@using IPhoneStore_Blazor.Models.Entities
+@inject IDbContextFactory<IPhoneStoreDbContext> DbFactory
+@inject NavigationManager Nav
+
+<PageTitle>Nhật Ký Kiểm Toán Hệ Thống - BomChelsea Admin</PageTitle>
+
+<style>
+    /* Bảng kiểm toán chuẩn Apple Clean UI */
+    .aar-audit-table {
+        width: 100%;
+        margin-bottom: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .aar-audit-table th {
+        padding: 0.85rem 0.75rem !important;
+        font-size: 0.75rem !important;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        color: #475569;
+        text-transform: uppercase;
+    }
+    .aar-audit-table td {
+        padding: 0.85rem 0.75rem !important;
+        vertical-align: middle !important;
+        font-size: 0.85rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #1e293b;
+    }
+    .aar-audit-table tr:hover td {
+        background-color: #f8fafc;
+    }
+
+    /* Avatar tròn chữ cái tác nhân */
+    .aar-avatar-audit {
+        width: 30px;
+        height: 30px;
+        font-size: 0.72rem;
+        background: #e2e8f0;
+        color: #1e293b;
+        font-weight: 700;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-transform: uppercase;
+        flex-shrink: 0;
+    }
+
+    /* Modal Chi tiết */
+    .modal-backdrop-custom {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(15, 23, 42, 0.5);
+        z-index: 1050;
+        backdrop-filter: blur(4px);
+    }
+    .modal-dialog-custom {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1055;
+        width: 92%;
+        max-width: 680px;
+        max-height: 90vh;
+        background: #ffffff;
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+</style>
+
+<div>
+    <!-- ================= 1. HEADER & BREADCRUMB ================= -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1">SECURITY &amp; AUDIT TRAIL</span>
+                <span class="text-secondary small">Ghi vết biến động kho hàng, đơn hàng &amp; an ninh tài khoản</span>
+            </div>
+            <h1 class="h3 fw-bold text-dark mb-1">Nhật Ký Kiểm Toán Hệ Thống</h1>
+            <p class="text-muted small mb-0">Dữ liệu được lưu trữ bất biến phục vụ tra soát, thanh tra Apple AASP và quản trị rủi ro vận hành.</p>
+        </div>
+    </div>
+
+    <!-- ================= 2. 4 KPI SUMMARY CARDS ================= -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="card border rounded-3 p-3 bg-white shadow-sm d-flex flex-row align-items-center gap-3">
+                <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3 fs-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                    📜
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Tổng số nhật ký</div>
+                    <div class="fs-4 fw-bold text-dark">@_totalCount</div>
+                    <div class="text-secondary" style="font-size: 0.75rem;">Toàn hệ thống</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-6">
+            <div class="card border rounded-3 p-3 bg-white shadow-sm d-flex flex-row align-items-center gap-3">
+                <div class="rounded-3 bg-success bg-opacity-10 text-success p-3 fs-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                    🛒
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Đơn hàng &amp; Xuất kho</div>
+                    <div class="fs-4 fw-bold text-success">@_orderLogsCount</div>
+                    <div class="text-secondary" style="font-size: 0.75rem;">Đặt hàng &amp; Duyệt đơn</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-6">
+            <div class="card border rounded-3 p-3 bg-white shadow-sm d-flex flex-row align-items-center gap-3">
+                <div class="rounded-3 bg-warning bg-opacity-10 text-warning p-3 fs-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                    🛡️
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Bảo hành &amp; Đổi máy</div>
+                    <div class="fs-4 fw-bold text-warning">@_warrantyLogsCount</div>
+                    <div class="text-secondary" style="font-size: 0.75rem;">AASP 1 Đổi 1</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-6">
+            <div class="card border rounded-3 p-3 bg-white shadow-sm d-flex flex-row align-items-center gap-3">
+                <div class="rounded-3 bg-info bg-opacity-10 text-info p-3 fs-3 d-flex align-items-center justify-content-center" style="width: 52px; height: 52px;">
+                    🔒
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Kho IMEI &amp; An ninh</div>
+                    <div class="fs-4 fw-bold text-info">@_systemLogsCount</div>
+                    <div class="text-secondary" style="font-size: 0.75rem;">Nhập kho &amp; Tài khoản</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 3. FILTER & SEARCH BAR ================= -->
+    <div class="card border rounded-3 p-3 mb-4 bg-white shadow-sm">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-5">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-end-0 text-muted">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                    </span>
+                    <input type="text" @bind="_search" @bind:event="oninput" class="form-control border-start-0 ps-0 rounded-end py-2" placeholder="Tìm theo ID, người thực hiện, nội dung chi tiết..." />
+                </div>
+            </div>
+            <div class="col-md-4">
+                <select @bind="_actionFilter" class="form-select rounded-3 py-2">
+                    <option value="">Tất cả loại hành động</option>
+                    <option value="PLACE_ORDER">🛒 Đặt hàng mới (PLACE_ORDER)</option>
+                    <option value="FULFILL_ORDER">📦 Xuất kho &amp; Duyệt đơn (FULFILL_ORDER)</option>
+                    <option value="BATCH_IMPORT_IMEI">📥 Nhập lô IMEI (BATCH_IMPORT_IMEI)</option>
+                    <option value="IMPORT_IMEI">📥 Nhập lẻ IMEI (IMPORT_IMEI)</option>
+                    <option value="CREATE_WARRANTY_CLAIM">🛡️ Tiếp nhận bảo hành (CREATE_WARRANTY_CLAIM)</option>
+                    <option value="PROCESS_WARRANTY_CLAIM">🛡️ Xử lý bảo hành (PROCESS_WARRANTY_CLAIM)</option>
+                    <option value="EXCHANGE_1TO1">🔄 Đổi máy mới 1 Đổi 1 (EXCHANGE_1TO1)</option>
+                    <option value="RESET_PASSWORD">🔒 Đổi mật khẩu tài khoản (RESET_PASSWORD)</option>
+                    <option value="LOCK_USER">🔒 Khóa tài khoản (LOCK_USER)</option>
+                    <option value="UNLOCK_USER">🔓 Mở khóa tài khoản (UNLOCK_USER)</option>
+                    <option value="AUTO_CANCEL_EXPIRED_ORDER">⚙️ Tự động hủy đơn quá hạn (AUTO_CANCEL)</option>
+                    <option value="SYSTEM_CLEANUP">⚙️ Thu hồi IMEI tồn trôi (SYSTEM_CLEANUP)</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button type="button" class="btn btn-primary btn-sm flex-fill py-2 fw-semibold rounded-pill shadow-sm" @onclick="ApplyFilter">
+                    Lọc dữ liệu
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2 fw-semibold" @onclick="ResetFilter">
+                    Đặt lại
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 4. AUDIT LOGS TABLE ================= -->
+    <div class="card border rounded-3 bg-white shadow-sm overflow-hidden mb-4">
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light bg-opacity-50">
+            <div>
+                <h6 class="fw-bold text-dark mb-0">
+                    Lịch Sử Hoạt Động Hệ Thống (@_totalCount bản ghi)
+                </h6>
+                <div class="text-secondary small mt-1">Dữ liệu được lưu trữ bất biến phục vụ tra soát &amp; kiểm tra tuân thủ</div>
+            </div>
+            <span class="badge bg-white text-dark border px-3 py-2 fw-semibold">
+                Trang @_page / @_totalPages
+            </span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="aar-audit-table">
+                <thead>
+                    <tr>
+                        <th style="width: 75px;">Mã log</th>
+                        <th style="width: 155px;">Thời gian</th>
+                        <th style="width: 170px;">Tác nhân</th>
+                        <th style="width: 160px;">Hành động</th>
+                        <th style="width: 130px;">Phân hệ</th>
+                        <th>Chi tiết thao tác</th>
+                        <th style="width: 90px; text-align: center;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (_logs.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-secondary">
+                                <div class="fs-1 mb-2">🔍</div>
+                                <div class="fw-semibold">Không tìm thấy bản ghi nhật ký nào phù hợp.</div>
+                                <div class="small text-muted mt-1">Vui lòng thử tìm kiếm với từ khóa hoặc bộ lọc khác.</div>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var log in _logs)
+                        {
+                            <tr @key="log.Id">
+                                <td>
+                                    <span class="font-monospace fw-bold text-secondary">#@log.Id</span>
+                                </td>
+                                <td>
+                                    <div class="small fw-semibold text-dark">@log.Timestamp.ToString("dd/MM/yyyy")</div>
+                                    <div class="text-muted font-monospace" style="font-size: 0.75rem;">@log.Timestamp.ToString("HH:mm:ss")</div>
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="aar-avatar-audit">
+                                            @GetActorInitials(log.UserName)
+                                        </div>
+                                        <div class="overflow-hidden" style="line-height: 1.2;">
+                                            <div class="fw-bold text-dark small text-truncate" style="max-width: 120px;" title="@log.UserName">
+                                                @(string.IsNullOrEmpty(log.UserName) ? "Hệ thống tự động" : log.UserName)
+                                            </div>
+                                            <div class="text-muted font-monospace" style="font-size: 0.7rem;">
+                                                @(string.IsNullOrEmpty(log.IpAddress) ? "Nội bộ" : log.IpAddress)
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @RenderActionBadge(log.Action)
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark border fw-medium px-2 py-1">
+                                        @FormatEntityName(log.EntityName, log.RecordId)
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="small text-dark" style="max-width: 520px; line-height: 1.45;">
+                                        @FormatAuditDetail(log)
+                                    </div>
+                                </td>
+                                <td style="text-align: center;">
+                                    <button type="button" class="btn btn-outline-primary btn-sm py-1 px-2 rounded-pill fw-semibold" style="font-size: 0.75rem;" @onclick="() => OpenDetailModal(log)">
+                                        Chi tiết
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ================= 5. PAGINATION ================= -->
+        @if (_totalPages > 1)
+        {
+            <div class="p-3 border-top bg-white d-flex align-items-center justify-content-between flex-wrap gap-2">
+                <div class="small text-muted">
+                    Hiển thị từ <strong>@((_page - 1) * PageSize + 1)</strong> đến <strong>@Math.Min(_page * PageSize, _totalCount)</strong> trong tổng số <strong>@_totalCount</strong> bản ghi
+                </div>
+
+                <nav class="d-flex gap-1 mb-0">
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" disabled="@(_page <= 1)" @onclick="() => ChangePage(_page - 1)">
+                        ‹ Trước
+                    </button>
+
+                    @for (int i = 1; i <= _totalPages; i++)
+                    {
+                        var pageNum = i;
+                        if (pageNum == 1 || pageNum == _totalPages || (pageNum >= _page - 2 && pageNum <= _page + 2))
+                        {
+                            <button type="button" class="btn btn-sm rounded-pill px-3 @(_page == pageNum ? "btn-primary fw-bold" : "btn-outline-light text-dark border")" @onclick="() => ChangePage(pageNum)">
+                                @pageNum
+                            </button>
+                        }
+                        else if (pageNum == _page - 3 || pageNum == _page + 3)
+                        {
+                            <span class="px-2 py-1 text-muted">...</span>
+                        }
+                    }
+
+                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" disabled="@(_page >= _totalPages)" @onclick="() => ChangePage(_page + 1)">
+                        Sau ›
+                    </button>
+                </nav>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ================= 6. MODAL XEM CHI TIẾT NHẬT KÝ KIỂM TOÁN ================= -->
+@if (_selectedLog != null)
+{
+    <div class="modal-backdrop-custom" @onclick="CloseDetailModal"></div>
+    <div class="modal-dialog-custom">
+        <div class="p-3 border-bottom d-flex align-items-center justify-content-between bg-light">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fs-5">📜</span>
+                <div>
+                    <h6 class="fw-bold text-dark mb-0">Chi Tiết Nhật Ký Kiểm Toán #@_selectedLog.Id</h6>
+                    <span class="text-secondary small">@_selectedLog.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")</span>
+                </div>
+            </div>
+            <button type="button" class="btn-close" @onclick="CloseDetailModal"></button>
+        </div>
+
+        <div class="p-4 overflow-auto flex-fill">
+            <div class="row g-3 mb-3">
+                <div class="col-6">
+                    <div class="text-muted small">Loại hành động:</div>
+                    <div class="mt-1">@RenderActionBadge(_selectedLog.Action)</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted small">Phân hệ tác động:</div>
+                    <div class="fw-bold text-dark mt-1">@FormatEntityName(_selectedLog.EntityName, _selectedLog.RecordId)</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted small">Tác nhân thực hiện:</div>
+                    <div class="fw-semibold text-dark mt-1">
+                        @(string.IsNullOrEmpty(_selectedLog.UserName) ? "Hệ thống tự động" : _selectedLog.UserName)
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted small">Địa chỉ IP:</div>
+                    <div class="font-monospace text-secondary small mt-1">
+                        @(string.IsNullOrEmpty(_selectedLog.IpAddress) ? "Nội bộ hệ thống (Internal)" : _selectedLog.IpAddress)
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(_selectedLog.OldValues))
+            {
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-danger">Giá trị ban đầu (Old Values):</label>
+                    <pre class="bg-light p-3 rounded-3 small border font-monospace text-wrap" style="max-height: 160px; overflow-y: auto;">@FormatJsonPretty(_selectedLog.OldValues)</pre>
+                </div>
+            }
+
+            <div>
+                <label class="form-label small fw-bold text-success">Giá trị cập nhật / Dữ liệu ghi vết (New Values):</label>
+                <pre class="bg-light p-3 rounded-3 small border font-monospace text-wrap" style="max-height: 200px; overflow-y: auto;">@FormatJsonPretty(_selectedLog.NewValues ?? "-")</pre>
+            </div>
+        </div>
+
+        <div class="p-3 border-top bg-light d-flex justify-content-end">
+            <button type="button" class="btn btn-secondary rounded-pill px-4" @onclick="CloseDetailModal">
+                Đóng
+            </button>
+        </div>
+    </div>
+}
+
+@code {
+    private const int PageSize = 15;
+    private List<AuditLog> _logs = new();
+    private string _search = "";
+    private string _actionFilter = "";
+    private int _page = 1, _totalPages = 1, _totalCount;
+
+    // KPI Metrics
+    private int _orderLogsCount;
+    private int _warrantyLogsCount;
+    private int _systemLogsCount;
+
+    // Modal state
+    private AuditLog? _selectedLog;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadKPIsAsync();
+        await LoadLogsAsync();
+    }
+
+    private async Task LoadKPIsAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _totalCount = await db.AuditLogs.CountAsync();
+        _orderLogsCount = await db.AuditLogs.CountAsync(l => l.Action.Contains("ORDER") || l.Action.Contains("FULFILL"));
+        _warrantyLogsCount = await db.AuditLogs.CountAsync(l => l.Action.Contains("WARRANTY") || l.Action.Contains("EXCHANGE"));
+        _systemLogsCount = await db.AuditLogs.CountAsync(l => l.Action.Contains("IMEI") || l.Action.Contains("PASSWORD") || l.Action.Contains("USER") || l.Action.Contains("STAFF") || l.Action.Contains("SYSTEM"));
+    }
+
+    private async Task LoadLogsAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var query = db.AuditLogs.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(_search))
+        {
+            var s = _search.Trim().ToLower();
+            query = query.Where(l => (l.NewValues != null && l.NewValues.ToLower().Contains(s)) ||
+                                     (l.OldValues != null && l.OldValues.ToLower().Contains(s)) ||
+                                     l.RecordId.Contains(s) ||
+                                     (l.UserName != null && l.UserName.ToLower().Contains(s)) ||
+                                     l.Action.ToLower().Contains(s));
+        }
+
+        if (!string.IsNullOrWhiteSpace(_actionFilter))
+        {
+            if (_actionFilter == "AUTO_CANCEL")
+            {
+                query = query.Where(l => l.Action.Contains("CANCEL"));
+            }
+            else
+            {
+                query = query.Where(l => l.Action == _actionFilter);
+            }
+        }
+
+        var filteredCount = await query.CountAsync();
+        _totalPages = (int)Math.Ceiling(filteredCount / (double)PageSize);
+        if (_totalPages < 1) _totalPages = 1;
+        if (_page < 1) _page = 1;
+        if (_page > _totalPages) _page = _totalPages;
+
+        _logs = await query
+            .OrderByDescending(l => l.Timestamp)
+            .Skip((_page - 1) * PageSize)
+            .Take(PageSize)
+            .ToListAsync();
+    }
+
+    private async Task ApplyFilter()
+    {
+        _page = 1;
+        await LoadLogsAsync();
+    }
+
+    private async Task ResetFilter()
+    {
+        _search = "";
+        _actionFilter = "";
+        _page = 1;
+        await LoadLogsAsync();
+    }
+
+    private async Task ChangePage(int newPage)
+    {
+        _page = newPage;
+        await LoadLogsAsync();
+    }
+
+    private void OpenDetailModal(AuditLog log)
+    {
+        _selectedLog = log;
+    }
+
+    private void CloseDetailModal()
+    {
+        _selectedLog = null;
+    }
+
+    private static string GetActorInitials(string? userName)
+    {
+        if (string.IsNullOrWhiteSpace(userName)) return "HT";
+        if (userName.StartsWith("admin", StringComparison.OrdinalIgnoreCase)) return "AD";
+        if (userName.StartsWith("Order", StringComparison.OrdinalIgnoreCase)) return "WF";
+        var parts = userName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2) return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
+        return userName.Length >= 2 ? userName.Substring(0, 2).ToUpper() : userName.ToUpper();
+    }
+
+    private static string FormatEntityName(string? entityName, string? recordId)
+    {
+        if (string.IsNullOrWhiteSpace(entityName)) return "Hệ thống";
+        var idSuffix = !string.IsNullOrEmpty(recordId) ? $" #{recordId}" : "";
+        return entityName switch
+        {
+            "Orders" or "Order" or "Đơn hàng" => $"Đơn hàng{idSuffix}",
+            "Warranties" or "Warranty" or "Sổ bảo hành" => $"Sổ bảo hành{idSuffix}",
+            "WarrantyClaims" or "Phiếu bảo hành" => $"Phiếu bảo hành{idSuffix}",
+            "ProductImeis" or "Thiết bị IMEI" => $"Kho IMEI{idSuffix}",
+            "Products" or "Sản phẩm" or "Biến thể" => $"Sản phẩm{idSuffix}",
+            "Customers" or "Khách hàng" => $"Khách hàng{idSuffix}",
+            "AspNetUsers" or "Tài khoản" => $"Tài khoản{idSuffix}",
+            _ => $"{entityName}{idSuffix}"
+        };
+    }
+
+    private static RenderFragment RenderActionBadge(string action) => builder =>
+    {
+        string badgeClass;
+        string icon;
+        string title;
+
+        if (action.Contains("PLACE_ORDER") || action.Contains("Tạo đơn"))
+        {
+            badgeClass = "bg-primary bg-opacity-10 text-primary border border-primary";
+            icon = "🛒";
+            title = "Đặt hàng mới";
+        }
+        else if (action.Contains("FULFILL_ORDER") || action.Contains("Xuất kho") || action.Contains("Xác nhận"))
+        {
+            badgeClass = "bg-success bg-opacity-10 text-success border border-success";
+            icon = "📦";
+            title = "Xuất kho & Vận đơn";
+        }
+        else if (action.Contains("WARRANTY") || action.Contains("EXCHANGE") || action.Contains("Đổi máy"))
+        {
+            badgeClass = "bg-warning bg-opacity-15 text-warning-emphasis border border-warning";
+            icon = "🛡️";
+            title = "Bảo hành Apple Care";
+        }
+        else if (action.Contains("IMPORT"))
+        {
+            badgeClass = "bg-info bg-opacity-10 text-info-emphasis border border-info";
+            icon = "📥";
+            title = "Nhập lô IMEI";
+        }
+        else if (action.Contains("PASSWORD") || action.Contains("LOCK") || action.Contains("STAFF") || action.Contains("USER"))
+        {
+            badgeClass = "bg-danger bg-opacity-10 text-danger border border-danger";
+            icon = "🔒";
+            title = "An ninh & Tài khoản";
+        }
+        else if (action.Contains("CANCEL") || action.Contains("CLEANUP") || action.Contains("Hủy"))
+        {
+            badgeClass = "bg-secondary bg-opacity-10 text-secondary border border-secondary";
+            icon = "⚙️";
+            title = "Tự động hoàn kho";
+        }
+        else
+        {
+            badgeClass = "bg-light text-dark border";
+            icon = "📝";
+            title = action;
+        }
+
+        builder.OpenElement(0, "span");
+        builder.AddAttribute(1, "class", $"badge {badgeClass} fw-bold py-1 px-2 d-inline-flex align-items-center gap-1");
+        builder.AddContent(2, $"{icon} {title}");
+        builder.CloseElement();
+    };
+
+    private static string FormatAuditDetail(AuditLog log)
+    {
+        var raw = log.NewValues ?? log.OldValues ?? "-";
+        if (string.IsNullOrWhiteSpace(raw) || raw == "-") return "Không có thông tin chi tiết.";
+
+        // Xử lý JSON đặt hàng: {"OrderId":37,"TotalAmount":14990000.00,"PaymentMethod":"BankTransfer"}
+        if (raw.StartsWith("{") && raw.Contains("TotalAmount"))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(raw);
+                var root = doc.RootElement;
+                int orderId = root.TryGetProperty("OrderId", out var oProp) ? oProp.GetInt32() : 0;
+                decimal total = root.TryGetProperty("TotalAmount", out var tProp) ? tProp.GetDecimal() : 0;
+                string payment = root.TryGetProperty("PaymentMethod", out var pProp) ? pProp.GetString() ?? "" : "";
+                
+                string paymentVn = payment switch
+                {
+                    "BankTransfer" => "Chuyển khoản ngân hàng",
+                    "COD" => "Thanh toán khi nhận hàng (COD)",
+                    "VietQR" => "Quét mã VietQR AAR",
+                    _ => payment
+                };
+
+                return $"Khách đặt đơn hàng #{orderId} · Tổng tiền: {total:N0} ₫ · Thanh toán: {paymentVn}";
+            }
+            catch
+            {
+                // Fallback nếu parse lỗi
+            }
+        }
+
+        // Xử lý trạng thái Status=Confirmed, Payment=Chưa thanh toán
+        if (raw.Contains("Status=") || raw.Contains("Payment="))
+        {
+            var parts = raw.Split(',', StringSplitOptions.TrimEntries);
+            var translated = new List<string>();
+            foreach (var p in parts)
+            {
+                if (p.StartsWith("Status="))
+                {
+                    var st = p.Substring(7).Trim();
+                    var stVn = st switch
+                    {
+                        "Pending" => "Chờ duyệt",
+                        "Confirmed" => "Đã xác nhận",
+                        "Shipping" => "Đang giao vận",
+                        "Completed" => "Giao thành công",
+                        "Cancelled" => "Đã hủy đơn",
+                        _ => st
+                    };
+                    translated.Add($"Trạng thái đơn: {stVn}");
+                }
+                else if (p.StartsWith("Payment="))
+                {
+                    translated.Add($"Thanh toán: {p.Substring(8).Trim()}");
+                }
+                else if (p.StartsWith("Tracking="))
+                {
+                    var tr = p.Substring(9).Trim();
+                    if (!string.IsNullOrEmpty(tr)) translated.Add($"Vận đơn: {tr}");
+                }
+                else
+                {
+                    translated.Add(p);
+                }
+            }
+            return string.Join(" · ", translated);
+        }
+
+        // Làm sạch và trả về text tiếng Việt
+        return raw
+            .Replace("Sa Mº¡c", "Sa Mạc")
+            .Replace("Sa M?c", "Sa Mạc")
+            .Replace("Mº¡c", "Mạc")
+            .Replace("º¡", "ạ");
+    }
+
+    private static string FormatJsonPretty(string? rawJson)
+    {
+        if (string.IsNullOrWhiteSpace(rawJson)) return "-";
+        if (!rawJson.StartsWith("{") && !rawJson.StartsWith("[")) return rawJson;
+        try
+        {
+            using var doc = JsonDocument.Parse(rawJson);
+            return JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions { WriteIndented = true });
+        }
+        catch
+        {
+            return rawJson;
+        }
+    }
+}

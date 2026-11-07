@@ -1,0 +1,143 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@inherits LayoutComponentBase
+@inject NavigationManager Nav
+
+<div class="aar-admin-wrapper">
+    <!-- Operations Sidebar -->
+    <aside class="aar-sidebar">
+        <!-- Brand Header -->
+        <div class="aar-sidebar-brand">
+            <a href="/admin" class="aar-brand-title d-flex align-items-center gap-2 text-decoration-none">
+                <img src="/images/chelsea-logo.svg" alt="Chelsea FC" width="28" height="28" class="rounded-circle shadow-sm" style="border: 1px solid #d1ab3e;" />
+                <span class="fw-bold tracking-tight text-white">BomChelsea</span>
+            </a>
+            <span class="aar-brand-badge" style="background: linear-gradient(135deg, #034694, #0956b5); color: #ffffff; border: 1px solid rgba(255,255,255,0.2);">ADMIN</span>
+        </div>
+
+        <!-- Navigation Modules -->
+        <nav class="aar-sidebar-nav">
+            <div class="aar-nav-section-title">Tổng quan &amp; Kho hàng</div>
+
+            <NavLink class="aar-nav-item" href="/admin" Match="NavLinkMatch.All">
+                <span>Tổng quan vận hành</span>
+            </NavLink>
+
+            <NavLink class="aar-nav-item" href="/admin/categories">
+                <span>Danh mục dòng máy</span>
+            </NavLink>
+
+            <NavLink class="aar-nav-item" href="/admin/products">
+                <span>Sản phẩm &amp; biến thể</span>
+            </NavLink>
+
+            <NavLink class="aar-nav-item" href="/admin/inventory">
+                <span>Kho IMEI &amp; Serial</span>
+            </NavLink>
+
+            <NavLink class="aar-nav-item" href="/admin/batch-import">
+                <span>Nhập lô IMEI</span>
+                <span class="aar-badge aar-badge-blue">Lô</span>
+            </NavLink>
+
+            <div class="aar-nav-section-title mt-2">Bán hàng &amp; Dịch vụ</div>
+
+            <NavLink class="aar-nav-item" href="/admin/orders">
+                <span>Quản lý Đơn hàng</span>
+                <span class="aar-badge aar-badge-red">3 mới</span>
+            </NavLink>
+
+            <NavLink class="aar-nav-item" href="/admin/warranty">
+                <span>Bảo hành &amp; 1 Đổi 1 AASP</span>
+            </NavLink>
+
+            <div class="aar-nav-section-title mt-2">Khách hàng &amp; Hệ thống</div>
+
+            <NavLink class="aar-nav-item" href="/admin/staff" Match="NavLinkMatch.Prefix">
+                <span>Quản lý Khách hàng</span>
+            </NavLink>
+
+            <NavLink class="aar-nav-item" href="/admin/audit-logs">
+                <span>Nhật ký kiểm toán</span>
+            </NavLink>
+        </nav>
+
+        <!-- Sidebar Footer -->
+        <div class="aar-sidebar-footer">
+            <div class="aar-status-indicator">
+                <span class="aar-status-dot"></span>
+                <span>Hệ thống AAR: Đang hoạt động</span>
+            </div>
+            <div class="d-flex align-items-center justify-content-between pt-2 border-top border-secondary border-opacity-25">
+                <a href="/" class="d-flex align-items-center gap-2 text-decoration-none text-light small fw-medium">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                    <span>Cửa hàng bán lẻ</span>
+                </a>
+                <a href="/admin/login" class="text-danger small" title="Đăng xuất">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                </a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Admin Main Body -->
+    <main class="aar-main">
+        <!-- Admin Topbar -->
+        <header class="aar-topbar">
+            <div class="aar-breadcrumb">
+                <a href="/admin">BomChelsea Admin</a>
+                <span>/</span>
+                <span class="aar-breadcrumb-current">@GetBreadcrumbTitle()</span>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <div class="aar-quick-search d-none d-md-block">
+                    <svg class="search-icon" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                    <input type="text" placeholder="Tìm kiếm SKU, IMEI, Đơn hàng..." />
+                    <span class="kbd-shortcut">⌘ K</span>
+                </div>
+                <div class="aar-user-profile ps-2 border-start">
+                    <div class="aar-avatar-circle">HL</div>
+                    <div class="d-none d-lg-block text-start" style="line-height:1.2;">
+                        <div class="fw-semibold small text-dark">Hoàng Linh</div>
+                        <span class="badge bg-primary bg-opacity-10 text-primary py-0 px-1" style="font-size:0.65rem;">Quản trị viên (Admin)</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Admin Dynamic Work Area -->
+        <section class="aar-content">
+            @Body
+        </section>
+    </main>
+</div>
+
+@code {
+    private string GetBreadcrumbTitle()
+    {
+        var uri = Nav.Uri.ToLowerInvariant();
+        if (uri.Contains("/admin/staff") || uri.Contains("/admin/customers") || uri.Contains("/admin/accounts"))
+            return "Quản lý Khách hàng & Tài khoản";
+        if (uri.Contains("/admin/orders"))
+            return "Quản lý Đơn hàng";
+        if (uri.Contains("/admin/categories"))
+            return "Danh mục dòng máy";
+        if (uri.Contains("/admin/products"))
+            return "Sản phẩm & biến thể";
+        if (uri.Contains("/admin/inventory"))
+            return "Kho IMEI & Serial";
+        if (uri.Contains("/admin/batch-import"))
+            return "Nhập lô IMEI";
+        if (uri.Contains("/admin/warranty"))
+            return "Bảo hành & 1 Đổi 1 AASP";
+        if (uri.Contains("/admin/audit-logs"))
+            return "Nhật ký kiểm toán";
+        return "Vận hành hệ thống";
+    }
+
+    protected override void OnInitialized()
+    {
+        Nav.LocationChanged += (_, _) => StateHasChanged();
+    }
+}

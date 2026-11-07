@@ -1,0 +1,417 @@
+@page
+@model IPhoneStore_Razor.Pages.Admin.ProductsModel
+@{
+    ViewData["Title"] = "3. Sản Phẩm & Biến Thể - Admin";
+}
+
+<div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1">CATALOG &amp; INVENTORY</span>
+                <span class="text-secondary small">Quản lý SKU, giá bán và bảo hành</span>
+            </div>
+            <h1 class="fs-3 fw-bold text-dark mb-0">3. Sản Phẩm &amp; Biến Thể iPhone</h1>
+        </div>
+        <button type="button" class="apple-cta-primary py-2 px-3 fs-6" onclick="openAddModal()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Thêm Sản Phẩm Mới (Mockup 4)</span>
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.AlertMessage))
+    {
+        <div class="alert alert-@(Model.AlertType ?? "info") alert-dismissible fade show border-0 rounded-3 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>@Model.AlertMessage</span>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Filter Bar (Mockup 3) -->
+    <div class="bg-white border rounded-3 p-3 mb-4 shadow-sm">
+        <form method="get" class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <input type="text" name="SearchKeyword" value="@Model.SearchKeyword" class="form-control rounded-3 py-2 px-3" placeholder="Tìm theo tên máy, màu sắc..." />
+            </div>
+            <div class="col-md-3">
+                <select name="CategoryId" class="form-select rounded-3 py-2" onchange="this.form.submit()">
+                    <option value="">Tất cả dòng máy (Series)</option>
+                    @foreach (var c in Model.Categories)
+                    {
+                        <option value="@c.Id" selected="@(Model.CategoryId == c.Id)">@c.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="StorageFilter" class="form-select rounded-3 py-2" onchange="this.form.submit()">
+                    <option value="">Tất cả dung lượng</option>
+                    <option value="128GB" selected="@(Model.StorageFilter == "128GB")">128GB</option>
+                    <option value="256GB" selected="@(Model.StorageFilter == "256GB")">256GB</option>
+                    <option value="512GB" selected="@(Model.StorageFilter == "512GB")">512GB</option>
+                    <option value="1TB" selected="@(Model.StorageFilter == "1TB")">1TB</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="apple-cta-primary btn-sm flex-fill py-2">Lọc</button>
+                <a asp-page="/Admin/Products" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Product / Variant Table (Mockup 3) -->
+    <div class="admin-table-container">
+        <div class="admin-table-header">
+            <div>
+                <h3 class="fs-6 fw-bold text-dark mb-0">Danh Sách SKU iPhone (@Model.TotalCount biến thể)</h3>
+                <div class="text-secondary small">Theo dõi giá bán niêm yết, số lượng tồn kho khả dụng</div>
+            </div>
+            <span class="badge bg-light text-dark border">Trang @Model.CurrentPage / @Model.TotalPages</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width: 70px;">Ảnh</th>
+                        <th>Tên sản phẩm</th>
+                        <th>Dòng máy</th>
+                        <th>Màu sắc</th>
+                        <th>Bộ nhớ</th>
+                        <th>Giá niêm yết</th>
+                        <th>Tồn kho</th>
+                        <th>Bảo hành</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end" style="width: 140px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.Products.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="10" class="text-center text-secondary py-5">
+                                Không tìm thấy sản phẩm iPhone nào phù hợp bộ lọc.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var p in Model.Products)
+                        {
+                            <tr>
+                                <td>
+                                    <img src="@(string.IsNullOrEmpty(p.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : p.ImageUrl)"
+                                         alt="@p.Name" class="rounded-2" style="width: 48px; height: 48px; object-fit: contain; background: #fbfbfd; border: 1px solid #f0f0f2;" />
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark small">@p.Name</div>
+                                    <div class="text-secondary" style="font-size: 0.72rem;">SKU: @(p.Sku ?? $"#VN-{p.Id:D5}")</div>
+                                </td>
+                                <td><span class="badge bg-light text-dark border">@(p.Category?.Name ?? p.ModelSeries)</span></td>
+                                <td>
+                                    <span class="small text-dark fw-semibold">@p.Color</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-primary border fw-semibold">@p.Storage</span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark small">@p.Price.ToString("N0") ₫</div>
+                                </td>
+                                <td>
+                                    @if (p.Quantity <= 5)
+                                    {
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger fw-bold">@p.Quantity máy (Thấp)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success bg-opacity-10 text-success fw-bold">@p.Quantity máy</span>
+                                    }
+                                </td>
+                                <td><span class="small text-secondary">@p.WarrantyMonths tháng</span></td>
+                                <td>
+                                    @if (p.IsActive)
+                                    {
+                                        <span class="status-pill success">Kinh doanh</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-pill danger">Tạm dừng</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3"
+                                                onclick='openEditModal(@Html.Raw(System.Text.Json.JsonSerializer.Serialize(new {
+                                                    p.Id, p.CategoryId, p.Sku, p.Name, p.ModelSeries, p.Color, p.Storage, p.Price, p.Quantity, p.WarrantyMonths, p.ImageUrl, p.Specifications, p.Description, p.IsActive
+                                                })))'>
+                                            Sửa
+                                        </button>
+                                        <form method="post" asp-page-handler="Delete" asp-route-id="@p.Id" onsubmit="return confirm('Bạn có chắc muốn xoá biến thể iPhone này?');">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3">Xóa</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination (Mockup 3) -->
+        @if (Model.TotalPages > 1)
+        {
+            <div class="p-3 border-top">
+                <nav class="apple-pagination mb-0">
+                    @if (Model.CurrentPage > 1)
+                    {
+                        <a asp-page="/Admin/Products" asp-route-CurrentPage="@(Model.CurrentPage - 1)"
+                           asp-route-SearchKeyword="@Model.SearchKeyword" asp-route-CategoryId="@Model.CategoryId" asp-route-StorageFilter="@Model.StorageFilter" class="page-link">‹ Trước</a>
+                    }
+                    else
+                    {
+                        <span class="page-item disabled">‹ Trước</span>
+                    }
+
+                    @for (int i = 1; i <= Model.TotalPages; i++)
+                    {
+                        if (i == Model.CurrentPage)
+                        {
+                            <span class="page-item active">@i</span>
+                        }
+                        else
+                        {
+                            <a asp-page="/Admin/Products" asp-route-CurrentPage="@i"
+                               asp-route-SearchKeyword="@Model.SearchKeyword" asp-route-CategoryId="@Model.CategoryId" asp-route-StorageFilter="@Model.StorageFilter" class="page-link">@i</a>
+                        }
+                    }
+
+                    @if (Model.CurrentPage < Model.TotalPages)
+                    {
+                        <a asp-page="/Admin/Products" asp-route-CurrentPage="@(Model.CurrentPage + 1)"
+                           asp-route-SearchKeyword="@Model.SearchKeyword" asp-route-CategoryId="@Model.CategoryId" asp-route-StorageFilter="@Model.StorageFilter" class="page-link">Sau ›</a>
+                    }
+                    else
+                    {
+                        <span class="page-item disabled">Sau ›</span>
+                    }
+                </nav>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ================= 4. ADD / EDIT PRODUCT MODAL (MOCKUP 4) ================= -->
+<div class="modal fade" id="productModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <div class="modal-header border-bottom py-3">
+                <h5 class="modal-title fw-bold text-dark mb-0" id="prodModalTitle">4. Thêm / Chỉnh Sửa Sản Phẩm iPhone</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" asp-page-handler="Save">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="prodId" name="InputProduct.Id" value="0" />
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Dòng Máy (Category): <span class="text-danger">*</span></label>
+                            <select id="prodCategoryId" name="InputProduct.CategoryId" class="form-select rounded-3 py-2" required>
+                                <option value="">-- Chọn danh mục --</option>
+                                @foreach (var c in Model.Categories)
+                                {
+                                    <option value="@c.Id">@c.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Model Series (Tiêu đề): <span class="text-danger">*</span></label>
+                            <input type="text" id="prodModelSeries" name="InputProduct.ModelSeries" class="form-control rounded-3 py-2" placeholder="Ví dụ: iPhone 16 Pro Max" required />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-7">
+                            <label class="form-label fw-bold text-dark small">Tên Đầy Đủ Sản Phẩm (Full Name): <span class="text-danger">*</span></label>
+                            <input type="text" id="prodName" name="InputProduct.Name" class="form-control rounded-3 py-2" placeholder="Ví dụ: iPhone 16 Pro Max 256GB Titan Sa Mạc" required />
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold text-dark small">Mã SKU Apple: <span class="text-danger">*</span></label>
+                            <input type="text" id="prodSku" name="InputProduct.Sku" class="form-control rounded-3 py-2 font-monospace" placeholder="Ví dụ: IP16PM-256-DES" required />
+                            <div id="modalSkuFeedback" class="small mt-1" style="min-height: 1.25rem;"></div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small">Màu Sắc: <span class="text-danger">*</span></label>
+                            <input type="text" id="prodColor" name="InputProduct.Color" class="form-control rounded-3 py-2" placeholder="Ví dụ: Titan Sa Mạc, Titan Đen..." required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small">Bộ Nhớ / Dung Lượng: <span class="text-danger">*</span></label>
+                            <select id="prodStorage" name="InputProduct.Storage" class="form-select rounded-3 py-2" required>
+                                <option value="128GB">128GB</option>
+                                <option value="256GB">256GB</option>
+                                <option value="512GB">512GB</option>
+                                <option value="1TB">1TB</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small">Thời Hạn Bảo Hành (Tháng):</label>
+                            <input type="number" id="prodWarranty" name="InputProduct.WarrantyMonths" class="form-control rounded-3 py-2" value="12" min="1" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Giá Bán Niêm Yết (VNĐ): <span class="text-danger">*</span></label>
+                            <input type="number" id="prodPrice" name="InputProduct.Price" class="form-control rounded-3 py-2" placeholder="34990000" required min="1000000" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Số Lượng Tồn Kho Sẵn Có: <span class="text-danger">*</span></label>
+                            <input type="number" id="prodQuantity" name="InputProduct.Quantity" class="form-control rounded-3 py-2" placeholder="10" required min="0" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">Link Ảnh Sản Phẩm (CDN Apple):</label>
+                        <input type="url" id="prodImageUrl" name="InputProduct.ImageUrl" class="form-control rounded-3 py-2" placeholder="https://store.storeimages.cdn-apple.com/..." />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">Thông Số Kỹ Thuật (JSON hoặc Ghi chú):</label>
+                        <textarea id="prodSpecs" name="InputProduct.Specifications" class="form-control rounded-3" rows="2" placeholder='Chip A18 Pro, Màn hình 6.9" Super Retina XDR 120Hz...'></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">Mô Tả Sản Phẩm:</label>
+                        <textarea id="prodDesc" name="InputProduct.Description" class="form-control rounded-3" rows="3" placeholder="Đặc điểm nổi bật của dòng sản phẩm..."></textarea>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="prodIsActive" name="InputProduct.IsActive" value="true" checked />
+                        <label class="form-check-label small text-dark fw-bold" for="prodIsActive">Bật kinh doanh trên Store</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-2">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="apple-cta-primary px-4 py-2">
+                        Lưu Sản Phẩm &rarr;
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var prodModal;
+        var isModalSkuValid = true;
+        var skuDebounceTimer = null;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            prodModal = new bootstrap.Modal(document.getElementById('productModal'));
+
+            const skuInput = document.getElementById('prodSku');
+            const feedback = document.getElementById('modalSkuFeedback');
+
+            function checkModalSku() {
+                const prodId = document.getElementById('prodId').value || '0';
+                const val = skuInput.value.trim();
+
+                if (!val) {
+                    feedback.innerHTML = '<span class="text-danger fw-semibold">⚠️ Mã SKU không được để trống!</span>';
+                    skuInput.classList.add('is-invalid');
+                    skuInput.classList.remove('is-valid');
+                    isModalSkuValid = false;
+                    return;
+                }
+
+                feedback.innerHTML = '<span class="text-secondary"><span class="spinner-border spinner-border-sm me-1" style="width: 0.8rem; height: 0.8rem;"></span>Đang kiểm tra SKU...</span>';
+
+                fetch(`/Admin/CheckSkuAvailability?sku=${encodeURIComponent(val)}&productId=${prodId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.available) {
+                            feedback.innerHTML = `<span class="text-success fw-semibold">${data.message}</span>`;
+                            skuInput.classList.remove('is-invalid');
+                            skuInput.classList.add('is-valid');
+                            isModalSkuValid = true;
+                        } else {
+                            feedback.innerHTML = `<span class="text-danger fw-semibold">${data.message}</span>`;
+                            skuInput.classList.add('is-invalid');
+                            skuInput.classList.remove('is-valid');
+                            isModalSkuValid = false;
+                        }
+                    })
+                    .catch(() => {
+                        feedback.innerHTML = '';
+                    });
+            }
+
+            skuInput.addEventListener('input', function () {
+                clearTimeout(skuDebounceTimer);
+                skuDebounceTimer = setTimeout(checkModalSku, 350);
+            });
+
+            skuInput.addEventListener('blur', function () {
+                checkModalSku();
+            });
+
+            document.querySelector('#productModal form').addEventListener('submit', function (e) {
+                if (!isModalSkuValid) {
+                    e.preventDefault();
+                    skuInput.focus();
+                    alert('Mã SKU không hợp lệ hoặc đã tồn tại trên một sản phẩm khác! Vui lòng chọn mã SKU khác.');
+                }
+            });
+        });
+
+        function openAddModal() {
+            document.getElementById('prodModalTitle').innerText = '4. Thêm Sản Phẩm iPhone Mới';
+            document.getElementById('prodId').value = '0';
+            document.getElementById('prodCategoryId').value = '';
+            document.getElementById('prodModelSeries').value = 'iPhone 16 Pro Max';
+            document.getElementById('prodName').value = '';
+            document.getElementById('prodSku').value = '';
+            document.getElementById('modalSkuFeedback').innerHTML = '';
+            document.getElementById('prodSku').classList.remove('is-invalid', 'is-valid');
+            isModalSkuValid = true;
+            document.getElementById('prodColor').value = '';
+            document.getElementById('prodStorage').value = '256GB';
+            document.getElementById('prodWarranty').value = '12';
+            document.getElementById('prodPrice').value = '';
+            document.getElementById('prodQuantity').value = '10';
+            document.getElementById('prodImageUrl').value = '';
+            document.getElementById('prodSpecs').value = '';
+            document.getElementById('prodDesc').value = '';
+            document.getElementById('prodIsActive').checked = true;
+            prodModal.show();
+        }
+
+        function openEditModal(p) {
+            document.getElementById('prodModalTitle').innerText = '4. Chỉnh Sửa Biến Thể #' + p.Id;
+            document.getElementById('prodId').value = p.Id;
+            document.getElementById('prodCategoryId').value = p.CategoryId;
+            document.getElementById('prodModelSeries').value = p.ModelSeries || '';
+            document.getElementById('prodName').value = p.Name;
+            document.getElementById('prodSku').value = p.Sku || '';
+            document.getElementById('modalSkuFeedback').innerHTML = '';
+            document.getElementById('prodSku').classList.remove('is-invalid', 'is-valid');
+            isModalSkuValid = true;
+            document.getElementById('prodColor').value = p.Color || '';
+            document.getElementById('prodStorage').value = p.Storage || '256GB';
+            document.getElementById('prodWarranty').value = p.WarrantyMonths || 12;
+            document.getElementById('prodPrice').value = p.Price;
+            document.getElementById('prodQuantity').value = p.Quantity;
+            document.getElementById('prodImageUrl').value = p.ImageUrl || '';
+            document.getElementById('prodSpecs').value = p.Specifications || '';
+            document.getElementById('prodDesc').value = p.Description || '';
+            document.getElementById('prodIsActive').checked = p.IsActive;
+            prodModal.show();
+        }
+    </script>
+}

@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="IPhoneStore_Blazor/IPhoneStore_Blazor.csproj" />
+  <Project Path="IPhoneStore_Mvc/IPhoneStore_Mvc.csproj" />
+  <Project Path="IPhoneStore_Razor/IPhoneStore_Razor.csproj" />
+</Solution>

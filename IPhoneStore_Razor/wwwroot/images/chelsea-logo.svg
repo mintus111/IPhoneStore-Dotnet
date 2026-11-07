@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <!-- Chelsea FC Crest Vector -->
+  <defs>
+    <!-- Chelsea Royal Blue Gradient -->
+    <radialGradient id="chelseaBlue" cx="50%" cy="50%" r="50%" fx="30%" fy="30%">
+      <stop offset="0%" stop-color="#0956b5" />
+      <stop offset="100%" stop-color="#034694" />
+    </radialGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f5d77f" />
+      <stop offset="50%" stop-color="#d1ab3e" />
+      <stop offset="100%" stop-color="#a47b19" />
+    </linearGradient>
+    <linearGradient id="whiteShine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#e6e8eb" />
+    </linearGradient>
+  </defs>
+
+  <!-- Outer Ring (Gold) -->
+  <circle cx="100" cy="100" r="96" fill="url(#goldAccent)" />
+  <!-- Outer Blue Ring -->
+  <circle cx="100" cy="100" r="92" fill="url(#chelseaBlue)" stroke="#ffffff" stroke-width="2" />
+  <!-- Inner White Ring -->
+  <circle cx="100" cy="100" r="66" fill="#ffffff" />
+  <!-- Inner Blue Field -->
+  <circle cx="100" cy="100" r="62" fill="url(#chelseaBlue)" />
+
+  <!-- Ring Text / Accents -->
+  <!-- Upper Text CHELSEA -->
+  <path id="textArcTop" d="M 30,100 A 70,70 0 0,1 170,100" fill="none" />
+  <text font-family="'Arial Black', 'Montserrat', Impact, sans-serif" font-weight="900" font-size="19" fill="#ffffff" letter-spacing="4">
+    <textPath href="#textArcTop" startOffset="50%" text-anchor="middle">CHELSEA</textPath>
+  </text>
+
+  <!-- Lower Text FOOTBALL CLUB -->
+  <path id="textArcBottom" d="M 172,100 A 72,72 0 0,1 28,100" fill="none" />
+  <text font-family="'Arial Black', 'Montserrat', Impact, sans-serif" font-weight="900" font-size="12" fill="#ffffff" letter-spacing="2.5">
+    <textPath href="#textArcBottom" startOffset="50%" text-anchor="middle">FOOTBALL CLUB</textPath>
+  </text>
+
+  <!-- Side Footballs and Roses -->
+  <!-- Left Soccer Ball -->
+  <circle cx="27" cy="100" r="7" fill="#ffffff" stroke="url(#goldAccent)" stroke-width="1.5" />
+  <polygon points="27,97 29,99 28,102 26,102 25,99" fill="#034694" />
+  <!-- Right Soccer Ball -->
+  <circle cx="173" cy="100" r="7" fill="#ffffff" stroke="url(#goldAccent)" stroke-width="1.5" />
+  <polygon points="173,97 175,99 174,102 172,102 171,99" fill="#034694" />
+
+  <!-- Center: The Chelsea Ceremonial Lion Rampant Reguardant with Abbot's Staff -->
+  <g id="chelseaLion" transform="translate(14, 8)">
+    <!-- Staff (Quyền trượng Abbot) -->
+    <path d="M 94,36 L 94,142" stroke="url(#goldAccent)" stroke-width="4.5" stroke-linecap="round" />
+    <!-- Staff Head (Cross / Trefoil) -->
+    <circle cx="94" cy="33" r="5" fill="url(#goldAccent)" />
+    <path d="M 87,33 L 101,33 M 94,26 L 94,40" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+
+    <!-- Lion Body (White silhouette with gold shading & red tongue) -->
+    <!-- Red Tongue -->
+    <path d="M 96,52 Q 106,50 102,57" fill="none" stroke="#e52424" stroke-width="2.5" stroke-linecap="round" />
+
+    <!-- Lion Silhouette -->
+    <!-- Head, mane, rampant paws holding staff, tail with tuft, hind legs -->
+    <path d="
+      M 91,48 
+      C 94,44 88,38 82,41 
+      C 77,43 76,48 78,52 
+      C 73,50 67,52 66,57
+      C 65,62 70,66 73,66
+      C 70,72 73,78 77,81
+      C 75,85 70,88 64,88
+      C 59,88 56,84 55,80
+      L 51,82
+      C 52,88 57,94 65,94
+      C 71,94 77,91 80,87
+      C 82,93 85,99 83,105
+      C 81,111 72,118 69,124
+      C 66,130 67,138 72,141
+      L 76,138
+      C 73,134 72,128 75,124
+      C 79,118 88,114 91,108
+      C 94,103 93,96 91,90
+      C 95,87 101,84 103,79
+      C 105,74 103,68 99,65
+      C 103,63 105,58 103,53
+      C 101,48 95,49 91,48 Z
+    " fill="url(#whiteShine)" stroke="#ffffff" stroke-width="0.8" />
+
+    <!-- Lion Paws Claws holding Staff -->
+    <path d="M 91,58 L 97,58 M 91,62 L 96,62" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+    <path d="M 91,76 L 98,75 M 92,80 L 97,80" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+
+    <!-- Lion Mane / Details (Gold highlights) -->
+    <path d="M 83,46 C 85,52 82,58 79,62" fill="none" stroke="url(#goldAccent)" stroke-width="2" stroke-linecap="round" />
+    <path d="M 80,68 C 82,75 80,82 76,86" fill="none" stroke="url(#goldAccent)" stroke-width="2" stroke-linecap="round" />
+
+    <!-- Lion Tail (Double branched curve with tuft) -->
+    <path d="
+      M 70,120 
+      C 52,115 45,95 49,78 
+      C 52,65 62,56 62,45 
+      C 62,38 55,36 50,40
+      C 47,43 47,48 50,50
+      C 53,52 56,48 54,44
+      C 52,40 45,43 46,50
+      C 48,60 38,72 38,88
+      C 38,106 52,126 72,128 Z
+    " fill="url(#whiteShine)" />
+
+    <!-- Tail Tuft (chùm lông đuôi sư tử) -->
+    <path d="M 52,36 C 58,30 64,34 62,42 C 60,37 56,35 52,36 Z" fill="url(#goldAccent)" />
+  </g>
+</svg>

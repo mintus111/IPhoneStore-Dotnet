@@ -1,0 +1,838 @@
+@page "/admin/orders"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin,Manager,Staff,Cashier,Shipper")]
+@inject IDbContextFactory<IPhoneStoreDbContext> DbFactory
+@inject NavigationManager Nav
+
+<PageTitle>Quản Lý &amp; Xuất Kho Đơn Hàng - Admin</PageTitle>
+
+<div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1">FULFILLMENT &amp; LOGISTICS</span>
+                <span class="text-secondary small">Duyệt đơn và gán mã IMEI xuất kho</span>
+            </div>
+            <h1 class="fs-3 fw-bold text-dark mb-0">Quản Lý &amp; Xuất Kho Đơn Hàng</h1>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_alert))
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 rounded-3 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <strong>Thành công:</strong> @_alert
+            </div>
+            <button type="button" class="btn-close" @onclick="() => _alert = null"></button>
+        </div>
+    }
+
+    <!-- 4 Stat Counters (Mockup 7) -->
+    <div class="admin-stat-grid mb-4">
+        <div class="admin-stat-card">
+            <div class="admin-stat-label">Tất Cả Đơn Hàng</div>
+            <div class="admin-stat-value text-dark">@_orders.Count</div>
+        </div>
+        <div class="admin-stat-card">
+            <div class="admin-stat-label">Chờ Xác Nhận</div>
+            <div class="admin-stat-value text-warning">@PendingCount</div>
+        </div>
+        <div class="admin-stat-card">
+            <div class="admin-stat-label">Đang Giao Hàng (GHN)</div>
+            <div class="admin-stat-value text-primary">@ShippingCount</div>
+        </div>
+        <div class="admin-stat-card">
+            <div class="admin-stat-label">Đã Giao Thành Công</div>
+            <div class="admin-stat-value text-success">@CompletedCount</div>
+        </div>
+    </div>
+
+    <!-- Status Tabs & Search Bar (Mockup 7) -->
+    <div class="bg-white border rounded-3 p-3 mb-4 shadow-sm">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(string.IsNullOrEmpty(_statusFilter) ? "btn-primary" : "btn-light text-dark")" @onclick='() => _statusFilter = ""'>Tất cả (@_orders.Count)</button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(_statusFilter == "Pending" ? "btn-primary" : "btn-light text-dark")" @onclick='() => _statusFilter = "Pending"'>Chờ xử lý (@PendingCount)</button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(_statusFilter == "Confirmed" ? "btn-primary" : "btn-light text-dark")" @onclick='() => _statusFilter = "Confirmed"'>Đã xác nhận (@ConfirmedCount)</button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(_statusFilter == "Shipping" ? "btn-primary" : "btn-light text-dark")" @onclick='() => _statusFilter = "Shipping"'>Đang giao (@ShippingCount)</button>
+                <button type="button" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(_statusFilter == "Completed" ? "btn-primary" : "btn-light text-dark")" @onclick='() => _statusFilter = "Completed"'>Hoàn tất (@CompletedCount)</button>
+            </div>
+
+            <div class="apple-search-pill-container" style="width:240px;">
+                <svg class="search-icon-inside" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" @bind="_search" @bind:event="oninput" class="apple-search-pill" placeholder="Mã đơn, SĐT khách..." />
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders Table (Mockup 7) -->
+    <div class="admin-table-container">
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Mã đơn hàng</th>
+                        <th>Ngày đặt</th>
+                        <th>Khách hàng</th>
+                        <th>Sản phẩm đặt</th>
+                        <th>Tổng tiền</th>
+                        <th>Thanh toán</th>
+                        <th>Trạng thái đơn</th>
+                        <th class="text-end">Xử lý &amp; Gán IMEI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (FilteredOrders.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-secondary">
+                                Không tìm thấy đơn hàng nào trong mục này.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var order in FilteredOrders)
+                        {
+                            <tr @key="order.Id">
+                                <td><strong class="text-primary fs-6">@(order.OrderCode ?? $"#IPS{order.Id:D6}")</strong></td>
+                                <td class="text-secondary small">@order.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <div class="fw-bold text-dark">@(order.Customer?.FullName ?? "Khách vãng lai")</div>
+                                    <div class="text-secondary small">@(order.Customer?.PhoneNumber ?? "")</div>
+                                </td>
+                                <td>
+                                    <div class="small text-secondary">
+                                        @foreach (var d in order.OrderDetails.Take(2))
+                                        {
+                                            <div>@d.Product?.Name <span class="badge bg-light text-dark">x@(d.Quantity)</span></div>
+                                        }
+                                        @if (order.OrderDetails.Count > 2)
+                                        {
+                                            <span class="text-muted">+@(order.OrderDetails.Count - 2) máy khác</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td><strong class="text-dark fs-6">@order.TotalAmount.ToString("N0") ₫</strong></td>
+                                <td>
+                                    <div class="small fw-semibold text-dark">@order.PaymentMethod</div>
+                                    @if (order.PaymentStatus == "Đã thanh toán" || order.PaymentStatus == "Paid")
+                                    {
+                                        <span class="badge bg-success bg-opacity-10 text-success small" style="font-size: 0.72rem;">Đã thanh toán</span>
+                                    }
+                                    else if (order.PaymentStatus == "Chờ hoàn tiền")
+                                    {
+                                        <span class="badge bg-danger bg-opacity-10 text-danger small" style="font-size: 0.72rem;">Chờ hoàn tiền</span>
+                                    }
+                                    else if (order.PaymentStatus == "Đã hoàn tiền")
+                                    {
+                                        <span class="badge bg-secondary small" style="font-size: 0.72rem;">Đã hoàn tiền</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning bg-opacity-10 text-dark small" style="font-size: 0.72rem;">Chưa thanh toán</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (order.OrderStatus == "Completed")
+                                    {
+                                        <span class="status-pill success">Hoàn tất</span>
+                                    }
+                                    else if (order.OrderStatus == "Shipping")
+                                    {
+                                        <span class="status-pill info">Đang giao</span>
+                                    }
+                                    else if (order.OrderStatus == "Confirmed")
+                                    {
+                                        <span class="status-pill warning">Đã xác nhận</span>
+                                    }
+                                    else if (order.OrderStatus == "Cancelled")
+                                    {
+                                        <span class="status-pill danger">Đã hủy</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-pill warning">Chờ duyệt</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    @if (order.OrderStatus == "Completed" || order.OrderStatus == "Cancelled")
+                                    {
+                                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" @onclick="() => OpenFulfillment(order)">
+                                            Chi tiết &rarr;
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" @onclick="() => OpenFulfillment(order)">
+                                            Xử lý xuất kho &rarr;
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination (Mockup 7) -->
+        <nav class="apple-pagination py-3">
+            <span class="page-item disabled">‹ Trước</span>
+            <span class="page-item active">1</span>
+            <a href="javascript:void(0);" class="page-link">2</a>
+            <a href="javascript:void(0);" class="page-link">Sau ›</a>
+        </nav>
+    </div>
+</div>
+
+<!-- ================= FULFILLMENT & IMEI ASSIGNMENT MODAL ================= -->
+@if (_selectedOrder != null)
+{
+    var isTerminal = _selectedOrder.OrderStatus == "Completed" || _selectedOrder.OrderStatus == "Cancelled";
+
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-3">
+                <div class="modal-header border-bottom py-3">
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Chi Tiết &amp; Xử Lý Đơn Hàng <span class="text-primary">@(_selectedOrder.OrderCode ?? $"#IPS{_selectedOrder.Id:D6}")</span></h5>
+                        <div class="text-secondary small">Gán mã thân máy IMEI thực tế từ kho và tạo vận đơn giao hàng</div>
+                    </div>
+                    <button type="button" class="btn-close" @onclick="() => _selectedOrder = null"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    @if (isTerminal)
+                    {
+                        <div class="alert alert-warning border-0 rounded-3 shadow-sm mb-3 d-flex align-items-center gap-2">
+                            <span class="fs-5">🔒</span>
+                            <div>
+                                <strong>Thông báo:</strong> Đơn hàng đã hoàn tất / đã hủy, không thể thay đổi trạng thái. Toàn bộ thao tác chỉnh sửa đã bị khóa.
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrEmpty(_modalError))
+                    {
+                        <div class="alert alert-danger py-2 px-3 small rounded-3 mb-3 d-flex align-items-center justify-content-between">
+                            <div>@_modalError</div>
+                            <button type="button" class="btn-close btn-sm" @onclick="() => _modalError = null"></button>
+                        </div>
+                    }
+
+                    <!-- Customer and address summary -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <div class="text-secondary small">Khách hàng nhận:</div>
+                                <strong class="text-dark">@(_selectedOrder.Customer?.FullName ?? "Khách vãng lai")</strong> - <span>@(_selectedOrder.Customer?.PhoneNumber ?? "Chưa có SĐT")</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <div class="text-secondary small">Địa chỉ giao nhận:</div>
+                                <span class="text-dark small">@(_selectedOrder.ShippingAddress ?? "Nhận tại shop BomChelsea")</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Products and IMEI Assignment list -->
+                    <div class="mb-4">
+                        <h6 class="fw-bold text-dark mb-2">Sản Phẩm Đặt Mua &amp; Mã IMEI Xuất Kho:</h6>
+                        <div class="table-responsive border rounded-3">
+                            <table class="table mb-0 align-middle">
+                                <thead class="table-light small">
+                                    <tr>
+                                        <th>Sản phẩm / SKU</th>
+                                        <th style="width: 80px;">Số lượng</th>
+                                        <th style="min-width: 280px;">Mã IMEI Thân Máy Kho (15 số)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var detail in _selectedOrder.OrderDetails)
+                                    {
+                                        var avail = _availableImeisByProduct.ContainsKey(detail.ProductId) 
+                                            ? _availableImeisByProduct[detail.ProductId] 
+                                            : new List<ProductImei>();
+
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <img src="@(string.IsNullOrEmpty(detail.Product?.ImageUrl) ? "/images/hero-iphone16.jpg" : detail.Product?.ImageUrl)"
+                                                         alt="@detail.Product?.Name"
+                                                         onerror="this.onerror=null;this.src='/images/hero-iphone16.jpg';"
+                                                         style="width: 44px; height: 44px; min-width: 44px; max-width: 44px; max-height: 44px; object-fit: contain; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; flex-shrink: 0;" />
+                                                    <div>
+                                                        <div class="fw-bold text-dark small">@detail.Product?.Name</div>
+                                                        <div class="text-secondary" style="font-size: 0.72rem;">SKU: @(detail.Product?.Sku ?? "-") · Đơn giá: @detail.UnitPrice.ToString("N0") ₫</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-light text-dark border">x@(detail.Quantity)</span>
+                                            </td>
+                                            <td>
+                                                @if (avail.Count == 0 && string.IsNullOrEmpty(detail.ImeiNumber))
+                                                {
+                                                    <span class="text-danger small fw-semibold">Kho hết hàng InStock!</span>
+                                                }
+                                                else
+                                                {
+                                                    <div class="d-flex flex-column gap-2 py-1">
+                                                        @for (int idx = 0; idx < detail.Quantity; idx++)
+                                                        {
+                                                            var slotIdx = idx;
+                                                            var slotKey = $"{detail.Id}_{slotIdx}";
+                                                            var currentImei = _selectedImeis.TryGetValue(slotKey, out var val) ? val : "";
+                                                            var filteredOptions = GetFilteredImeisForSlot(detail.ProductId, slotKey).ToList();
+
+                                                            <div class="p-2 bg-light rounded-2 border">
+                                                                @if (detail.Quantity > 1)
+                                                                {
+                                                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                                                        <span class="small fw-bold text-dark" style="font-size: 0.78rem;">Thân máy #@(slotIdx + 1) / @(detail.Quantity):</span>
+                                                                        @if (!string.IsNullOrEmpty(currentImei))
+                                                                        {
+                                                                            <span class="badge bg-success small" style="font-size: 0.65rem;">Đã chọn</span>
+                                                                        }
+                                                                        else
+                                                                        {
+                                                                            <span class="badge bg-warning text-dark small" style="font-size: 0.65rem;">Chưa gán</span>
+                                                                        }
+                                                                    </div>
+                                                                }
+                                                                <select class="form-select form-select-sm font-monospace" 
+                                                                        value="@currentImei"
+                                                                        disabled="@isTerminal"
+                                                                        @onchange="(e) => OnSlotImeiChanged(detail.Id, slotIdx, e.Value?.ToString())">
+                                                                    <option value="">-- Chọn IMEI thân máy #@(slotIdx + 1) --</option>
+                                                                    @foreach (var im in filteredOptions)
+                                                                    {
+                                                                        <option value="@im.Imei">
+                                                                            @im.Imei (@(im.OrderId == _selectedOrder.Id ? "Đơn này giữ chỗ" : im.Status))
+                                                                        </option>
+                                                                    }
+                                                                </select>
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Logistics Info -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Đơn vị vận chuyển:</label>
+                            <select @bind="_shippingUnit" class="form-select rounded-3 py-2" disabled="@isTerminal">
+                                <option value="Giao Hàng Nhanh (GHN)">Giao Hàng Nhanh (GHN)</option>
+                                <option value="Viettel Post">Viettel Post</option>
+                                <option value="Giao Hàng Tiết Kiệm (GHTK)">Giao Hàng Tiết Kiệm (GHTK)</option>
+                                <option value="Nhận tại cửa hàng (In-Store Pickup)">Nhận tại cửa hàng (In-Store Pickup)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Mã vận đơn / Tracking code:</label>
+                            <input type="text" @bind="_trackingNumber" class="form-control rounded-3 py-2 font-monospace" placeholder="GHN882910VN" disabled="@isTerminal" />
+                        </div>
+                    </div>
+
+                    <!-- Payment Status & Order Status Matrix (AAR State Machine) -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Trạng thái thanh toán: <span class="text-danger">*</span></label>
+                            <select class="form-select rounded-3 py-2 fw-semibold" 
+                                    value="@_paymentStatus" 
+                                    disabled="@isTerminal" 
+                                    @onchange="OnPaymentStatusChanged">
+                                <option value="Đã thanh toán">Đã thanh toán</option>
+                                <option value="Chưa thanh toán">Chưa thanh toán</option>
+                                <option value="Chờ hoàn tiền" disabled="@(_newStatus != "Cancelled")">Chờ hoàn tiền</option>
+                                <option value="Đã hoàn tiền" disabled="@(_newStatus != "Cancelled")">Đã hoàn tiền</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Chuyển Bước Trạng Thái Đơn Hàng: <span class="text-danger">*</span></label>
+                            <select class="form-select rounded-3 py-2 fw-semibold" 
+                                    value="@_newStatus" 
+                                    disabled="@isTerminal" 
+                                    @onchange="OnOrderStatusChanged">
+                                <option value="Pending">Chờ xác nhận (Pending)</option>
+                                <option value="Confirmed">1. Đã duyệt đơn &amp; Gán giữ hàng kho (Confirmed)</option>
+                                <option value="Shipping">2. Đã bàn giao đơn vị vận chuyển (Shipping)</option>
+                                <option value="Completed">3. Khách đã nhận máy &amp; Kích hoạt E-Warranty (Completed)</option>
+                                <option value="Cancelled">4. Hủy đơn &amp; Hoàn trả thân máy về kho (Cancelled)</option>
+                            </select>
+                            @if (isTerminal)
+                            {
+                                <div class="form-text text-danger small mt-1">
+                                    🔒 Đơn hàng đã ở trạng thái kết thúc, không thể thay đổi trạng thái.
+                                </div>
+                            }
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrEmpty(_statusConstraintNotice))
+                    {
+                        <div class="@_statusConstraintNoticeClass mb-3">
+                            @((MarkupString)_statusConstraintNotice)
+                        </div>
+                    }
+
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="small text-secondary">
+                            Khi chuyển sang <strong>Completed</strong>, hệ thống tự động xác nhận <strong>Đã thanh toán</strong> và kích hoạt chế độ bảo hành điện tử chính hãng Apple Care (12 tháng) cho các thân máy được gán.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top py-2">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" @onclick="() => _selectedOrder = null">Đóng</button>
+                    @if (!isTerminal)
+                    {
+                        <button type="button" class="apple-cta-primary px-4 py-2" @onclick="UpdateStatusAsync">
+                            Lưu Cập Nhật Xuất Kho &rarr;
+                        </button>
+                    }
+                    else
+                    {
+                        <button type="button" class="btn btn-secondary px-4 py-2 rounded-pill" disabled>
+                            🔒 Đơn hàng đã kết thúc &mdash; Đã khóa chỉnh sửa
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Order> _orders = new();
+    private Order? _selectedOrder;
+    private string _newStatus = "Confirmed";
+    private string _paymentStatus = "Chưa thanh toán";
+    private string? _originalPaymentStatus;
+    private string? _statusConstraintNotice;
+    private string _statusConstraintNoticeClass = "small p-2 rounded";
+    private string _shippingUnit = "Giao Hàng Nhanh (GHN)";
+    private string _trackingNumber = "";
+    private Dictionary<string, string> _selectedImeis = new(); // key: $"{detailId}_{slotIdx}"
+    private Dictionary<int, List<ProductImei>> _availableImeisByProduct = new();
+
+    private string? _alert;
+    private string? _modalError;
+    private string _statusFilter = "";
+    private string _search = "";
+
+    private int PendingCount => _orders.Count(o => o.OrderStatus == "Pending");
+    private int ConfirmedCount => _orders.Count(o => o.OrderStatus == "Confirmed");
+    private int ShippingCount => _orders.Count(o => o.OrderStatus == "Shipping");
+    private int CompletedCount => _orders.Count(o => o.OrderStatus == "Completed");
+
+    private List<Order> FilteredOrders => _orders
+        .Where(o => string.IsNullOrEmpty(_statusFilter) || o.OrderStatus == _statusFilter)
+        .Where(o => string.IsNullOrWhiteSpace(_search) ||
+                    ("#IPS" + o.Id.ToString("D6")).ToLower().Contains(_search.Trim().ToLower()) ||
+                    (o.Customer != null && (o.Customer.FullName.ToLower().Contains(_search.Trim().ToLower()) || o.Customer.PhoneNumber.Contains(_search.Trim()))))
+        .ToList();
+
+    protected override async Task OnInitializedAsync() => await LoadOrdersAsync();
+
+    private async Task LoadOrdersAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _orders = await db.Orders
+            .Include(o => o.Customer)
+            .Include(o => o.OrderDetails).ThenInclude(od => od.Product)
+            .Include(o => o.OrderDetails).ThenInclude(od => od.ProductImei)
+            .OrderByDescending(o => o.OrderDate)
+            .ToListAsync();
+    }
+
+    private IEnumerable<ProductImei> GetFilteredImeisForSlot(int productId, string currentSlotKey)
+    {
+        if (!_availableImeisByProduct.TryGetValue(productId, out var imeis))
+            return Enumerable.Empty<ProductImei>();
+
+        var chosenInOtherSlots = _selectedImeis
+            .Where(kvp => kvp.Key != currentSlotKey && !string.IsNullOrEmpty(kvp.Value))
+            .Select(kvp => kvp.Value)
+            .ToHashSet();
+
+        return imeis.Where(im => !chosenInOtherSlots.Contains(im.Imei));
+    }
+
+    private void OnSlotImeiChanged(int detailId, int slotIdx, string? imei)
+    {
+        var slotKey = $"{detailId}_{slotIdx}";
+        if (!string.IsNullOrWhiteSpace(imei))
+            _selectedImeis[slotKey] = imei.Trim();
+        else
+            _selectedImeis.Remove(slotKey);
+    }
+
+    private void SyncStatusRules()
+    {
+        if (_newStatus != "Cancelled")
+        {
+            // Đơn hàng đang lưu hành (Pending, Confirmed, Shipping, Completed)
+            // Khóa tuyệt đối: Không cho chọn "Chờ hoàn tiền" hoặc "Đã hoàn tiền"
+            if (_paymentStatus == "Chờ hoàn tiền" || _paymentStatus == "Đã hoàn tiền")
+            {
+                _paymentStatus = "Đã thanh toán";
+            }
+
+            if (_newStatus == "Completed")
+            {
+                _paymentStatus = "Đã thanh toán";
+                _statusConstraintNoticeClass = "alert alert-success py-2 px-3 small rounded-3 mb-3 border-0";
+                _statusConstraintNotice = "✓ <strong>Quy chuẩn AAR:</strong> Đơn hàng \"Hoàn tất\" bắt buộc đã thu đủ tiền. Trạng thái thanh toán tự động xác nhận <strong>Đã thanh toán</strong> (khóa các tùy chọn hoàn tiền).";
+            }
+            else
+            {
+                _statusConstraintNotice = null;
+            }
+        }
+        else
+        {
+            // Đơn hàng bị hủy (Cancelled)
+            // Mở khóa các tùy chọn hoàn tiền
+            if (_originalPaymentStatus == "Đã thanh toán" || _originalPaymentStatus == "Paid")
+            {
+                if (_paymentStatus != "Đã hoàn tiền")
+                {
+                    _paymentStatus = "Chờ hoàn tiền";
+                }
+                _statusConstraintNoticeClass = "alert alert-danger py-2 px-3 small rounded-3 mb-3 border-0";
+                _statusConstraintNotice = "⚠️ <strong>Chính sách hoàn tiền:</strong> Đơn hàng bị hủy nếu đã thanh toán trước sẽ tự động chuyển sang trạng thái <strong>Chờ hoàn tiền</strong> để bộ phận kế toán thực hiện hoàn tiền cho khách.";
+            }
+            else if (_paymentStatus == "Chờ hoàn tiền" || _paymentStatus == "Đã hoàn tiền")
+            {
+                _statusConstraintNoticeClass = "alert alert-warning py-2 px-3 small rounded-3 mb-3 border-0 text-dark";
+                _statusConstraintNotice = "🔄 <strong>Đơn hàng xử lý hoàn tiền:</strong> Trạng thái ghi nhận hoàn tất thủ tục tài chính cho khách.";
+            }
+            else
+            {
+                _paymentStatus = "Chưa thanh toán";
+                _statusConstraintNoticeClass = "alert alert-secondary py-2 px-3 small rounded-3 mb-3 border-0";
+                _statusConstraintNotice = "ℹ️ <strong>Hủy đơn chưa thanh toán:</strong> Đơn hàng chưa thu tiền (COD hoặc chưa chuyển khoản) khi hủy sẽ <strong>giữ nguyên Chưa thanh toán</strong> (không phát sinh hoàn tiền). Hệ thống tự động hoàn tồn kho và giải phóng mã IMEI.";
+            }
+        }
+    }
+
+    private void OnOrderStatusChanged(ChangeEventArgs e)
+    {
+        _newStatus = e.Value?.ToString() ?? "Pending";
+        _modalError = null;
+        SyncStatusRules();
+    }
+
+    private void OnPaymentStatusChanged(ChangeEventArgs e)
+    {
+        var val = e.Value?.ToString() ?? "Chưa thanh toán";
+        if (_newStatus == "Completed" && val == "Chưa thanh toán")
+        {
+            _modalError = "⚠️ Cảnh báo nghiệp vụ AAR: Đơn hàng 'Hoàn tất giao hàng' không thể để 'Chưa thanh toán'! Nếu máy đã giao thành công cho khách, dòng tiền phải được ghi nhận 'Đã thanh toán'.";
+            _paymentStatus = "Đã thanh toán";
+        }
+        else if (_newStatus != "Cancelled" && (val == "Chờ hoàn tiền" || val == "Đã hoàn tiền"))
+        {
+            _modalError = "Lỗi nghiệp vụ: Chỉ đơn hàng ở trạng thái 'Hủy đơn hàng' mới được phép chọn Chờ hoàn tiền hoặc Đã hoàn tiền!";
+            _paymentStatus = "Đã thanh toán";
+        }
+        else
+        {
+            _paymentStatus = val;
+            _modalError = null;
+        }
+        SyncStatusRules();
+    }
+
+    private async Task OpenFulfillment(Order o)
+    {
+        _selectedOrder = o;
+        _modalError = null;
+        _newStatus = o.OrderStatus;
+        _paymentStatus = !string.IsNullOrEmpty(o.PaymentStatus) ? o.PaymentStatus : "Chưa thanh toán";
+        if (_paymentStatus == "Paid") _paymentStatus = "Đã thanh toán";
+        _originalPaymentStatus = _paymentStatus;
+        SyncStatusRules();
+        _shippingUnit = !string.IsNullOrEmpty(o.ShippingUnit) ? o.ShippingUnit : "Giao Hàng Nhanh (GHN)";
+        _trackingNumber = !string.IsNullOrEmpty(o.TrackingNumber) ? o.TrackingNumber : ("GHN" + o.Id.ToString("D6") + "VN");
+        _selectedImeis.Clear();
+        _availableImeisByProduct.Clear();
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        foreach (var detail in o.OrderDetails)
+        {
+            var imeis = await db.ProductImeis
+                .Where(pi => pi.ProductId == detail.ProductId && (pi.Status == "InStock" || pi.OrderId == o.Id))
+                .OrderBy(pi => pi.ImportDate)
+                .ToListAsync();
+
+            _availableImeisByProduct[detail.ProductId] = imeis;
+
+            var assignedForThisOrder = imeis.Where(pi => pi.OrderId == o.Id).ToList();
+
+            var savedImeis = !string.IsNullOrEmpty(detail.ImeiNumber)
+                ? detail.ImeiNumber.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList()
+                : new List<string>();
+
+            var used = new HashSet<string>();
+
+            for (int idx = 0; idx < detail.Quantity; idx++)
+            {
+                var slotKey = $"{detail.Id}_{idx}";
+
+                // 1. Ưu tiên lấy từ savedImeis
+                if (idx < savedImeis.Count && imeis.Any(pi => pi.Imei == savedImeis[idx]))
+                {
+                    _selectedImeis[slotKey] = savedImeis[idx];
+                    used.Add(savedImeis[idx]);
+                }
+                // 2. Tiếp theo lấy từ các IMEI mà chính đơn hàng này đang giữ chỗ
+                else if (idx < assignedForThisOrder.Count && !used.Contains(assignedForThisOrder[idx].Imei))
+                {
+                    _selectedImeis[slotKey] = assignedForThisOrder[idx].Imei;
+                    used.Add(assignedForThisOrder[idx].Imei);
+                }
+                // 3. Nếu chưa đủ, tự động lấy IMEI InStock khả dụng tiếp theo
+                else
+                {
+                    var nextInStock = imeis.FirstOrDefault(pi => (pi.Status == "InStock" || pi.OrderId == o.Id) && !used.Contains(pi.Imei));
+                    if (nextInStock != null)
+                    {
+                        _selectedImeis[slotKey] = nextInStock.Imei;
+                        used.Add(nextInStock.Imei);
+                    }
+                }
+            }
+        }
+    }
+
+    private async Task UpdateStatusAsync()
+    {
+        if (_selectedOrder == null) return;
+        _modalError = null;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var order = await db.Orders
+            .Include(o => o.OrderDetails).ThenInclude(od => od.Product)
+            .FirstOrDefaultAsync(o => o.Id == _selectedOrder.Id);
+
+        if (order != null)
+        {
+            var currentStatus = order.OrderStatus?.Trim();
+
+            // 1. Kiểm tra trạng thái hiện tại từ CSDL: nếu là Completed hoặc Cancelled thì chặn lại
+            if (currentStatus == "Completed" || currentStatus == "Cancelled")
+            {
+                _modalError = "Đơn hàng đã ở trạng thái kết thúc, không thể chỉnh sửa!";
+                return;
+            }
+
+            // 2. Kiểm tra luồng hợp lệ (State Machine):
+            // Pending -> Confirmed hoặc Cancelled
+            // Confirmed -> Shipping hoặc Cancelled
+            // Shipping -> Completed hoặc Cancelled
+            bool isValidTransition = false;
+            if (currentStatus == _newStatus)
+            {
+                isValidTransition = true;
+            }
+            else if (currentStatus == "Pending" && (_newStatus == "Confirmed" || _newStatus == "Cancelled"))
+            {
+                isValidTransition = true;
+            }
+            else if (currentStatus == "Confirmed" && (_newStatus == "Shipping" || _newStatus == "Cancelled"))
+            {
+                isValidTransition = true;
+            }
+            else if (currentStatus == "Shipping" && (_newStatus == "Completed" || _newStatus == "Cancelled"))
+            {
+                isValidTransition = true;
+            }
+
+            if (!isValidTransition)
+            {
+                _modalError = $"Quy trình chuyển trạng thái không hợp lệ: Không thể chuyển từ '{currentStatus}' sang '{_newStatus}'! (Chỉ cho phép: Chờ xác nhận → Đã xác nhận → Đang giao → Hoàn tất, hoặc Hủy)";
+                return;
+            }
+
+            var now = DateTime.Now;
+
+            // Bắt buộc kiểm tra gán đủ N mã IMEI cho N máy khi chuyển sang Shipping hoặc Completed
+            if (_newStatus == "Shipping" || _newStatus == "Completed")
+            {
+                foreach (var detail in order.OrderDetails)
+                {
+                    int assignedCount = 0;
+                    for (int i = 0; i < detail.Quantity; i++)
+                    {
+                        if (_selectedImeis.TryGetValue($"{detail.Id}_{i}", out var imei) && !string.IsNullOrWhiteSpace(imei))
+                        {
+                            assignedCount++;
+                        }
+                    }
+
+                    if (assignedCount < detail.Quantity)
+                    {
+                        _modalError = $"⚠️ Lỗi: Sản phẩm '{detail.Product?.Name}' có số lượng {detail.Quantity} máy nhưng mới gán {assignedCount} mã IMEI. Vui lòng gán đủ {detail.Quantity} mã thân máy trước khi xuất kho / hoàn tất đơn hàng!";
+                        return;
+                    }
+                }
+            }
+
+            // 1. Cập nhật các IMEI cho từng thân máy của từng chi tiết đơn
+            foreach (var detail in order.OrderDetails)
+            {
+                var assignedImeiList = new List<string>();
+                ProductImei? primaryImeiRecord = null;
+
+                for (int i = 0; i < detail.Quantity; i++)
+                {
+                    var slotKey = $"{detail.Id}_{i}";
+                    if (_selectedImeis.TryGetValue(slotKey, out var imeiStr) && !string.IsNullOrWhiteSpace(imeiStr))
+                    {
+                        var imeiRecord = await db.ProductImeis
+                            .FirstOrDefaultAsync(pi => pi.Imei == imeiStr.Trim() && pi.ProductId == detail.ProductId);
+
+                        if (imeiRecord != null)
+                        {
+                            assignedImeiList.Add(imeiRecord.Imei);
+                            primaryImeiRecord ??= imeiRecord;
+
+                            imeiRecord.OrderId = order.Id;
+
+                            if (_newStatus == "Shipping" || _newStatus == "Completed")
+                            {
+                                imeiRecord.Status = "Sold";
+                                imeiRecord.ExportDate = now;
+
+                                if (_newStatus == "Completed")
+                                {
+                                    // Tạo sổ bảo hành điện tử chính hãng Apple Care cho TỪNG thân máy
+                                    var hasWarranty = await db.Warranties.AnyAsync(w => w.Imei == imeiRecord.Imei);
+                                    if (!hasWarranty)
+                                    {
+                                        var prod = await db.Products.FindAsync(detail.ProductId);
+                                        var months = prod?.WarrantyMonths ?? 12;
+                                        db.Warranties.Add(new IPhoneStore_Blazor.Models.Entities.Warranty
+                                        {
+                                            Imei = imeiRecord.Imei,
+                                            SerialNumber = imeiRecord.SerialNumber,
+                                            CustomerId = order.CustomerId,
+                                            ProductId = detail.ProductId,
+                                            OrderDetailId = detail.Id,
+                                            StartDate = now,
+                                            EndDate = now.AddMonths(months),
+                                            Status = "Active",
+                                            WarrantyType = "Chính hãng Apple 12 tháng"
+                                        });
+                                    }
+                                }
+                            }
+                            else if (_newStatus == "Confirmed")
+                            {
+                                imeiRecord.Status = "Reserved";
+                            }
+                        }
+                    }
+                }
+
+                if (primaryImeiRecord != null)
+                {
+                    detail.ProductImeiId = primaryImeiRecord.Id;
+                }
+                if (assignedImeiList.Count > 0)
+                {
+                    detail.ImeiNumber = string.Join(", ", assignedImeiList);
+                }
+            }
+
+            // 2. Chuyển trạng thái đơn & thanh toán theo quy chuẩn AAR
+            var oldAuditState = $"Status={order.OrderStatus}, Payment={order.PaymentStatus}";
+
+            // Ràng buộc ma trận Trạng thái Đơn hàng & Trạng thái Thanh toán
+            if (_newStatus != "Cancelled" && (_paymentStatus == "Chờ hoàn tiền" || _paymentStatus == "Đã hoàn tiền"))
+            {
+                _modalError = "Không thể chọn trạng thái 'Chờ hoàn tiền' hoặc 'Đã hoàn tiền' khi đơn hàng đang xử lý hoặc chưa bị hủy!";
+                return;
+            }
+
+            if (_newStatus == "Completed")
+            {
+                _paymentStatus = "Đã thanh toán";
+                order.PaymentStatus = "Đã thanh toán";
+            }
+            else if (_newStatus == "Cancelled")
+            {
+                if (order.PaymentStatus == "Đã thanh toán" || order.PaymentStatus == "Paid" || _paymentStatus == "Đã thanh toán")
+                {
+                    if (_paymentStatus != "Đã hoàn tiền")
+                    {
+                        _paymentStatus = "Chờ hoàn tiền";
+                    }
+                }
+                order.PaymentStatus = _paymentStatus;
+            }
+            else
+            {
+                order.PaymentStatus = _paymentStatus;
+            }
+
+            order.OrderStatus = _newStatus;
+            order.ShippingUnit = _shippingUnit;
+            order.TrackingNumber = _trackingNumber;
+
+            // Nếu Cancelled: hoàn tồn kho và giải phóng IMEI
+            if (_newStatus == "Cancelled")
+            {
+                foreach (var detail in order.OrderDetails)
+                {
+                    var prod = await db.Products.FindAsync(detail.ProductId);
+                    if (prod != null) prod.Quantity += detail.Quantity;
+
+                    var reservedImeis = await db.ProductImeis
+                        .Where(pi => pi.OrderId == order.Id && (pi.Status == "Reserved" || pi.Status == "InStock"))
+                        .ToListAsync();
+
+                    foreach (var imei in reservedImeis)
+                    {
+                        imei.Status = "InStock";
+                        imei.OrderId = null;
+                    }
+
+                    detail.ProductImeiId = null;
+                    detail.ImeiNumber = null;
+                }
+            }
+
+            // Ghi vết Audit Log
+            var newAuditValues = $"Status={order.OrderStatus}, Payment={order.PaymentStatus}, Tracking={order.TrackingNumber}";
+            db.AuditLogs.Add(new AuditLog
+            {
+                Action = "FULFILL_ORDER",
+                EntityName = "Orders",
+                RecordId = order.Id.ToString(),
+                OldValues = oldAuditState,
+                NewValues = newAuditValues,
+                Timestamp = now,
+                UserName = "Admin"
+            });
+
+            await db.SaveChangesAsync();
+            _alert = $"Cập nhật thành công đơn hàng #IPS{order.Id:D6} (Trạng thái: {_newStatus}, Thanh toán: {_paymentStatus})!";
+        }
+
+        _selectedOrder = null;
+        await LoadOrdersAsync();
+    }
+}

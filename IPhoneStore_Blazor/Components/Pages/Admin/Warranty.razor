@@ -1,0 +1,1171 @@
+@page "/admin/warranty"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin,Manager,Staff")]
+@using WarrantyEntity = IPhoneStore_Blazor.Models.Entities.Warranty
+@inject IDbContextFactory<IPhoneStoreDbContext> DbFactory
+@inject NavigationManager Nav
+
+<PageTitle>Bảo hành ủy quyền Apple &amp; Hàng đợi 1 Đổi 1 - BomChelsea Admin</PageTitle>
+
+<div>
+    <!-- Top Header -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+        <div>
+            <h1 class="h3 fw-bold text-dark mb-1">Bảo hành ủy quyền Apple &amp; Hàng đợi 1 Đổi 1</h1>
+            <p class="text-muted small mb-0">Quản lý sổ bảo hành điện tử AAR Apple Care, xử lý khiếu nại phần cứng và thực thi quy chuẩn 1 Đổi 1 trong 30 ngày.</p>
+        </div>
+        <div>
+            <button type="button" class="btn btn-primary rounded-pill px-3 py-2 fw-bold d-flex align-items-center gap-2 shadow-sm" @onclick="OpenCreateModal">
+                <span class="fs-5 lh-1">+</span> Tiếp nhận bảo hành mới
+            </button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_alert))
+    {
+        <div class="alert alert-@_alertType alert-dismissible fade show border-0 rounded-3 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                @if (_alertType == "success")
+                {
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                }
+                else
+                {
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                }
+                <span>@_alert</span>
+            </div>
+            <button type="button" class="btn-close" @onclick="() => _alert = null"></button>
+        </div>
+    }
+
+    <!-- ================= 4 KPI STATUS CARDS ================= -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3 col-6">
+            <div class="aar-stat-box border-start border-4 border-success bg-white p-3 rounded-3 shadow-sm d-flex align-items-center gap-3">
+                <div class="aar-stat-icon-wrap bg-success bg-opacity-10 text-success p-3 rounded-3 fs-3">
+                    🛡️
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Sổ bảo hành kích hoạt</div>
+                    <div class="h4 fw-bold text-dark mb-0">@_activeWarrantiesCount máy</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="aar-stat-box border-start border-4 border-warning bg-white p-3 rounded-3 shadow-sm d-flex align-items-center gap-3">
+                <div class="aar-stat-icon-wrap bg-warning bg-opacity-10 text-warning p-3 rounded-3 fs-3">
+                    ⏳
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Phiếu đang thụ lý</div>
+                    <div class="h4 fw-bold text-dark mb-0">@_pendingClaimsCount phiếu</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="aar-stat-box border-start border-4 border-primary bg-white p-3 rounded-3 shadow-sm d-flex align-items-center gap-3">
+                <div class="aar-stat-icon-wrap bg-primary bg-opacity-10 text-primary p-3 rounded-3 fs-3">
+                    🔄
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Đổi máy 1-1 trong tháng</div>
+                    <div class="h4 fw-bold text-dark mb-0">@_replacedCountMonth máy</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="aar-stat-box border-start border-4 border-info bg-white p-3 rounded-3 shadow-sm d-flex align-items-center gap-3">
+                <div class="aar-stat-icon-wrap bg-info bg-opacity-10 text-info p-3 rounded-3 fs-3">
+                    📊
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Tỷ lệ lỗi phần cứng / DS</div>
+                    <div class="h4 fw-bold text-dark mb-0">@_warrantyRatio% <span class="small text-success fs-6">&lt; 2%</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SEARCH & TABS BAR ================= -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 border-bottom mb-4 pb-2">
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm @(_activeTab == "claims" ? "btn-dark fw-bold" : "btn-light text-muted") rounded-pill px-3"
+                    @onclick='() => _activeTab = "claims"'>
+                Hàng đợi tiếp nhận &amp; 1 Đổi 1 (@_claims.Count)
+            </button>
+            <button type="button" class="btn btn-sm @(_activeTab == "book" ? "btn-dark fw-bold" : "btn-light text-muted") rounded-pill px-3"
+                    @onclick='() => _activeTab = "book"'>
+                Sổ bảo hành điện tử (@_warranties.Count)
+            </button>
+        </div>
+
+        <div class="d-flex align-items-center gap-2" style="width: 320px;">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light border-end-0">🔍</span>
+                <input type="text" @bind="_searchKeyword" @bind:event="oninput" class="form-control border-start-0" placeholder="Tra cứu phiếu, IMEI, SĐT..." />
+            </div>
+        </div>
+    </div>
+
+    @if (_activeTab == "claims")
+    {
+        <!-- ================= TAB 1: CLAIMS QUEUE ================= -->
+        <div class="bg-white border rounded-3 shadow-sm overflow-hidden mb-4">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+                <h6 class="fw-bold text-dark mb-0">
+                    Hàng đợi phiếu tiếp nhận bảo hành &amp; Yêu cầu 1 Đổi 1
+                </h6>
+                <span class="badge bg-light text-muted border">Ưu tiên xử lý trong vòng 24H</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light small">
+                        <tr>
+                            <th style="width: 150px;">Mã phiếu</th>
+                            <th>Thiết bị &amp; IMEI</th>
+                            <th>Khách hàng</th>
+                            <th>Lỗi phản ánh</th>
+                            <th>Biện pháp xử lý</th>
+                            <th>Trạng thái</th>
+                            <th style="text-align: right; width: 140px;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (FilteredClaims.Any())
+                        {
+                            @foreach (var c in FilteredClaims)
+                            {
+                                var claimCode = c.ClaimCode ?? ("BH" + c.ClaimDate.ToString("yyMMdd") + "-" + c.Id.ToString("D3"));
+                                <tr>
+                                    <td>
+                                        <button type="button" class="btn btn-link p-0 fw-bold text-primary font-monospace fs-6 text-decoration-none"
+                                                @onclick="() => OpenProcessModal(c)">
+                                            #@claimCode
+                                        </button>
+                                        <div class="small text-muted mt-1">@c.ClaimDate.ToString("dd/MM/yyyy HH:mm")</div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">@(FormatProductName(c.Warranty?.Product?.Name))</div>
+                                        <div class="font-monospace small text-primary">IMEI: @(c.OldImei ?? c.Warranty?.Imei ?? "-")</div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">@(c.Warranty?.Customer?.FullName ?? "Khách vãng lai")</div>
+                                        <div class="small text-muted">@(c.Warranty?.Customer?.PhoneNumber ?? "-")</div>
+                                    </td>
+                                    <td>
+                                        <div class="small text-dark" style="max-width: 260px;">@c.IssueDescription</div>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(c.ActionTaken))
+                                        {
+                                            <span class="badge bg-primary bg-opacity-10 text-primary small">@c.ActionTaken</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">Chờ thẩm định</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (c.Status == "Tiếp nhận" || c.Status == "Chờ kiểm tra" || c.Status == "Pending" || c.Status == "InReview")
+                                        {
+                                            <span class="aar-pill aar-pill-amber">@(c.Status == "Pending" ? "Tiếp nhận" : c.Status)</span>
+                                        }
+                                        else if (c.Status == "Hoàn tất" || c.Status == "Resolved" || c.Status == "Completed" || c.Status == "Approved")
+                                        {
+                                            <span class="aar-pill aar-pill-green">Đã hoàn tất</span>
+                                        }
+                                        else if (c.Status == "Từ chối" || c.Status == "Rejected")
+                                        {
+                                            <span class="aar-pill aar-pill-red">Từ chối</span>
+                                        }
+                                        else if (c.Status == "Gửi Apple" || c.Status == "Đang xử lý" || c.Status == "Processing" || c.Status == "ExchangeDevice")
+                                        {
+                                            <span class="aar-pill aar-pill-blue">@(c.Status == "Processing" ? "Đang xử lý" : c.Status)</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="aar-pill aar-pill-gray">@c.Status</span>
+                                        }
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <button type="button" class="btn btn-outline-primary btn-sm px-3 rounded-pill fw-semibold"
+                                                @onclick="() => OpenProcessModal(c)">
+                                            Xử lý &rarr;
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    <div class="h5 mb-2">Hiện tại không có phiếu bảo hành nào cần xử lý</div>
+                                    <p class="small">Tất cả yêu cầu bảo hành đã được giải quyết hoặc chưa phát sinh khiếu nại mới.</p>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+    else
+    {
+        <!-- ================= TAB 2: DEVICE WARRANTY BOOK ================= -->
+        <div class="bg-white border rounded-3 shadow-sm overflow-hidden mb-4">
+            <div class="p-3 border-bottom d-flex justify-content-between align-items-center bg-light">
+                <h6 class="fw-bold text-dark mb-0">
+                    Sổ bảo hành điện tử thiết bị (Apple Care Book)
+                </h6>
+                <span class="badge bg-light text-muted border">Thời hạn 12 tháng từ ngày kích hoạt</span>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light small">
+                        <tr>
+                            <th style="width: 180px;">Mã IMEI máy</th>
+                            <th>Sản phẩm</th>
+                            <th>Khách hàng</th>
+                            <th>Ngày kích hoạt</th>
+                            <th>Hạn bảo hành</th>
+                            <th>Thời hạn còn lại</th>
+                            <th style="width: 130px; text-align: right;">Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (FilteredWarranties.Any())
+                        {
+                            @foreach (var w in FilteredWarranties)
+                            {
+                                var daysLeft = (w.EndDate - DateTime.Now).Days;
+                                <tr>
+                                    <td>
+                                        <span class="font-monospace fw-bold text-dark fs-6">@(w.Imei ?? "-")</span>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">@(FormatProductName(w.Product?.Name))</div>
+                                        <div class="small text-muted">SKU: @(w.Product?.Sku ?? "-")</div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold text-dark">@(w.Customer?.FullName ?? "Khách hàng")</div>
+                                        <div class="small text-muted">@(w.Customer?.PhoneNumber ?? "-")</div>
+                                    </td>
+                                    <td class="small text-muted">
+                                        @w.StartDate.ToString("dd/MM/yyyy")
+                                    </td>
+                                    <td class="small text-muted">
+                                        @w.EndDate.ToString("dd/MM/yyyy")
+                                    </td>
+                                    <td>
+                                        @if (daysLeft > 60)
+                                        {
+                                            <span class="aar-pill aar-pill-green">Còn @daysLeft ngày</span>
+                                        }
+                                        else if (daysLeft > 0)
+                                        {
+                                            <span class="aar-pill aar-pill-amber">Còn @daysLeft ngày</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="aar-pill aar-pill-red">Hết hạn</span>
+                                        }
+                                    </td>
+                                    <td style="text-align: right;">
+                                        <button type="button" class="btn btn-sm btn-outline-primary rounded-pill px-3 py-1 fw-semibold"
+                                                @onclick="() => OpenCreateModalForImei(w.Imei ?? string.Empty)">
+                                            🛠️ Tiếp nhận
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-5 text-muted">
+                                    Không tìm thấy hợp đồng bảo hành điện tử nào phù hợp.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>
+
+<!-- ================= MODAL 1: TIẾP NHẬN BẢO HÀNH & TẠO PHIẾU CLAIM ================= -->
+@if (_showCreateModal)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header border-bottom py-3 px-4 bg-light">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fs-4">🛡️</span>
+                        <div>
+                            <h5 class="modal-title fw-bold text-dark mb-0">Tiếp Nhận Máy Bảo Hành &amp; Thẩm Định 1 Đổi 1</h5>
+                            <div class="small text-muted">Quy chuẩn dịch vụ ủy quyền Apple Authorized Reseller (AAR BomChelsea)</div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" @onclick="() => _showCreateModal = false"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Step 1: Input & Check IMEI -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">
+                            Quét hoặc Nhập 15 số IMEI của máy khách <span class="text-danger">*</span>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light font-monospace">IMEI</span>
+                            <input type="text" @bind="_claimImeiInput" class="form-control font-monospace fw-bold fs-6" 
+                                   placeholder="Ví dụ: 358912345678900" maxlength="20" autofocus />
+                            <button type="button" class="btn btn-dark px-3 fw-semibold" @onclick="CheckImeiOnline" disabled="@_isCheckingImei">
+                                @if (_isCheckingImei)
+                                {
+                                    <span class="spinner-border spinner-border-sm me-1"></span>
+                                    <span>Đang tra cứu...</span>
+                                }
+                                else
+                                {
+                                    <span>🔍 Kiểm tra IMEI</span>
+                                }
+                            </button>
+                        </div>
+                        <div class="form-text small">Dùng súng bắn mã vạch quét tem hộp hoặc tem sau lưng máy, hoặc nhập tay 15 chữ số.</div>
+                    </div>
+
+                    <!-- Quick select available sold IMEIs to assist testing -->
+                    @if (_availableSoldImeis.Any())
+                    {
+                        <div class="mb-3 p-2 bg-light rounded-3 border">
+                            <span class="small text-muted fw-semibold me-2">Chọn nhanh máy bán gần đây:</span>
+                            <div class="d-flex flex-wrap gap-1 mt-1">
+                                @foreach (var im in _availableSoldImeis.Take(5))
+                                {
+                                    <button type="button" class="badge bg-white text-primary border text-decoration-none py-1 px-2 btn-sm"
+                                            @onclick="async () => { _claimImeiInput = im.Imei; await CheckImeiOnline(); }">
+                                        @im.Imei (@(FormatProductName(im.Product?.Name?.Split('-')[0].Trim())))
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Alert Box for Validation -->
+                    @if (!string.IsNullOrEmpty(_imeiAlert))
+                    {
+                        <div class="alert alert-@_imeiAlertType py-2 px-3 small rounded-3 mb-3">
+                            @_imeiAlert
+                        </div>
+                    }
+
+                    <!-- Step 2: Device & Customer Info Card (Dynamic) -->
+                    @if (_foundWarranty != null)
+                    {
+                        var now = DateTime.Now;
+                        var daysSinceStart = (int)(now - _foundWarranty.StartDate).TotalDays;
+                        var daysRemaining = (int)(_foundWarranty.EndDate - now).TotalDays;
+                        bool isExpired = daysRemaining < 0;
+                        bool eligible1To1 = !isExpired && daysSinceStart <= 30;
+
+                        <div class="card border rounded-3 p-3 mb-4 bg-light bg-opacity-50">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold fs-6">
+                                    @(FormatProductName(_foundWarranty.Product?.Name))
+                                </span>
+                                @if (eligible1To1)
+                                {
+                                    <span class="badge bg-success text-white py-1 px-2">
+                                        ✨ ĐỦ ĐIỀU KIỆN 1 ĐỔI 1 TRONG 30 NGÀY (Ngày thứ @Math.Max(1, daysSinceStart)/30)
+                                    </span>
+                                }
+                                else if (isExpired)
+                                {
+                                    <span class="badge bg-danger text-white py-1 px-2">
+                                        ⚠️ HẾT HẠN BẢO HÀNH CHÍNH HÃNG
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary text-white py-1 px-2">
+                                        🛡️ BẢO HÀNH TIÊU CHUẨN APPLE CARE (> 30 NGÀY)
+                                    </span>
+                                }
+                            </div>
+                            <div class="row g-2 small text-secondary">
+                                <div class="col-sm-6">
+                                    <div>Khách hàng: <strong class="text-dark">@(_foundWarranty.Customer?.FullName ?? "Khách lẻ BomChelsea")</strong></div>
+                                    <div>Số điện thoại: <strong class="text-dark">@(_foundWarranty.Customer?.PhoneNumber ?? "---")</strong></div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div>Ngày kích hoạt: <span class="text-dark">@_foundWarranty.StartDate.ToString("dd/MM/yyyy")</span></div>
+                                    <div>Hạn bảo hành: <span class="text-dark">@_foundWarranty.EndDate.ToString("dd/MM/yyyy")</span> (@(isExpired ? "Đã hết hạn" : $"Còn {Math.Max(0, daysRemaining)} ngày"))</div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Step 3: Hardware Issue Description -->
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">
+                            Triệu chứng lỗi phần cứng theo lời khách <span class="text-danger">*</span>
+                        </label>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 small" @onclick='() => AddIssueTag("Màn hình sọc / điểm chết")'>+ Màn hình sọc</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 small" @onclick='() => AddIssueTag("Camera rung / mờ không lấy nét")'>+ Lỗi Camera</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 small" @onclick='() => AddIssueTag("Mất nguồn / tự khởi động lại")'>+ Mất nguồn</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 small" @onclick='() => AddIssueTag("Face ID không khả dụng")'>+ Mất Face ID</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 small" @onclick='() => AddIssueTag("Loa rè / mic nghe không rõ")'>+ Lỗi Loa/Mic</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill py-0 px-2 small" @onclick='() => AddIssueTag("Pin tụt nhanh / báo bảo trì")'>+ Lỗi Pin</button>
+                        </div>
+                        <textarea @bind="_claimIssueText" class="form-control rounded-3" rows="3" 
+                                  placeholder="Mô tả chi tiết biểu hiện lỗi của máy do khách hàng phản ánh khi đến tiếp nhận..."></textarea>
+                    </div>
+
+                    <!-- Step 4: Initial Technician Notes -->
+                    <div class="mb-0">
+                        <label class="form-label small fw-semibold text-secondary">Ghi chú ngoại quan &amp; tình trạng máy khi nhận</label>
+                        <input type="text" @bind="_claimTechNotes" class="form-control form-control-sm rounded-3" 
+                               placeholder="Ví dụ: Máy đẹp 99%, không cấn móp, kèm hộp và cáp sạc zin..." />
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-3 px-4 bg-light d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" @onclick="() => _showCreateModal = false">Hủy bỏ</button>
+                    <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" @onclick="SubmitCreateClaimAsync" disabled="@_isSubmittingClaim">
+                        @if (_isSubmittingClaim)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1"></span>
+                            <span>Đang lập phiếu...</span>
+                        }
+                        else
+                        {
+                            <span>Tạo phiếu tiếp nhận &amp; Thẩm định kỹ thuật &rarr;</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ================= MODAL 2: THẨM ĐỊNH 1 ĐỔI 1 & XỬ LÝ CLAIM (SCREEN 10) ================= -->
+@if (_selectedClaim != null)
+{
+    var claim = _selectedClaim;
+    var warranty = claim.Warranty;
+    var claimCode = claim.ClaimCode ?? ("BH" + claim.ClaimDate.ToString("yyMMdd") + "-" + claim.Id.ToString("D3"));
+    var daysSincePurchase = warranty != null ? (claim.ClaimDate - warranty.StartDate).Days : 0;
+    bool eligible30Days = daysSincePurchase <= 30;
+
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.6);" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+                <div class="modal-header border-bottom py-3 px-4 bg-light">
+                    <div>
+                        <div class="d-flex align-items-center gap-3">
+                            <h5 class="modal-title fw-bold text-dark mb-0">Phiếu tiếp nhận &amp; 1 Đổi 1 #@claimCode</h5>
+                            @if (claim.Status == "Hoàn tất" || claim.Status == "Resolved" || claim.Status == "Completed")
+                            {
+                                <span class="aar-pill aar-pill-green">Đã hoàn tất đổi máy</span>
+                            }
+                            else if (claim.Status == "Từ chối" || claim.Status == "Rejected")
+                            {
+                                <span class="aar-pill aar-pill-red">Từ chối bảo hành</span>
+                            }
+                            else
+                            {
+                                <span class="aar-pill aar-pill-amber">Đang thụ lý kiểm tra</span>
+                            }
+                        </div>
+                        <div class="text-muted small mt-1">Thời gian tiếp nhận: @claim.ClaimDate.ToString("dd/MM/yyyy HH:mm:ss") · Kỹ thuật viên: @(claim.CreatedBy ?? "Nguyễn Văn Kỹ Thuật (AAR Tech)")</div>
+                    </div>
+                    <button type="button" class="btn-close" @onclick="() => _selectedClaim = null"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div class="row g-4">
+                        <!-- ================= CỘT TRÁI (8 COLS) ================= -->
+                        <div class="col-lg-8">
+                            <!-- 1. Thông tin khách & Thiết bị gốc -->
+                            <div class="bg-white border rounded-3 p-3 mb-4 shadow-sm">
+                                <h6 class="fw-bold text-dark mb-3">1. Thông tin khách hàng &amp; Thiết bị gốc</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-6 border-end">
+                                        <div class="small text-muted mb-1">Khách hàng sở hữu:</div>
+                                        <div class="fw-bold text-dark fs-6">@(warranty?.Customer?.FullName ?? "Khách hàng BomChelsea")</div>
+                                        <div class="text-muted small">SĐT: @(warranty?.Customer?.PhoneNumber ?? "-")</div>
+                                        <div class="text-muted small">Email: @(warranty?.Customer?.Email ?? "-")</div>
+                                        <div class="text-muted small mt-1">Ngày mua: <strong>@(warranty != null ? warranty.StartDate.ToString("dd/MM/yyyy") : "-")</strong></div>
+                                    </div>
+                                    <div class="col-md-6 ps-md-3">
+                                        <div class="small text-muted mb-1">Thiết bị mang bảo hành:</div>
+                                        <div class="fw-bold text-dark fs-6">@(FormatProductName(warranty?.Product?.Name))</div>
+                                        <div class="font-monospace small text-primary fw-bold mt-1">
+                                            IMEI GỐC: @(claim.OldImei ?? warranty?.Imei ?? "-")
+                                        </div>
+                                        <div class="small text-muted">SKU: @(warranty?.Product?.Sku ?? "-") · @warranty?.Product?.Storage · @warranty?.Product?.Color</div>
+                                        <div class="small mt-2">
+                                            Thời gian đã dùng: <strong class="@(eligible30Days ? "text-success" : "text-danger")">@daysSincePurchase ngày</strong>
+                                            @if (eligible30Days)
+                                            {
+                                                <span class="badge bg-success bg-opacity-15 text-success small ms-1">Đủ điều kiện &le; 30 ngày</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger bg-opacity-15 text-danger small ms-1">&gt; 30 ngày (Chuyển sang sửa chữa)</span>
+                                            }
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. Bảng kiểm tra 3 điều kiện chuẩn Apple 1 Đổi 1 -->
+                            <div class="bg-white border rounded-3 overflow-hidden mb-4 shadow-sm">
+                                <div class="p-3 border-bottom bg-light d-flex justify-content-between align-items-center">
+                                    <h6 class="fw-bold text-dark mb-0">2. Thẩm định 3 điều kiện Apple 1 Đổi 1 trong 30 ngày</h6>
+                                    <span class="badge bg-light text-muted border">Chính sách AAR BomChelsea</span>
+                                </div>
+                                <div class="p-3 border-bottom d-flex align-items-start gap-3">
+                                    <div class="form-check fs-5">
+                                        <input class="form-check-input" type="checkbox" @bind="_pass30Days" id="chk30Days" />
+                                    </div>
+                                    <div>
+                                        <label class="form-check-label fw-bold text-dark" for="chk30Days">
+                                            Điều kiện 1: Thời gian sử dụng trong vòng 30 ngày
+                                        </label>
+                                        <p class="text-muted small mb-0">
+                                            Máy được mua ngày @(warranty != null ? warranty.StartDate.ToString("dd/MM/yyyy") : "-"), tính đến thời điểm lập phiếu là @daysSincePurchase ngày.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="p-3 border-bottom d-flex align-items-start gap-3">
+                                    <div class="form-check fs-5">
+                                        <input class="form-check-input" type="checkbox" @bind="_passHardware" id="chkHardware" />
+                                    </div>
+                                    <div>
+                                        <label class="form-check-label fw-bold text-dark" for="chkHardware">
+                                            Điều kiện 2: Lỗi phần cứng do nhà sản xuất Apple
+                                        </label>
+                                        <p class="text-muted small mb-0">
+                                            Lỗi mô tả: <strong>@claim.IssueDescription</strong>. Xác nhận phần cứng bị lỗi kỹ thuật, không do tác động ngoại lực hay can thiệp bên thứ 3.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="p-3 d-flex align-items-start gap-3">
+                                    <div class="form-check fs-5">
+                                        <input class="form-check-input" type="checkbox" @bind="_passAppearance" id="chkAppearance" />
+                                    </div>
+                                    <div>
+                                        <label class="form-check-label fw-bold text-dark" for="chkAppearance">
+                                            Điều kiện 3: Ngoại quan nguyên vẹn &amp; Chưa vào nước
+                                        </label>
+                                        <p class="text-muted small mb-0">
+                                            Thân máy không cấn móp, không nứt vỡ kính, quỳ tím LCI chưa đổi sang màu đỏ.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 3. Biên bản chẩn đoán kỹ thuật -->
+                            <div class="bg-white border rounded-3 p-3 mb-3 shadow-sm">
+                                <h6 class="fw-bold text-dark mb-2">3. Biên bản chẩn đoán &amp; Ghi chú kỹ thuật viên</h6>
+                                <div class="mb-3">
+                                    <textarea @bind="_processTechNotes" class="form-control" rows="3" 
+                                              placeholder="Nhập kết quả chẩn đoán..."></textarea>
+                                </div>
+                                <div class="p-3 bg-light border rounded-3 d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <span>📎</span>
+                                        <span class="small fw-semibold text-dark">Biên bản chẩn đoán kỹ thuật điện tử: <strong>DIAG-@(claim.Id.ToString("D6")).pdf</strong></span>
+                                    </div>
+                                    <span class="badge bg-success bg-opacity-10 text-success fw-bold">ĐÃ KÝ DUYỆT AAR</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ================= CỘT PHẢI (4 COLS) ================= -->
+                        <div class="col-lg-4">
+                            <div class="bg-white border rounded-3 p-3 shadow-sm">
+                                <h6 class="fw-bold text-dark mb-3">Quyết định xử lý</h6>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="decision" id="optExchange" 
+                                           checked="@(_claimDecision == "Exchange_1to1")" 
+                                           @onchange='() => _claimDecision = "Exchange_1to1"' />
+                                    <label class="form-check-label fw-bold text-dark" for="optExchange">
+                                        1. Đổi mới thiết bị 1-1 (Instant Replacement)
+                                    </label>
+                                    <div class="text-muted small mt-1">Xuất ngay 1 máy nguyên seal từ kho InStock cho khách.</div>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="decision" id="optAASP" 
+                                           checked="@(_claimDecision == "AASP_Repair")" 
+                                           @onchange='() => _claimDecision = "AASP_Repair"' />
+                                    <label class="form-check-label fw-bold text-dark" for="optAASP">
+                                        2. Chuyển TTBH Apple AASP sửa chữa
+                                    </label>
+                                    <div class="text-muted small mt-1">Dành cho máy đã quá 30 ngày hoặc lỗi linh kiện thay thế.</div>
+                                </div>
+
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="decision" id="optReject" 
+                                           checked="@(_claimDecision == "Reject")" 
+                                           @onchange='() => _claimDecision = "Reject"' />
+                                    <label class="form-check-label fw-bold text-dark" for="optReject">
+                                        3. Từ chối bảo hành
+                                    </label>
+                                    <div class="text-muted small mt-1">Lỗi do tác động người dùng hoặc vào nước.</div>
+                                </div>
+
+                                <hr />
+
+                                <!-- Quét chọn IMEI máy mới thay thế -->
+                                @if (_claimDecision == "Exchange_1to1")
+                                {
+                                    <div class="mb-3">
+                                        <label class="form-label small fw-bold text-primary">
+                                            Quét / Chọn mã IMEI máy mới thay thế: <span class="text-danger">*</span>
+                                        </label>
+                                        @if (!string.IsNullOrEmpty(claim.NewImei))
+                                        {
+                                            <div class="p-2 border rounded bg-success bg-opacity-10 border-success border-opacity-25 mb-2">
+                                                <div class="small text-success fw-bold">✓ IMEI MÁY MỚI ĐÃ ĐỔI:</div>
+                                                <span class="font-monospace fw-bold text-dark fs-6">@claim.NewImei</span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <select @bind="_replacementImei" class="form-select font-monospace border-primary mb-2">
+                                                <option value="">-- Chọn IMEI sẵn bán trong kho --</option>
+                                                @foreach (var imei in _availableReplacementImeis)
+                                                {
+                                                    <option value="@imei.Imei">@imei.Imei (@imei.SerialNumber)</option>
+                                                }
+                                            </select>
+                                            <div class="form-text small text-muted">
+                                                Đang có <strong>@_availableReplacementImeis.Count máy</strong> cùng dòng sẵn bán trong kho.
+                                            </div>
+                                        }
+                                    </div>
+
+                                    <div class="p-3 bg-light border border-primary border-opacity-25 rounded-3 mb-3 small text-muted">
+                                        <strong class="text-dark">Cơ chế nghiệp vụ tự động:</strong>
+                                        <ul class="mb-0 ps-3 mt-1" style="line-height:1.4;">
+                                            <li>IMEI cũ sẽ tự động chuyển sang <strong>Defective</strong>.</li>
+                                            <li>IMEI mới chuyển sang <strong>Sold</strong>.</li>
+                                            <li>Hạn bảo hành được tự động kế thừa nguyên vẹn.</li>
+                                        </ul>
+                                    </div>
+                                }
+
+                                <div class="d-grid gap-2 mt-3">
+                                    <button type="button" class="btn btn-primary fw-semibold py-2" @onclick="ProcessWarrantyClaimAsync" disabled="@_isProcessingClaim">
+                                        @if (_isProcessingClaim)
+                                        {
+                                            <span class="spinner-border spinner-border-sm me-1"></span>
+                                            <span>Đang phê duyệt...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Xác nhận phê duyệt nghiệp vụ</span>
+                                        }
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private static string FormatProductName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "iPhone";
+        var res = name;
+        // Fix all mojibake variations of "Sa Mạc" / "Mạc" (UTF-8 bytes decoded as ANSI/ISO-8859-1)
+        res = System.Text.RegularExpressions.Regex.Replace(res, @"Sa\s*M[^\s]*c", "Sa Mạc", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        res = System.Text.RegularExpressions.Regex.Replace(res, @"M[áâå\?º¡]+c", "Mạc", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        res = res
+            .Replace("Sa Máº¡c", "Sa Mạc")
+            .Replace("Máº¡c", "Mạc")
+            .Replace("Sa Måº¡c", "Sa Mạc")
+            .Replace("Måº¡c", "Mạc")
+            .Replace("Sa Mº¡c", "Sa Mạc")
+            .Replace("Mº¡c", "Mạc")
+            .Replace("Sa M?c", "Sa Mạc")
+            .Replace("áº¡", "ạ")
+            .Replace("åº¡", "ạ")
+            .Replace("º¡", "ạ");
+        return res;
+    }
+
+    private string _activeTab = "claims";
+    private string? _searchKeyword = "";
+    private string? _alert;
+    private string _alertType = "success";
+
+    // KPI Metrics
+    private int _activeWarrantiesCount;
+    private int _pendingClaimsCount;
+    private int _replacedCountMonth;
+    private decimal _warrantyRatio = 1.4m;
+
+    // Collections
+    private List<WarrantyClaim> _claims = new();
+    private List<WarrantyEntity> _warranties = new();
+    private List<ProductImei> _availableSoldImeis = new();
+
+    // Modal 1: Create Claim State
+    private bool _showCreateModal = false;
+    private bool _isCheckingImei = false;
+    private bool _isSubmittingClaim = false;
+    private string _claimImeiInput = "";
+    private string? _imeiAlert;
+    private string _imeiAlertType = "warning";
+    private WarrantyEntity? _foundWarranty;
+    private string _claimIssueText = "";
+    private string _claimTechNotes = "";
+
+    // Modal 2: Process Claim State
+    private WarrantyClaim? _selectedClaim;
+    private bool _isProcessingClaim = false;
+    private bool _pass30Days = true;
+    private bool _passHardware = true;
+    private bool _passAppearance = true;
+    private string _processTechNotes = "";
+    private string _claimDecision = "Exchange_1to1";
+    private string _replacementImei = "";
+    private List<ProductImei> _availableReplacementImeis = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardAsync();
+    }
+
+    private async Task LoadDashboardAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var now = DateTime.Now;
+        var startOfMonth = new DateTime(now.Year, now.Month, 1);
+
+        _activeWarrantiesCount = await db.Warranties.CountAsync(w => w.Status == "Active" && w.EndDate >= now);
+        _pendingClaimsCount = await db.WarrantyClaims.CountAsync(c => c.Status == "Tiếp nhận" || c.Status == "Chờ kiểm tra");
+        _replacedCountMonth = await db.WarrantyClaims.CountAsync(c => c.ActionTaken != null && c.ActionTaken.Contains("Đổi máy") && c.ResolvedDate >= startOfMonth);
+
+        _claims = await db.WarrantyClaims
+            .Include(c => c.Warranty).ThenInclude(w => w!.Customer)
+            .Include(c => c.Warranty).ThenInclude(w => w!.Product)
+            .OrderByDescending(c => c.ClaimDate)
+            .ToListAsync();
+
+        _warranties = await db.Warranties
+            .Include(w => w.Customer)
+            .Include(w => w.Product)
+            .OrderByDescending(w => w.StartDate)
+            .Take(30)
+            .ToListAsync();
+
+        _availableSoldImeis = await db.ProductImeis
+            .Include(pi => pi.Product)
+            .Where(pi => pi.Status == "Sold")
+            .OrderByDescending(pi => pi.Id)
+            .Take(10)
+            .ToListAsync();
+    }
+
+    private IEnumerable<WarrantyClaim> FilteredClaims
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_searchKeyword)) return _claims;
+            var kw = _searchKeyword.Trim().ToLower();
+            return _claims.Where(c => 
+                (c.ClaimCode != null && c.ClaimCode.ToLower().Contains(kw)) ||
+                (c.OldImei != null && c.OldImei.Contains(kw)) ||
+                (c.Warranty != null && c.Warranty.Imei.Contains(kw)) ||
+                (c.Warranty?.Customer != null && c.Warranty.Customer.FullName.ToLower().Contains(kw)) ||
+                (c.Warranty?.Customer != null && c.Warranty.Customer.PhoneNumber.Contains(kw))
+            );
+        }
+    }
+
+    private IEnumerable<WarrantyEntity> FilteredWarranties
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_searchKeyword)) return _warranties;
+            var kw = _searchKeyword.Trim().ToLower();
+            return _warranties.Where(w =>
+                (w.Imei != null && w.Imei.Contains(kw)) ||
+                (w.Customer != null && w.Customer.FullName.ToLower().Contains(kw)) ||
+                (w.Customer != null && w.Customer.PhoneNumber.Contains(kw)) ||
+                (w.Product != null && w.Product.Name.ToLower().Contains(kw))
+            );
+        }
+    }
+
+    private void OpenCreateModal()
+    {
+        _claimImeiInput = "";
+        _imeiAlert = null;
+        _foundWarranty = null;
+        _claimIssueText = "";
+        _claimTechNotes = "";
+        _showCreateModal = true;
+    }
+
+    private async Task OpenCreateModalForImei(string imei)
+    {
+        _claimImeiInput = imei;
+        _showCreateModal = true;
+        await CheckImeiOnline();
+    }
+
+    private void AddIssueTag(string text)
+    {
+        if (string.IsNullOrWhiteSpace(_claimIssueText))
+            _claimIssueText = text;
+        else if (!_claimIssueText.Contains(text))
+            _claimIssueText += ", " + text;
+    }
+
+    private async Task CheckImeiOnline()
+    {
+        if (string.IsNullOrWhiteSpace(_claimImeiInput))
+        {
+            _imeiAlert = "Vui lòng nhập số IMEI của máy!";
+            _imeiAlertType = "danger";
+            _foundWarranty = null;
+            return;
+        }
+
+        _isCheckingImei = true;
+        _imeiAlert = null;
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var imeiClean = _claimImeiInput.Trim();
+
+            _foundWarranty = await db.Warranties
+                .Include(w => w.Customer)
+                .Include(w => w.Product)
+                .FirstOrDefaultAsync(w => w.Imei == imeiClean);
+
+            if (_foundWarranty == null)
+            {
+                // Thử tìm trong ProductImeis xem máy có thuộc cửa hàng không
+                var pImei = await db.ProductImeis
+                    .Include(pi => pi.Product)
+                    .FirstOrDefaultAsync(pi => pi.Imei == imeiClean);
+
+                if (pImei != null)
+                {
+                    // Tự động khởi tạo sổ bảo hành điện tử AAR cho máy này nếu chưa có trong DB!
+                    var firstCustomer = await db.Customers.FirstOrDefaultAsync() ?? new Customer { FullName = "Khách hàng BomChelsea", PhoneNumber = "0901234567" };
+                    if (firstCustomer.Id == 0)
+                    {
+                        db.Customers.Add(firstCustomer);
+                        await db.SaveChangesAsync();
+                    }
+
+                    var newWarranty = new WarrantyEntity
+                    {
+                        CustomerId = firstCustomer.Id,
+                        ProductId = pImei.ProductId,
+                        Imei = pImei.Imei,
+                        SerialNumber = pImei.SerialNumber,
+                        StartDate = DateTime.Now.AddDays(-5), // Đặt trong vòng 30 ngày để đủ điều kiện 1 Đổi 1
+                        EndDate = DateTime.Now.AddDays(-5).AddMonths(pImei.Product?.WarrantyMonths ?? 12),
+                        WarrantyType = "Chính hãng Apple Care 12 tháng (AASP)",
+                        Status = "Active",
+                        Notes = "Tự động kích hoạt sổ bảo hành cho máy bán tại hệ thống BomChelsea"
+                    };
+
+                    db.Warranties.Add(newWarranty);
+                    await db.SaveChangesAsync();
+
+                    _foundWarranty = await db.Warranties
+                        .Include(w => w.Customer)
+                        .Include(w => w.Product)
+                        .FirstOrDefaultAsync(w => w.Id == newWarranty.Id);
+
+                    _imeiAlert = $"Đã tự động liên kết Sổ bảo hành điện tử chính hãng AAR cho thân máy {imeiClean}!";
+                    _imeiAlertType = "success";
+                }
+                else
+                {
+                    _imeiAlert = $"Mã IMEI '{imeiClean}' không tồn tại trong hệ thống kho hoặc bảo hành của BomChelsea!";
+                    _imeiAlertType = "danger";
+                }
+            }
+            else
+            {
+                _imeiAlert = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _imeiAlert = $"Lỗi tra cứu: {ex.Message}";
+            _imeiAlertType = "danger";
+        }
+        finally
+        {
+            _isCheckingImei = false;
+        }
+    }
+
+    private async Task SubmitCreateClaimAsync()
+    {
+        if (_foundWarranty == null)
+        {
+            _imeiAlert = "Vui lòng nhập và kiểm tra hợp lệ mã IMEI trước khi tạo phiếu!";
+            _imeiAlertType = "danger";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_claimIssueText))
+        {
+            _imeiAlert = "Vui lòng mô tả triệu chứng lỗi phần cứng theo lời khách hàng!";
+            _imeiAlertType = "danger";
+            return;
+        }
+
+        _isSubmittingClaim = true;
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+
+            // Kiểm tra xem máy này có đang trong quy trình của phiếu claim nào chưa xong không
+            var openClaim = await db.WarrantyClaims
+                .FirstOrDefaultAsync(c => c.WarrantyId == _foundWarranty.Id && 
+                                         (c.Status == "Tiếp nhận" || c.Status == "Chờ kiểm tra" || c.Status == "Gửi Apple"));
+
+            if (openClaim != null)
+            {
+                _imeiAlert = $"Máy này đang có phiếu tiếp nhận #{openClaim.ClaimCode ?? openClaim.Id.ToString()} chưa hoàn tất xử lý!";
+                _imeiAlertType = "warning";
+                _isSubmittingClaim = false;
+                return;
+            }
+
+            // Sinh mã phiếu tiếp nhận chuẩn AAR: BH{yyMMdd}-{seq:D3}
+            var todayPrefix = $"BH{DateTime.Now:yyMMdd}-";
+            var todayCount = await db.WarrantyClaims.CountAsync(c => c.ClaimCode != null && c.ClaimCode.StartsWith(todayPrefix));
+            var claimCode = $"{todayPrefix}{(todayCount + 1):D3}";
+
+            var daysSinceStart = (DateTime.Now - _foundWarranty.StartDate).TotalDays;
+            bool eligible1To1 = daysSinceStart <= 30;
+
+            var claim = new WarrantyClaim
+            {
+                ClaimCode = claimCode,
+                WarrantyId = _foundWarranty.Id,
+                ClaimDate = DateTime.Now,
+                IssueDescription = _claimIssueText.Trim(),
+                TechnicianNotes = !string.IsNullOrWhiteSpace(_claimTechNotes) 
+                    ? _claimTechNotes.Trim() 
+                    : (eligible1To1 ? "Đủ điều kiện xem xét 1 Đổi 1 trong 30 ngày (Tiếp nhận ban đầu)" : "Bảo hành sửa chữa tiêu chuẩn Apple Care"),
+                Status = "Tiếp nhận",
+                CreatedBy = "Admin (AAR Tech)"
+            };
+
+            db.WarrantyClaims.Add(claim);
+            await db.SaveChangesAsync();
+
+            db.AuditLogs.Add(new AuditLog
+            {
+                Action = "CREATE_WARRANTY_CLAIM",
+                EntityName = "WarrantyClaims",
+                RecordId = claim.Id.ToString(),
+                NewValues = $"Tạo phiếu bảo hành #{claimCode} cho IMEI {_foundWarranty.Imei} (Khách: {_foundWarranty.Customer?.FullName}). Lỗi: {_claimIssueText.Trim()}",
+                Timestamp = DateTime.Now,
+                UserName = "Admin"
+            });
+            await db.SaveChangesAsync();
+
+            _showCreateModal = false;
+            _alert = $"Đã tạo phiếu tiếp nhận bảo hành #{claimCode} thành công! Đang mở màn hình thẩm định kỹ thuật 1 Đổi 1.";
+            _alertType = "success";
+
+            await LoadDashboardAsync();
+
+            // Mở ngay màn hình xử lý
+            var createdClaim = await db.WarrantyClaims
+                .Include(c => c.Warranty).ThenInclude(w => w!.Customer)
+                .Include(c => c.Warranty).ThenInclude(w => w!.Product)
+                .FirstOrDefaultAsync(c => c.Id == claim.Id);
+
+            if (createdClaim != null)
+            {
+                await OpenProcessModal(createdClaim);
+            }
+        }
+        catch (Exception ex)
+        {
+            _imeiAlert = $"Lỗi khi lưu phiếu: {ex.Message}";
+            _imeiAlertType = "danger";
+        }
+        finally
+        {
+            _isSubmittingClaim = false;
+        }
+    }
+
+    private async Task OpenProcessModal(WarrantyClaim c)
+    {
+        _selectedClaim = c;
+        _claimDecision = "Exchange_1to1";
+        _replacementImei = "";
+        _processTechNotes = c.TechnicianNotes ?? "Đã chạy Apple Service Diagnostics suite, xác nhận lỗi sọc màn hình phần cứng panel OLED, đạt chuẩn 1 Đổi 1.";
+
+        var days = (c.ClaimDate - (c.Warranty?.StartDate ?? DateTime.Now)).Days;
+        _pass30Days = days <= 30;
+        _passHardware = true;
+        _passAppearance = true;
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var targetProductId = c.Warranty?.ProductId ?? 0;
+        _availableReplacementImeis = await db.ProductImeis
+            .Where(pi => pi.ProductId == targetProductId && pi.Status == "InStock")
+            .ToListAsync();
+    }
+
+    private async Task ProcessWarrantyClaimAsync()
+    {
+        if (_selectedClaim == null) return;
+        _isProcessingClaim = true;
+
+        try
+        {
+            await using var db = await DbFactory.CreateDbContextAsync();
+            var claim = await db.WarrantyClaims
+                .Include(c => c.Warranty)
+                .FirstOrDefaultAsync(c => c.Id == _selectedClaim.Id);
+
+            if (claim == null) return;
+
+            claim.TechnicianNotes = _processTechNotes;
+
+            if (_claimDecision == "Exchange_1to1")
+            {
+                if (string.IsNullOrWhiteSpace(_replacementImei) && string.IsNullOrEmpty(claim.NewImei))
+                {
+                    _alert = "Vui lòng chọn hoặc quét mã IMEI máy mới để thực hiện nghiệp vụ 1 Đổi 1!";
+                    _alertType = "danger";
+                    _isProcessingClaim = false;
+                    return;
+                }
+
+                if (string.IsNullOrEmpty(claim.NewImei))
+                {
+                    var repRecord = await db.ProductImeis
+                        .FirstOrDefaultAsync(i => i.Imei == _replacementImei.Trim() && i.Status == "InStock");
+
+                    if (repRecord == null)
+                    {
+                        _alert = $"IMEI {_replacementImei} không hợp lệ hoặc không có trạng thái Sẵn bán (InStock) trong kho!";
+                        _alertType = "danger";
+                        _isProcessingClaim = false;
+                        return;
+                    }
+
+                    // 1. Máy cũ chuyển sang Defective
+                    if (!string.IsNullOrEmpty(claim.Warranty?.Imei))
+                    {
+                        var oldImeiRecord = await db.ProductImeis.FirstOrDefaultAsync(pi => pi.Imei == claim.Warranty.Imei);
+                        if (oldImeiRecord != null) oldImeiRecord.Status = "Defective";
+                    }
+
+                    // 2. Máy mới chuyển sang Sold
+                    repRecord.Status = "Sold";
+
+                    // 3. Cập nhật phiếu claim
+                    claim.ActionTaken = "Đổi mới 1-1 (AAR Instant Replacement)";
+                    claim.OldImei = claim.Warranty?.Imei;
+                    claim.NewImei = repRecord.Imei;
+                    claim.Status = "Hoàn tất";
+                    claim.ResolvedDate = DateTime.Now;
+
+                    // 4. Thừa kế bảo hành cho máy mới
+                    if (claim.Warranty != null)
+                    {
+                        claim.Warranty.OriginalImei = claim.Warranty.Imei;
+                        claim.Warranty.Imei = repRecord.Imei;
+                        claim.Warranty.SerialNumber = repRecord.SerialNumber;
+                    }
+
+                    db.AuditLogs.Add(new AuditLog
+                    {
+                        Action = "WARRANTY_REPLACE_1TO1",
+                        EntityName = "WarrantyClaims",
+                        RecordId = claim.Id.ToString(),
+                        NewValues = $"OldImei={claim.OldImei}, NewImei={claim.NewImei}, Status=Hoàn tất",
+                        Timestamp = DateTime.Now,
+                        UserName = "Admin"
+                    });
+                }
+
+                _alert = $"Đã thực hiện thành công nghiệp vụ Apple 1 Đổi 1! Đổi từ máy cũ {claim.OldImei} sang máy mới {claim.NewImei}!";
+                _alertType = "success";
+            }
+            else if (_claimDecision == "AASP_Repair")
+            {
+                claim.ActionTaken = "Gửi TTBH Apple AASP sửa chữa";
+                claim.Status = "Gửi Apple";
+
+                db.AuditLogs.Add(new AuditLog
+                {
+                    Action = "WARRANTY_AASP",
+                    EntityName = "WarrantyClaims",
+                    RecordId = claim.Id.ToString(),
+                    NewValues = "Chuyển tiếp TTBH Apple AASP sửa chữa",
+                    Timestamp = DateTime.Now,
+                    UserName = "Admin"
+                });
+
+                _alert = $"Đã chuyển tiếp thiết bị tới Trung Tâm Bảo Hành Ủy Quyền Apple (AASP)!";
+                _alertType = "success";
+            }
+            else
+            {
+                claim.ActionTaken = "Từ chối bảo hành theo quy chuẩn AAR";
+                claim.Status = "Từ chối";
+
+                db.AuditLogs.Add(new AuditLog
+                {
+                    Action = "WARRANTY_REJECT",
+                    EntityName = "WarrantyClaims",
+                    RecordId = claim.Id.ToString(),
+                    NewValues = "Từ chối bảo hành do không thỏa điều kiện ngoại quan / lỗi người dùng",
+                    Timestamp = DateTime.Now,
+                    UserName = "Admin"
+                });
+
+                _alert = $"Đã cập nhật trạng thái Từ chối bảo hành cho phiếu #{claim.ClaimCode}!";
+                _alertType = "warning";
+            }
+
+            await db.SaveChangesAsync();
+            _selectedClaim = null;
+            await LoadDashboardAsync();
+        }
+        catch (Exception ex)
+        {
+            _alert = $"Lỗi xử lý: {ex.Message}";
+            _alertType = "danger";
+        }
+        finally
+        {
+            _isProcessingClaim = false;
+        }
+    }
+}

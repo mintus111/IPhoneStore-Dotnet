@@ -1,0 +1,475 @@
+@page
+@model IPhoneStore_Razor.Pages.Admin.OrdersModel
+@{
+    ViewData["Title"] = "Quản Lý & Xuất Kho Đơn Hàng - Admin";
+
+    var pendingCount = Model.PendingCount;
+    var confirmedCount = Model.ConfirmedCount;
+    var shippingCount = Model.ShippingCount;
+    var completedCount = Model.CompletedCount;
+    var cancelledCount = Model.CancelledCount;
+    var msg = !string.IsNullOrEmpty(Model.SuccessMessage) ? Model.SuccessMessage : Model.AlertMessage;
+    var errMsg = !string.IsNullOrEmpty(Model.ErrorMessage) ? Model.ErrorMessage : (string?)TempData["ErrorMessage"];
+}
+
+<div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1">FULFILLMENT &amp; LOGISTICS</span>
+                <span class="text-secondary small">Duyệt đơn và gán mã IMEI xuất kho</span>
+            </div>
+            <h1 class="fs-3 fw-bold text-dark mb-0">Quản Lý &amp; Xuất Kho Đơn Hàng</h1>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(errMsg))
+    {
+        <div class="alert alert-danger alert-dismissible fade show border-0 rounded-3 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fs-5">⚠️</span>
+                <strong>Lỗi nghiệp vụ:</strong> @errMsg
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(msg))
+    {
+        <div class="alert alert-success alert-dismissible fade show border-0 rounded-3 shadow-sm mb-4" role="alert" style="background-color: #e8f5e9; color: #1b5e20;">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fs-5">✅</span>
+                <strong>Thành công:</strong> @msg
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- 4 Stat Counters (Mockup 7) -->
+    <div class="admin-stat-grid mb-4">
+        <div class="admin-stat-card">
+            <div class="admin-stat-label">Tất Cả Đơn Hàng</div>
+            <div class="admin-stat-value text-dark">@Model.TotalCount</div>
+        </div>
+        <div class="admin-stat-card">
+            <div class="admin-stat-label">Chờ Xác Nhận</div>
+            <div class="admin-stat-value text-warning">@pendingCount</div>
+        </div>
+        <div class="admin-stat-card">
+            <div class="admin-stat-label">Đang Giao Hàng (GHN)</div>
+            <div class="admin-stat-value text-primary">@shippingCount</div>
+        </div>
+        <div class="admin-stat-card">
+            <div class="admin-stat-label">Đã Giao Thành Công</div>
+            <div class="admin-stat-value text-success">@completedCount</div>
+        </div>
+    </div>
+
+    <!-- Status Tabs & Search Bar (Mockup 7) -->
+    <div class="bg-white border rounded-3 p-3 mb-4 shadow-sm">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex gap-2 flex-wrap">
+                <a asp-page="/Admin/Orders" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(string.IsNullOrEmpty(Model.StatusFilter) ? "btn-primary" : "btn-light text-dark")">Tất cả (@Model.TotalCount)</a>
+                <a asp-page="/Admin/Orders" asp-route-StatusFilter="Pending" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(Model.StatusFilter == "Pending" ? "btn-primary" : "btn-light text-dark")">Chờ xử lý (@pendingCount)</a>
+                <a asp-page="/Admin/Orders" asp-route-StatusFilter="Confirmed" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(Model.StatusFilter == "Confirmed" ? "btn-primary" : "btn-light text-dark")">Đã xác nhận (@confirmedCount)</a>
+                <a asp-page="/Admin/Orders" asp-route-StatusFilter="Shipping" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(Model.StatusFilter == "Shipping" ? "btn-primary" : "btn-light text-dark")">Đang giao (@shippingCount)</a>
+                <a asp-page="/Admin/Orders" asp-route-StatusFilter="Completed" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(Model.StatusFilter == "Completed" ? "btn-primary" : "btn-light text-dark")">Hoàn tất (@completedCount)</a>
+                <a asp-page="/Admin/Orders" asp-route-StatusFilter="Cancelled" class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(Model.StatusFilter == "Cancelled" ? "btn-primary" : "btn-light text-dark")">Đã hủy (@cancelledCount)</a>
+            </div>
+
+            <div class="apple-search-pill-container" style="width:240px;">
+                <svg class="search-icon-inside" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                <input type="text" id="orderSearchBox" class="apple-search-pill" placeholder="Mã đơn, SĐT khách..." onkeyup="filterAdminOrders()" />
+            </div>
+        </div>
+    </div>
+
+    <!-- Orders Table (Mockup 7) -->
+    <div class="admin-table-container">
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Mã đơn hàng</th>
+                        <th>Ngày đặt</th>
+                        <th>Khách hàng</th>
+                        <th>Sản phẩm đặt</th>
+                        <th>Tổng tiền</th>
+                        <th>Thanh toán</th>
+                        <th>Trạng thái đơn</th>
+                        <th class="text-end">Xử lý &amp; Gán IMEI</th>
+                    </tr>
+                </thead>
+                <tbody id="ordersTableBody">
+                    @if (Model.Orders.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-secondary">
+                                Không tìm thấy đơn hàng nào trong mục này.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var order in Model.Orders)
+                        {
+                            var isTerminalOrder = order.OrderStatus == "Completed" || order.OrderStatus == "Cancelled" 
+                                               || order.OrderStatus == "Hoàn tất" || order.OrderStatus == "Đã hủy" || order.OrderStatus == "Hoàn thành";
+                            var allImeisAssigned = order.OrderDetails.All(od => od.ProductImeiId.HasValue && od.ProductImeiId > 0);
+
+                            <tr class="admin-order-row" data-code="@(order.OrderCode ?? $"#IPS{order.Id:D6}")" data-customer="@(order.Customer?.FullName) @(order.Customer?.PhoneNumber)">
+                                <td>
+                                    <a asp-page="/Admin/OrderDetail" asp-route-id="@order.Id" class="fw-bold text-primary text-decoration-none fs-6">
+                                        @(order.OrderCode ?? $"#IPS{order.Id:D6}")
+                                    </a>
+                                </td>
+                                <td class="text-secondary small">@order.OrderDate.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <div class="fw-bold text-dark">@(order.Customer?.FullName ?? "Khách vãng lai")</div>
+                                    <div class="text-secondary small">@(order.Customer?.PhoneNumber ?? "")</div>
+                                </td>
+                                <td>
+                                    <div class="small text-secondary">
+                                        @foreach (var d in order.OrderDetails.Take(2))
+                                        {
+                                            <div>@d.Product?.Name <span class="badge bg-light text-dark">x@(d.Quantity)</span></div>
+                                        }
+                                        @if (order.OrderDetails.Count > 2)
+                                        {
+                                            <span class="text-muted">+@(order.OrderDetails.Count - 2) máy khác</span>
+                                        }
+                                    </div>
+                                </td>
+                                <td><strong class="text-dark fs-6">@order.TotalAmount.ToString("N0") ₫</strong></td>
+                                <td>
+                                    <span class="badge bg-light text-dark border d-block mb-1 text-truncate" style="max-width: 120px;">@order.PaymentMethod</span>
+                                    @if (order.PaymentStatus == "Paid" || order.PaymentStatus == "Đã thanh toán")
+                                    {
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25" style="font-size:0.72rem;">Đã thanh toán</span>
+                                    }
+                                    else if (order.PaymentStatus == "Chờ hoàn tiền")
+                                    {
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25" style="font-size:0.72rem;">Chờ hoàn tiền</span>
+                                    }
+                                    else if (order.PaymentStatus == "Đã hoàn tiền")
+                                    {
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25" style="font-size:0.72rem;">Đã hoàn tiền</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning bg-opacity-10 text-warning text-dark border border-warning border-opacity-25" style="font-size:0.72rem;">Chưa thanh toán</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (order.OrderStatus == "Completed" || order.OrderStatus == "Hoàn tất" || order.OrderStatus == "Hoàn thành")
+                                    {
+                                        <span class="status-pill success">Hoàn tất</span>
+                                    }
+                                    else if (order.OrderStatus == "Cancelled" || order.OrderStatus == "Đã hủy")
+                                    {
+                                        <span class="status-pill danger">Đã hủy</span>
+                                    }
+                                    else if (order.OrderStatus == "Shipping" || order.OrderStatus == "Đang giao")
+                                    {
+                                        <span class="status-pill info">Đang giao</span>
+                                    }
+                                    else if (order.OrderStatus == "Confirmed" || order.OrderStatus == "Đã duyệt")
+                                    {
+                                        <span class="status-pill warning">Đã xác nhận</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-pill warning">Chờ duyệt</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    @if (isTerminalOrder)
+                                    {
+                                        <a asp-page="/Admin/OrderDetail" asp-route-id="@order.Id" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                                            Xem chi tiết &rarr;
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <button type="button" class="btn btn-primary btn-sm rounded-pill px-3"
+                                                onclick="openFulfillmentModal('@order.Id', '@(order.Customer?.FullName)', '@(order.Customer?.PhoneNumber)', '@order.ShippingAddress', '@order.TotalAmount.ToString("N0")', '@order.OrderStatus', '@(order.OrderCode ?? $"#IPS{order.Id:D6}")', '@(order.PaymentStatus ?? "Chưa thanh toán")', @(allImeisAssigned ? "true" : "false"))">
+                                            Xử lý xuất kho &rarr;
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination (Mockup 7) -->
+        <nav class="apple-pagination py-3">
+            <span class="page-item disabled">‹ Trước</span>
+            <span class="page-item active">1</span>
+            <a href="javascript:void(0);" class="page-link">2</a>
+            <a href="javascript:void(0);" class="page-link">Sau ›</a>
+        </nav>
+    </div>
+</div>
+
+<!-- ================= FULFILLMENT & IMEI SCANNER MODAL ================= -->
+<div class="modal fade" id="fulfillmentModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-3">
+            <form method="post" asp-page-handler="UpdateStatus" id="modalFulfillmentForm" onsubmit="return validateModalStatusForm();">
+                <input type="hidden" id="modalOrderId" name="orderId" value="0" />
+
+                <div class="modal-header border-bottom py-3">
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Xử Lý &amp; Xuất Kho Đơn Hàng <span id="fOrderCode" class="text-primary">#IPS000000</span></h5>
+                        <div class="text-secondary small">Gán mã IMEI thực tế từ kho và tạo vận đơn giao hàng</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <!-- Terminal Warning Banner (Hiển thị khi đơn đã đóng) -->
+                    <div id="modalTerminalWarning" class="alert alert-danger d-none d-flex align-items-center gap-2 mb-3 py-2 px-3 rounded-3">
+                        <span class="fs-5">🔒</span>
+                        <div class="small fw-bold">Đơn hàng đã hoàn tất / đã hủy, không thể thay đổi trạng thái.</div>
+                    </div>
+
+                    <!-- Customer and address summary -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <div class="text-secondary small">Khách hàng:</div>
+                                <strong id="fCustName" class="text-dark">...</strong> - <span id="fCustPhone">...</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border">
+                                <div class="text-secondary small">Nơi giao hàng:</div>
+                                <span id="fAddress" class="text-dark small">...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Hardware IMEI Scanner Box -->
+                    <div class="scanner-box mb-4">
+                        <div class="d-flex align-items-center gap-2 mb-2">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                            <span class="fw-bold fs-6">QUÉT HOẶC CHỌN MÃ IMEI XUẤT KHO THỰC TẾ</span>
+                        </div>
+                        <p class="small text-secondary mb-3">
+                            Mỗi máy iPhone bán ra bắt buộc phải gán chính xác một mã IMEI trạng thái <code>InStock</code> trước khi chuyển sang giao hàng.
+                        </p>
+
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0">
+                                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                            </span>
+                            <input type="text" id="scanImeiInput" class="form-control font-monospace border-start-0" placeholder="Quét barcode bằng súng đọc hoặc nhập 15 số IMEI..." value="358912345678901" />
+                            <button type="button" id="btnMatchImei" class="btn btn-outline-primary" onclick="alert('Mã IMEI 358912345678901 hợp lệ và đã khớp kho InStock!')">Khớp Kho</button>
+                        </div>
+                    </div>
+
+                    <!-- Change Order Status Select -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Bước Trạng Thái Đơn Hàng: <span class="text-danger">*</span></label>
+                            <select id="fNewStatus" name="newStatus" class="form-select rounded-3 py-2 fw-semibold" onchange="syncModalStatusRules()">
+                                <option value="Pending">Chờ xác nhận (Pending)</option>
+                                <option value="Confirmed">Xác nhận đơn &amp; Gán giữ hàng kho (Confirmed)</option>
+                                <option value="Shipping">Đã bàn giao đơn vị vận chuyển (Shipping)</option>
+                                <option value="Completed">Khách đã nhận &amp; Kích hoạt E-Warranty (Completed)</option>
+                                <option value="Cancelled">Hủy đơn &amp; Hoàn trả IMEI về kho (Cancelled)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Trạng Thái Thanh Toán: <span class="text-danger">*</span></label>
+                            <select id="fPaymentStatus" name="paymentStatus" class="form-select rounded-3 py-2 fw-semibold" onchange="syncModalStatusRules()">
+                                <option id="mOptUnpaid" value="Chưa thanh toán">Chưa thanh toán (Chờ thu tiền / COD)</option>
+                                <option id="mOptPaid" value="Đã thanh toán">Đã thanh toán (Thu đủ tiền)</option>
+                                <option id="mOptPendingRefund" value="Chờ hoàn tiền" disabled>Chờ hoàn tiền (Pending Refund)</option>
+                                <option id="mOptRefunded" value="Đã hoàn tiền" disabled>Đã hoàn tiền (Refunded)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Notice for Modal -->
+                    <div id="modalStatusRuleNotice" class="mb-3"></div>
+
+                    <div class="p-3 bg-light rounded-3 border">
+                        <div class="small text-secondary">
+                            Khi chọn <strong>Completed</strong>, hệ thống tự động chuẩn hóa thanh toán thành <strong>Đã thanh toán</strong> và kích hoạt bảo hành điện tử Apple Care cho khách hàng.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top py-2">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" id="modalSubmitBtn" class="apple-cta-primary px-4 py-2">
+                        Lưu Cập Nhật &rarr;
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var fModal;
+        var currentModalInitialPayment = 'Chưa thanh toán';
+        var currentModalHasImei = false;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var modalEl = document.getElementById('fulfillmentModal');
+            if (modalEl) {
+                fModal = new bootstrap.Modal(modalEl);
+            }
+        });
+
+        function openFulfillmentModal(id, name, phone, address, total, status, code, paymentStatus, hasImeis) {
+            document.getElementById('modalOrderId').value = id;
+            document.getElementById('fOrderCode').innerText = code || ('#IPS' + String(id).padStart(6, '0'));
+            document.getElementById('fCustName').innerText = name || 'Khách vãng lai';
+            document.getElementById('fCustPhone').innerText = phone || 'Chưa có SĐT';
+            document.getElementById('fAddress').innerText = address || 'Nhận tại cửa hàng BomChelsea';
+            
+            currentModalInitialPayment = paymentStatus || 'Chưa thanh toán';
+            currentModalHasImei = (hasImeis === true);
+
+            var statusSelect = document.getElementById('fNewStatus');
+            statusSelect.value = status || 'Pending';
+
+            var paymentSelect = document.getElementById('fPaymentStatus');
+            paymentSelect.value = currentModalInitialPayment;
+
+            var isTerminal = (status === 'Completed' || status === 'Cancelled' || status === 'Hoàn tất' || status === 'Đã hủy' || status === 'Hoàn thành');
+            var warnElem = document.getElementById('modalTerminalWarning');
+            var submitBtn = document.getElementById('modalSubmitBtn');
+            var imeiInput = document.getElementById('scanImeiInput');
+            var imeiBtn = document.getElementById('btnMatchImei');
+
+            if (isTerminal) {
+                if (warnElem) warnElem.classList.remove('d-none');
+                if (statusSelect) statusSelect.disabled = true;
+                if (paymentSelect) paymentSelect.disabled = true;
+                if (imeiInput) imeiInput.disabled = true;
+                if (imeiBtn) imeiBtn.disabled = true;
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerText = '🔒 Đơn hàng đã đóng';
+                }
+            } else {
+                if (warnElem) warnElem.classList.add('d-none');
+                if (statusSelect) statusSelect.disabled = false;
+                if (paymentSelect) paymentSelect.disabled = false;
+                if (imeiInput) imeiInput.disabled = false;
+                if (imeiBtn) imeiBtn.disabled = false;
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerText = 'Lưu Cập Nhật →';
+                }
+                syncModalStatusRules();
+            }
+
+            if (fModal) {
+                fModal.show();
+            }
+        }
+
+        function syncModalStatusRules() {
+            var orderStatus = document.getElementById('fNewStatus')?.value;
+            var paymentSelect = document.getElementById('fPaymentStatus');
+            var noticeDiv = document.getElementById('modalStatusRuleNotice');
+            if (!orderStatus || !paymentSelect) return;
+
+            var optUnpaid = document.getElementById('mOptUnpaid');
+            var optPaid = document.getElementById('mOptPaid');
+            var optPendingRefund = document.getElementById('mOptPendingRefund');
+            var optRefunded = document.getElementById('mOptRefunded');
+
+            // YÊU CẦU 1: Completed bắt buộc Đã thanh toán
+            if (orderStatus === 'Completed') {
+                paymentSelect.value = 'Đã thanh toán';
+                if (optUnpaid) optUnpaid.disabled = true;
+                if (optPendingRefund) optPendingRefund.disabled = true;
+                if (optRefunded) optRefunded.disabled = true;
+
+                if (noticeDiv) {
+                    noticeDiv.innerHTML = '<div class="p-2 rounded bg-success bg-opacity-10 border border-success border-opacity-25 small text-success">✅ <strong>Quy chuẩn AAR:</strong> Đơn hoàn tất bắt buộc "Đã thanh toán" & kích hoạt bảo hành điện tử.</div>';
+                }
+                return;
+            }
+
+            // YÊU CẦU 2 & 3: Cancelled vs Đang hoạt động
+            if (orderStatus === 'Cancelled') {
+                if (optUnpaid) optUnpaid.disabled = false;
+                if (optPendingRefund) optPendingRefund.disabled = false;
+                if (optRefunded) optRefunded.disabled = false;
+
+                if (currentModalInitialPayment === 'Đã thanh toán' || currentModalInitialPayment === 'Paid' || paymentSelect.value === 'Chờ hoàn tiền' || paymentSelect.value === 'Đã hoàn tiền') {
+                    if (paymentSelect.value !== 'Đã hoàn tiền') {
+                        paymentSelect.value = 'Chờ hoàn tiền';
+                    }
+                    if (noticeDiv) {
+                        noticeDiv.innerHTML = '<div class="p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25 small text-danger">⚠️ Đơn đã thanh toán trước khi hủy &rarr; Tự động chuyển <strong>Chờ hoàn tiền</strong> cho kế toán.</div>';
+                    }
+                } else {
+                    paymentSelect.value = 'Chưa thanh toán';
+                    if (noticeDiv) {
+                        noticeDiv.innerHTML = '<div class="p-2 rounded bg-secondary bg-opacity-10 border border-secondary border-opacity-25 small text-dark">ℹ️ Đơn chưa thanh toán khi hủy (COD) &rarr; Giữ nguyên <strong>Chưa thanh toán</strong>, hoàn trả kho & IMEI.</div>';
+                    }
+                }
+            } else {
+                if (optUnpaid) optUnpaid.disabled = false;
+                if (optPaid) optPaid.disabled = false;
+                if (optPendingRefund) optPendingRefund.disabled = true;
+                if (optRefunded) optRefunded.disabled = true;
+
+                if (paymentSelect.value === 'Chờ hoàn tiền' || paymentSelect.value === 'Đã hoàn tiền') {
+                    paymentSelect.value = 'Chưa thanh toán';
+                }
+                if (noticeDiv) {
+                    noticeDiv.innerHTML = '';
+                }
+            }
+        }
+
+        function validateModalStatusForm() {
+            var orderStatus = document.getElementById('fNewStatus')?.value;
+            var paymentStatus = document.getElementById('fPaymentStatus')?.value;
+
+            if (orderStatus === 'Completed' && paymentStatus === 'Chưa thanh toán') {
+                alert('Lỗi: Đơn hoàn tất giao hàng bắt buộc phải ghi nhận "Đã thanh toán"!');
+                return false;
+            }
+
+            if (orderStatus !== 'Cancelled' && (paymentStatus === 'Chờ hoàn tiền' || paymentStatus === 'Đã hoàn tiền')) {
+                alert('Lỗi: Chỉ đơn hàng đã hủy mới được phép chọn "Chờ hoàn tiền" hoặc "Đã hoàn tiền"!');
+                return false;
+            }
+
+            if ((orderStatus === 'Shipping' || orderStatus === 'Completed') && !currentModalHasImei) {
+                alert('Lỗi: Đơn hàng chưa được gán đủ IMEI thực tế từ kho. Vui lòng vào Chi tiết đơn hàng để xuất kho gán mã IMEI trước!');
+                return false;
+            }
+
+            return true;
+        }
+
+        function filterAdminOrders() {
+            var val = document.getElementById('orderSearchBox').value.trim().toLowerCase();
+            var rows = document.querySelectorAll('.admin-order-row');
+            rows.forEach(r => {
+                var code = (r.getAttribute('data-code') || '').toLowerCase();
+                var cust = (r.getAttribute('data-customer') || '').toLowerCase();
+                if (code.includes(val) || cust.includes(val)) {
+                    r.style.display = '';
+                } else {
+                    r.style.display = 'none';
+                }
+            });
+        }
+    </script>
+}

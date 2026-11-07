@@ -1,0 +1,234 @@
+@page "{id:int}"
+@model IPhoneStore_Razor.Pages.Admin.WarrantyClaimDetailModel
+@{
+    Layout = "_AdminLayout";
+    var claim = Model.Vm.Claim;
+    var warranty = Model.Vm.Warranty;
+    ViewData["Title"] = $"Hồ sơ thẩm định: {claim.ClaimCode ?? claim.Id.ToString()}";
+}
+
+<div class="aar-topbar-title-section mb-4">
+    <div class="d-flex align-items-center gap-2 mb-1">
+        <a asp-page="/Admin/Warranty" class="text-secondary text-decoration-none small">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" class="me-1">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            Quay lại Trung tâm Bảo hành
+        </a>
+    </div>
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <div class="d-flex align-items-center gap-2">
+                <h1 class="h3 fw-bold mb-0">Hồ sơ Thẩm định Kỹ thuật @(claim.ClaimCode ?? $"BH-{claim.Id:D4}")</h1>
+                @switch (claim.Status)
+                {
+                    case "Pending":
+                    case "Tiếp nhận":
+                        <span class="aar-pill aar-pill-warning">Tiếp nhận máy</span>
+                        break;
+                    case "Completed":
+                        <span class="aar-pill aar-pill-success">Đã hoàn tất</span>
+                        break;
+                    case "Rejected":
+                        <span class="aar-pill aar-pill-danger">Từ chối bảo hành</span>
+                        break;
+                    default:
+                        <span class="aar-pill aar-pill-info">@claim.Status</span>
+                        break;
+                }
+            </div>
+            <p class="text-secondary small mb-0">Tiếp nhận: @claim.ClaimDate.ToString("dd/MM/yyyy HH:mm") • KTV phụ trách: Apple Certified Tech #04</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button onclick="window.print()" class="aar-btn aar-btn-outline">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" class="me-1">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Xuất Biên bản GSX Apple (PDF)
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (Model.SuccessMessage != null)
+{
+    <div class="alert alert-success py-2 px-3 small rounded-3 mb-4 d-flex align-items-center gap-2">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <span>@Model.SuccessMessage</span>
+    </div>
+}
+
+@if (Model.ErrorMessage != null)
+{
+    <div class="alert alert-danger py-2 px-3 small rounded-3 mb-4 d-flex align-items-center gap-2">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <span>@Model.ErrorMessage</span>
+    </div>
+}
+
+<div class="row g-4">
+    <!-- Cột trái: Biên bản chẩn đoán & Checkbox Apple 1 Đổi 1 -->
+    <div class="col-lg-8">
+        <!-- 3 ĐIỀU KIỆN 1 ĐỔI 1 APPLE CHUẨN AAR -->
+        <div class="aar-card mb-4 border-primary">
+            <div class="aar-card-header bg-light">
+                <div class="fw-bold fs-6 text-primary">Biên bản Thẩm định Tiêu chuẩn 1 Đổi 1 trong 30 ngày của Apple</div>
+                <span class="badge bg-primary">AAR Standard</span>
+            </div>
+            <div class="aar-card-body">
+                <div class="p-3 bg-light rounded-3 mb-3">
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="cond1" checked>
+                        <label class="form-check-label small fw-semibold" for="cond1">
+                            Lỗi phát sinh do Nhà sản xuất (Phần cứng, nguồn, màn hình sọc, camera lỗi cảm biến)
+                        </label>
+                    </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="cond2" checked>
+                        <label class="form-check-label small fw-semibold" for="cond2">
+                            Thân máy nguyên vẹn: Không cấn móp, không rơi vỡ, chỉ số quỳ tím LCI chưa kích hoạt (Chưa vào nước)
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="cond3" checked>
+                        <label class="form-check-label small fw-semibold" for="cond3">
+                            Tài khoản iCloud đã đăng xuất hoàn toàn khỏi thiết bị và hệ thống Find My iPhone đã tắt
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Mô tả triệu chứng lỗi từ khách hàng</label>
+                    <div class="p-3 bg-white border rounded small text-dark">
+                        @claim.IssueDescription
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(claim.TechnicianNotes))
+                {
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Ghi chú kết luận của Kỹ thuật viên</label>
+                        <div class="p-3 bg-white border rounded small text-dark font-monospace">
+                            @claim.TechnicianNotes
+                        </div>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(claim.NewImei))
+                {
+                    <div class="alert alert-success border-success p-3 rounded-3 mb-0">
+                        <div class="fw-bold">Máy đã hoàn tất quy trình 1 Đổi 1:</div>
+                        <div class="font-monospace small mt-1">
+                            - IMEI máy lỗi đã cách ly: <strong>@(claim.Warranty?.OriginalImei ?? "N/A")</strong><br />
+                            - IMEI máy mới đã cấp bù cho khách: <strong>@claim.NewImei</strong>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        @if (claim.Status != "Completed" && claim.Status != "Rejected")
+        {
+            <!-- FORM XỬ LÝ PHÊ DUYỆT -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <div class="fw-bold fs-6">Quyết định Xử lý Hồ sơ Bảo hành</div>
+                </div>
+                <div class="aar-card-body">
+                    <form method="post" asp-page-handler="ProcessClaim">
+                        <input type="hidden" name="claimId" value="@claim.Id" />
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Phương án xử lý kỹ thuật <span class="text-danger">*</span></label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="resolutionType" id="resReplace" value="Replace" checked>
+                                    <label class="form-check-label small fw-semibold text-primary" for="resReplace">
+                                        1 Đổi 1 (Xuất máy mới nguyên seal)
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="resolutionType" id="resRepair" value="Repair">
+                                    <label class="form-check-label small fw-semibold text-info" for="resRepair">
+                                        Sửa chữa &amp; Thay linh kiện Apple chính hãng
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="resolutionType" id="resReject" value="Reject">
+                                    <label class="form-check-label small fw-semibold text-danger" for="resReject">
+                                        Từ chối bảo hành (Do lỗi người dùng / vào nước)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3" id="replacementImeiSection">
+                            <label class="form-label small fw-semibold">Chọn mã IMEI máy mới để bù đổi từ kho:</label>
+                            <select name="replacementImeiId" class="form-select form-select-sm font-monospace border-primary">
+                                <option value="">-- Chọn IMEI máy mới nguyên seal --</option>
+                                @foreach (var imei in Model.Vm.AvailableReplacementImeis)
+                                {
+                                    <option value="@imei.Id">@imei.Imei - Serial: @imei.SerialNumber</option>
+                                }
+                            </select>
+                            <div class="text-secondary small mt-1" style="font-size: 0.72rem;">
+                                Chỉ hiển thị các máy trạng thái InStock đúng model @warranty.Product?.Name
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Ghi chú &amp; Kết luận của KTV</label>
+                            <textarea name="technicianNotes" class="form-control form-control-sm" rows="3" 
+                                      placeholder="VD: Kiểm tra phát hiện sọc màn hình do lỗi panel OLED từ nhà máy. Đủ điều kiện 1 Đổi 1 theo chính sách AAR Apple."></textarea>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" class="aar-btn aar-btn-primary">
+                                Xác nhận Phê duyệt &amp; Cập nhật Trạng thái
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Cột phải: Thông tin máy & Khách hàng -->
+    <div class="col-lg-4">
+        <div class="aar-card mb-4">
+            <div class="aar-card-header">
+                <div class="fw-bold fs-6">Thông tin Máy tiếp nhận</div>
+            </div>
+            <div class="aar-card-body">
+                <div class="mb-3">
+                    <span class="text-secondary small d-block">Sản phẩm:</span>
+                    <strong class="text-dark">@(warranty.Product?.Name ?? "N/A")</strong>
+                    <div class="text-secondary small font-monospace">SKU: @(warranty.Product?.Sku ?? "N/A")</div>
+                </div>
+                <div class="mb-3">
+                    <span class="text-secondary small d-block">Mã IMEI tiếp nhận:</span>
+                    <strong class="font-monospace text-primary">@warranty.Imei</strong>
+                </div>
+                <div class="mb-3">
+                    <span class="text-secondary small d-block">Hạn bảo hành Apple:</span>
+                    <strong class="text-dark">@warranty.EndDate.ToString("dd/MM/yyyy")</strong>
+                </div>
+                <div>
+                    <span class="text-secondary small d-block">Chủ sở hữu:</span>
+                    <strong class="text-dark">@(warranty.Customer?.FullName ?? "Khách lẻ")</strong>
+                    <div class="small text-secondary">SĐT: @(warranty.Customer?.PhoneNumber ?? "N/A")</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

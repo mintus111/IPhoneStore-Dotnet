@@ -1,0 +1,226 @@
+@page "/cart"
+@attribute [Microsoft.AspNetCore.Authorization.Authorize]
+@implements IDisposable
+@inject CartService Cart
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthProvider
+@inject ToastService Toast
+
+<PageTitle>Giỏ Hàng - BomChelsea Authorized Reseller</PageTitle>
+
+<div class="container py-4">
+    @if (!string.IsNullOrEmpty(ErrorFromQuery))
+    {
+        <div class="alert alert-danger py-3 px-4 rounded-3 mb-4 shadow-sm border-danger d-flex align-items-center gap-2">
+            <span class="fs-5">⚠️</span>
+            <div>@ErrorFromQuery</div>
+        </div>
+    }
+
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="/" class="text-secondary text-decoration-none small">Trang chủ</a></li>
+                    <li class="breadcrumb-item active small text-dark fw-semibold" aria-current="page">Giỏ hàng</li>
+                </ol>
+            </nav>
+            <h1 class="fs-3 fw-bold text-dark mb-0">Giỏ Hàng Apple BomChelsea</h1>
+        </div>
+        <a href="/" class="text-primary text-decoration-none small fw-semibold">
+            ‹ Mua thêm iPhone khác
+        </a>
+    </div>
+
+    @if (!Cart.IsLoaded)
+    {
+        <div class="text-center py-5 text-secondary"><span class="spinner-border spinner-border-sm me-2"></span>Đang tải giỏ hàng...</div>
+    }
+    else if (Cart.GetCart().Count == 0)
+    {
+        <div class="bg-white border rounded-3 p-5 text-center shadow-sm">
+            <svg width="64" height="64" fill="none" stroke="#86868b" viewBox="0 0 24 24" class="mb-3"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+            <h4 class="fw-bold text-dark">Giỏ hàng của bạn đang trống</h4>
+            <p class="text-secondary small mb-4">Hãy khám phá các siêu phẩm iPhone mới nhất và thêm vào giỏ nhé.</p>
+            <a href="/" class="apple-cta-primary">Khám phá iPhone ngay</a>
+        </div>
+    }
+    else
+    {
+        <div class="row g-4">
+            <!-- Left: Items List -->
+            <div class="col-lg-8">
+                <div class="bg-white border rounded-3 p-4 shadow-sm mb-3">
+                    <div class="d-flex justify-content-between align-items-center pb-3 border-bottom mb-3">
+                        <h2 class="fs-5 fw-bold text-dark mb-0">Giỏ Hàng (@Cart.GetCount() sản phẩm)</h2>
+                        <button type="button" class="btn btn-link text-danger text-decoration-none small p-0" @onclick="Cart.ClearCartAsync">Xóa tất cả</button>
+                    </div>
+
+                    <div class="d-flex flex-column gap-3">
+                        @foreach (var item in Cart.GetCart())
+                        {
+                            <div class="d-flex flex-wrap align-items-center justify-content-between py-3 border-bottom gap-3" @key="item.ProductId">
+                                <div class="d-flex align-items-center gap-3">
+                                    <img src="@(string.IsNullOrEmpty(item.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : item.ImageUrl)"
+                                         alt="@item.ProductName" style="width: 72px; height: 72px; object-fit: contain;" />
+                                    <div>
+                                        <a href="/product/@item.ProductId" class="fw-bold text-dark text-decoration-none d-block">@item.ProductName</a>
+                                        <div class="text-secondary small">Màu: @item.Color · Dung lượng: @item.Storage</div>
+                                        <div class="text-primary fw-semibold small mt-1">@item.Price.ToString("N0") ₫</div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex align-items-center gap-4">
+                                    <!-- Qty Stepper -->
+                                    <div class="d-flex align-items-center border rounded-pill px-2 py-1 bg-white">
+                                        <button type="button" class="btn btn-link text-dark p-0 text-decoration-none fw-bold px-2" @onclick="() => Change(item.ProductId, item.Quantity - 1)">-</button>
+                                        <span class="mx-2 fw-bold small">@item.Quantity</span>
+                                        <button type="button" class="btn btn-link text-dark p-0 text-decoration-none fw-bold px-2" @onclick="() => Change(item.ProductId, item.Quantity + 1)">+</button>
+                                    </div>
+
+                                    <div class="text-end" style="min-width: 110px;">
+                                        <div class="fw-bold text-dark">@item.TotalPrice.ToString("N0") ₫</div>
+                                        <button type="button" class="btn btn-link text-secondary text-decoration-none p-0 small" @onclick="() => Cart.RemoveFromCartAsync(item.ProductId)">Xóa</button>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="pt-3">
+                        <a href="/" class="text-primary text-decoration-none small fw-semibold">&larr; Tiếp tục chọn thêm iPhone khác</a>
+                    </div>
+                </div>
+
+                <!-- 1 Đổi 1 Policy Note -->
+                <div class="p-3 bg-light rounded-3 border d-flex align-items-center gap-3">
+                    <span class="badge bg-success text-white">1 ĐỔI 1</span>
+                    <div class="small text-secondary">
+                        Áp dụng chính sách đổi mới 30 ngày cho tất cả thân máy iPhone nếu phát hiện lỗi phần cứng nhà sản xuất.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Order Summary (Mockup 04) -->
+            <div class="col-lg-4">
+                <div class="bg-white border rounded-3 p-4 shadow-sm mb-3">
+                    <h3 class="fs-5 fw-bold text-dark mb-3">Tóm Tắt Đơn Hàng</h3>
+
+                    <div class="d-flex justify-content-between py-2 border-bottom small text-secondary">
+                        <span>Tạm tính hàng:</span>
+                        <span class="text-dark fw-semibold">@Cart.GetTotalAmount().ToString("N0") ₫</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between py-2 border-bottom small text-secondary">
+                        <span>Phí vận chuyển:</span>
+                        <span class="text-success fw-semibold">Miễn phí 2H</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between py-2 border-bottom small text-secondary">
+                        <span>Bảo hành chính hãng:</span>
+                        <span class="text-success fw-semibold">Apple Care 12T (Tặng kèm)</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-baseline py-3 my-2">
+                        <span class="fw-bold text-dark">Tổng tiền thanh toán:</span>
+                        <span class="fs-4 fw-bold text-primary">@Cart.GetTotalAmount().ToString("N0") ₫</span>
+                    </div>
+
+                    @if (_isInternalStaff)
+                    {
+                        <div class="alert alert-warning p-3 rounded-3 mb-3 border-warning">
+                            <div class="fw-bold text-dark mb-1">⚠️ Tài khoản Quản trị / Nội bộ (@_username)</div>
+                            <div class="small text-secondary mb-3">Tài khoản nội bộ không được phép mua hàng theo chuẩn AAR. Vui lòng đăng xuất để dùng tài khoản Khách hàng (ví dụ: nguyenvana).</div>
+                            <a href="/Account/Login" class="btn btn-warning w-100 py-2 fw-semibold rounded-pill text-dark">
+                                Đổi tài khoản để mua hàng &rarr;
+                            </a>
+                        </div>
+                    }
+                    else
+                    {
+                        <button type="button" class="apple-cta-primary w-100 py-3 fs-6 text-center mb-3 border-0 d-block text-decoration-none" @onclick="ProceedToCheckout">
+                            Tiến Hành Thanh Toán &rarr;
+                        </button>
+                    }
+
+                    <div class="text-secondary small text-center">
+                        🔒 Bảo mật giao dịch theo tiêu chuẩn quốc tế PCI-DSS &amp; Apple Pay.
+                    </div>
+                </div>
+
+                <!-- BomChelsea Support Box -->
+                <div class="bg-white border rounded-3 p-3 shadow-sm text-center">
+                    <div class="small text-secondary mb-1">Cần hỗ trợ đặt hàng ngay?</div>
+                    <div class="fw-bold text-dark">Tổng đài BomChelsea: <span class="text-primary">1900.6789</span></div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [SupplyParameterFromQuery(Name = "error")]
+    private string? ErrorFromQuery { get; set; }
+
+    private bool _isInternalStaff;
+    private string? _username;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await Cart.EnsureLoadedAsync();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Cart.Changed += OnChanged;
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        var user = state.User;
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            Nav.NavigateTo("/Account/Login?returnUrl=%2Fcart", forceLoad: true);
+            return;
+        }
+
+        if ((user.IsInRole("Admin") || user.IsInRole("Manager") || user.IsInRole("Staff") || user.IsInRole("Cashier") || user.IsInRole("Shipper")) &&
+            !user.IsInRole("Customer"))
+        {
+            _isInternalStaff = true;
+            _username = user.Identity.Name;
+        }
+    }
+
+    private async Task ProceedToCheckout()
+    {
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        var user = state.User;
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            Nav.NavigateTo("/Account/Login?returnUrl=%2Fcheckout", forceLoad: true);
+            return;
+        }
+
+        if (Cart.GetCart().Count == 0)
+        {
+            Toast.Error("Giỏ hàng của bạn đang trống!");
+            return;
+        }
+
+        // Tự động loại bỏ các sản phẩm lỗi không hợp lệ (ví dụ đơn giá <= 0)
+        var invalidItems = Cart.GetCart().Where(i => i.Price <= 0).ToList();
+        if (invalidItems.Count > 0)
+        {
+            foreach (var inv in invalidItems)
+            {
+                await Cart.RemoveFromCartAsync(inv.ProductId);
+            }
+            Toast.Warning("Đã tự động loại bỏ sản phẩm không hợp lệ khỏi giỏ hàng.");
+        }
+
+        Nav.NavigateTo("/checkout");
+    }
+
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+    private Task Change(int productId, int qty) => Cart.UpdateQuantityAsync(productId, qty);
+    public void Dispose() => Cart.Changed -= OnChanged;
+}
+

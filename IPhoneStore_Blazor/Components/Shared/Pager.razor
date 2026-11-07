@@ -1,0 +1,41 @@
+@* Phân trang dùng chung. AdminStyle=true dùng kiểu .apple-pagination, ngược lại .pagination-apple *@
+@if (TotalPages > 1)
+{
+    @if (AdminStyle)
+    {
+        <div class="apple-pagination">
+            <a href="@HrefFor(CurrentPage - 1)" class="page-btn @(CurrentPage <= 1 ? "disabled" : "")">&laquo;</a>
+            @for (int i = 1; i <= TotalPages; i++)
+            {
+                <a href="@HrefFor(i)" class="page-btn @(CurrentPage == i ? "active" : "")">@i</a>
+            }
+            <a href="@HrefFor(CurrentPage + 1)" class="page-btn @(CurrentPage >= TotalPages ? "disabled" : "")">&raquo;</a>
+        </div>
+    }
+    else
+    {
+        <nav class="d-flex justify-content-center">
+            <ul class="pagination-apple">
+                @if (CurrentPage > 1)
+                {
+                    <li><a href="@HrefFor(CurrentPage - 1)">‹</a></li>
+                }
+                @for (int i = 1; i <= TotalPages; i++)
+                {
+                    <li><a href="@HrefFor(i)" class="@(i == CurrentPage ? "active" : "")">@i</a></li>
+                }
+                @if (CurrentPage < TotalPages)
+                {
+                    <li><a href="@HrefFor(CurrentPage + 1)">›</a></li>
+                }
+            </ul>
+        </nav>
+    }
+}
+
+@code {
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter] public int TotalPages { get; set; } = 1;
+    [Parameter] public bool AdminStyle { get; set; }
+    [Parameter, EditorRequired] public Func<int, string> HrefFor { get; set; } = _ => "#";
+}

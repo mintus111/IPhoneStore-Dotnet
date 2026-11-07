@@ -1,0 +1,280 @@
+@model List<Order>
+@{
+    ViewData["Title"] = "Quản lý đơn hàng (Order Fulfillment)";
+    string? currentStatus = ViewBag.StatusFilter as string;
+    string? currentPayment = ViewBag.PaymentFilter as string;
+    string? currentSearch = ViewBag.SearchKeyword as string;
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h1 class="h3 fw-bold text-dark mb-1">Quản lý đơn hàng (Order Fulfillment)</h1>
+        <p class="text-muted small mb-0">Theo dõi tiến độ đơn hàng trực tuyến, đếm ngược giữ kho 15 phút và điều phối luồng xuất kho IMEI.</p>
+    </div>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-4 shadow-sm border-0 rounded-3" role="alert" style="background-color: #e8f5e9; color: #1b5e20;">
+        <span class="fs-5">✅</span>
+        <div class="fw-semibold">@TempData["Success"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 mb-4 shadow-sm border-0 rounded-3" role="alert">
+        <span class="fs-5">⚠️</span>
+        <div class="fw-semibold">@TempData["Error"]</div>
+        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<!-- ================= 3 KPI SUMMARY CARDS ================= -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4 col-12">
+        <div class="aar-stat-box border-start border-4 border-warning">
+            <div class="aar-stat-icon-wrap bg-warning bg-opacity-10 text-warning">
+                ⏳
+            </div>
+            <div>
+                <div class="text-muted small fw-semibold">Đơn chờ duyệt &amp; xuất kho</div>
+                <div class="h4 fw-bold text-dark mb-0">@(ViewBag.PendingCount ?? 0) đơn hàng</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-12">
+        <div class="aar-stat-box border-start border-4 border-primary">
+            <div class="aar-stat-icon-wrap bg-primary bg-opacity-10 text-primary">
+                🚚
+            </div>
+            <div>
+                <div class="text-muted small fw-semibold">Đang giao hàng (In Transit)</div>
+                <div class="h4 fw-bold text-dark mb-0">@(ViewBag.ShippingCount ?? 0) đơn hàng</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 col-12">
+        <div class="aar-stat-box border-start border-4 border-success">
+            <div class="aar-stat-icon-wrap bg-success bg-opacity-10 text-success">
+                ✅
+            </div>
+            <div>
+                <div class="text-muted small fw-semibold">Giao thành công</div>
+                <div class="h4 fw-bold text-dark mb-0">@(ViewBag.CompletedCount ?? 0) đơn hàng</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= STATUS TABS ================= -->
+<div class="d-flex align-items-center gap-2 border-bottom mb-4 pb-2">
+    <a asp-area="Admin" asp-controller="Admin" asp-action="Orders" 
+       asp-route-statusFilter="" asp-route-searchKeyword="@currentSearch" asp-route-paymentFilter="@currentPayment"
+       class="btn btn-sm @(string.IsNullOrEmpty(currentStatus) ? "btn-dark fw-bold" : "btn-light text-muted") rounded-pill px-3">
+        Tất cả (@(ViewBag.TotalCount ?? Model.Count))
+    </a>
+    <a asp-area="Admin" asp-controller="Admin" asp-action="Orders" 
+       asp-route-statusFilter="Pending" asp-route-searchKeyword="@currentSearch" asp-route-paymentFilter="@currentPayment"
+       class="btn btn-sm @(currentStatus == "Pending" ? "btn-warning fw-bold text-dark" : "btn-light text-muted") rounded-pill px-3">
+        Chờ duyệt (@(ViewBag.PendingCount ?? 0))
+    </a>
+    <a asp-area="Admin" asp-controller="Admin" asp-action="Orders" 
+       asp-route-statusFilter="Confirmed" asp-route-searchKeyword="@currentSearch" asp-route-paymentFilter="@currentPayment"
+       class="btn btn-sm @(currentStatus == "Confirmed" ? "btn-dark fw-bold" : "btn-light text-muted") rounded-pill px-3">
+        Đã duyệt (@(ViewBag.ConfirmedCount ?? 0))
+    </a>
+    <a asp-area="Admin" asp-controller="Admin" asp-action="Orders" 
+       asp-route-statusFilter="Shipping" asp-route-searchKeyword="@currentSearch" asp-route-paymentFilter="@currentPayment"
+       class="btn btn-sm @(currentStatus == "Shipping" ? "btn-dark fw-bold" : "btn-light text-muted") rounded-pill px-3">
+        Đang giao (@(ViewBag.ShippingCount ?? 0))
+    </a>
+    <a asp-area="Admin" asp-controller="Admin" asp-action="Orders" 
+       asp-route-statusFilter="Completed" asp-route-searchKeyword="@currentSearch" asp-route-paymentFilter="@currentPayment"
+       class="btn btn-sm @(currentStatus == "Completed" ? "btn-dark fw-bold" : "btn-light text-muted") rounded-pill px-3">
+        Hoàn tất (@(ViewBag.CompletedCount ?? 0))
+    </a>
+    <a asp-area="Admin" asp-controller="Admin" asp-action="Orders" 
+       asp-route-statusFilter="Cancelled" asp-route-searchKeyword="@currentSearch" asp-route-paymentFilter="@currentPayment"
+       class="btn btn-sm @(currentStatus == "Cancelled" ? "btn-dark fw-bold" : "btn-light text-muted") rounded-pill px-3">
+        Đã hủy (@(ViewBag.CancelledCount ?? 0))
+    </a>
+</div>
+
+<!-- ================= SEARCH & FILTERS BAR ================= -->
+<div class="aar-card p-3 mb-4">
+    <form asp-area="Admin" asp-controller="Admin" asp-action="Orders" method="get" class="row g-2 align-items-center">
+        <input type="hidden" name="statusFilter" value="@currentStatus" />
+
+        <div class="col-lg-5 col-md-6">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light border-end-0">🔍</span>
+                <input type="text" name="searchKeyword" value="@currentSearch" class="form-control border-start-0" placeholder="Tìm theo mã đơn (DH...), tên khách, SĐT..." />
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-3">
+            <select name="paymentFilter" class="form-select form-select-sm">
+                <option value="">-- Trạng thái thanh toán --</option>
+                <option value="Đã thanh toán" selected="@(currentPayment == "Đã thanh toán")">Đã thanh toán</option>
+                <option value="Chưa thanh toán" selected="@(currentPayment == "Chưa thanh toán")">Chưa thanh toán</option>
+                <option value="Chờ hoàn tiền" selected="@(currentPayment == "Chờ hoàn tiền")">Chờ hoàn tiền</option>
+            </select>
+        </div>
+
+        <div class="col-lg-3 col-md-3 d-flex gap-2 justify-content-end">
+            <button type="submit" class="btn btn-primary btn-sm px-3 fw-semibold">Lọc đơn</button>
+            <a asp-area="Admin" asp-controller="Admin" asp-action="Orders" class="btn btn-light btn-sm px-3">Đặt lại</a>
+        </div>
+    </form>
+</div>
+
+<!-- ================= ORDERS TABLE ================= -->
+<div class="aar-card">
+    <div class="table-responsive">
+        <table class="aar-table">
+            <thead>
+                <tr>
+                    <th style="width: 150px;">Mã đơn</th>
+                    <th>Thời gian &amp; Giữ kho</th>
+                    <th>Khách hàng</th>
+                    <th>Sản phẩm đặt</th>
+                    <th>Tổng thanh toán</th>
+                    <th>Thanh toán</th>
+                    <th>Trạng thái</th>
+                    <th style="text-align: right; width: 140px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Any())
+                {
+                    foreach (var o in Model)
+                    {
+                        var isPending = o.OrderStatus == "Pending" || o.OrderStatus == "Chờ duyệt";
+                        var elapsedMinutes = (DateTime.Now - o.OrderDate).TotalMinutes;
+                        var remainingMinutes = Math.Max(0, 15 - (int)elapsedMinutes);
+
+                        <tr>
+                            <td>
+                                <a asp-area="Admin" asp-controller="Admin" asp-action="OrderDetail" asp-route-id="@o.Id" class="fw-bold text-primary font-monospace fs-6 text-decoration-none">
+                                    #@(o.OrderCode ?? "DH261024-" + o.Id.ToString("D3"))
+                                </a>
+                            </td>
+                            <td>
+                                <div class="small fw-semibold text-dark">@o.OrderDate.ToString("dd/MM/yyyy HH:mm")</div>
+                                @if (isPending)
+                                {
+                                    <div class="small text-danger fw-bold d-flex align-items-center gap-1 mt-1">
+                                        <span>⏳ Còn @(remainingMinutes)p giữ kho</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="small text-muted">Đã xử lý</div>
+                                }
+                            </td>
+                            <td>
+                                <div class="fw-bold text-dark">@(o.Customer?.FullName ?? "Khách vãng lai")</div>
+                                <div class="text-muted small">@(o.Customer?.PhoneNumber ?? "-")</div>
+                            </td>
+                            <td>
+                                @if (o.OrderDetails != null && o.OrderDetails.Any())
+                                {
+                                    var first = o.OrderDetails.First();
+                                    <div class="small fw-semibold text-dark">
+                                        @(first.Product?.Name ?? "iPhone") x @first.Quantity
+                                    </div>
+                                    @if (o.OrderDetails.Count > 1)
+                                    {
+                                        <div class="text-muted small">+@(o.OrderDetails.Count - 1) sản phẩm khác</div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">-</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="fw-bold text-primary fs-6">
+                                    @o.TotalAmount.ToString("N0") ₫
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small fw-semibold text-dark">@o.PaymentMethod</div>
+                                @if (o.PaymentStatus == "Đã thanh toán")
+                                {
+                                    <span class="badge bg-success bg-opacity-10 text-success small">Đã thanh toán</span>
+                                }
+                                else if (o.PaymentStatus == "Chờ hoàn tiền")
+                                {
+                                    <span class="badge bg-danger bg-opacity-10 text-danger small">Chờ hoàn tiền</span>
+                                }
+                                else if (o.PaymentStatus == "Đã hoàn tiền")
+                                {
+                                    <span class="badge bg-secondary small">Đã hoàn tiền</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning bg-opacity-15 text-dark small">Chưa thanh toán</span>
+                                }
+                            </td>
+                            <td>
+                                @if (o.OrderStatus == "Pending" || o.OrderStatus == "Chờ duyệt")
+                                {
+                                    <span class="aar-pill aar-pill-amber">Chờ duyệt</span>
+                                }
+                                else if (o.OrderStatus == "Confirmed" || o.OrderStatus == "Đã duyệt")
+                                {
+                                    <span class="aar-pill aar-pill-blue">Đã duyệt</span>
+                                }
+                                else if (o.OrderStatus == "Shipping" || o.OrderStatus == "Đang giao")
+                                {
+                                    <span class="aar-pill aar-pill-blue">Đang giao</span>
+                                }
+                                else if (o.OrderStatus == "Completed" || o.OrderStatus == "Hoàn tất")
+                                {
+                                    <span class="aar-pill aar-pill-green">Hoàn tất</span>
+                                }
+                                else if (o.OrderStatus == "Cancelled" || o.OrderStatus == "Đã hủy")
+                                {
+                                    <span class="aar-pill aar-pill-red">Đã hủy</span>
+                                }
+                                else
+                                {
+                                    <span class="aar-pill aar-pill-gray">@o.OrderStatus</span>
+                                }
+                            </td>
+                            <td style="text-align: right;">
+                                @{
+                                    var isClosedOrder = o.OrderStatus == "Completed" || o.OrderStatus == "Hoàn tất" || o.OrderStatus == "Cancelled" || o.OrderStatus == "Đã hủy";
+                                }
+                                @if (isClosedOrder)
+                                {
+                                    <a asp-area="Admin" asp-controller="Admin" asp-action="OrderDetail" asp-route-id="@o.Id" class="btn btn-outline-secondary btn-sm px-3 rounded-pill">
+                                        Chi tiết &rarr;
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a asp-area="Admin" asp-controller="Admin" asp-action="OrderDetail" asp-route-id="@o.Id" class="btn btn-outline-primary btn-sm px-3 rounded-pill fw-semibold">
+                                        Xử lý &rarr;
+                                    </a>
+                                }
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center py-5 text-muted">
+                            <div class="h5 mb-2">Không tìm thấy đơn hàng nào</div>
+                            <p class="small">Thử điều chỉnh lại bộ lọc hoặc tìm kiếm theo từ khóa khác.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

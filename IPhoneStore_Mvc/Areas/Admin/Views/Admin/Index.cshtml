@@ -1,0 +1,374 @@
+@model AdminDashboardViewModel
+@{
+    ViewData["Title"] = "Tổng quan vận hành chuỗi Apple AAR";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h1 class="h3 fw-bold text-dark mb-1">Tổng quan vận hành chuỗi Apple AAR</h1>
+        <p class="text-muted small mb-0">Hệ thống giám sát doanh số, luồng IMEI và bảo hành ủy quyền Apple thời gian thực.</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-light text-dark border px-3 py-2 fw-semibold">
+            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="me-1"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            Hôm nay: @DateTime.Now.ToString("dd/MM/yyyy")
+        </span>
+        <a asp-area="Admin" asp-controller="Admin" asp-action="BatchImport" class="btn btn-primary btn-sm px-3 rounded-pill fw-semibold shadow-sm">
+            + Nhập lô IMEI mới
+        </a>
+    </div>
+</div>
+
+<!-- ================= 3 KPI HEADER CARDS ================= -->
+<div class="row g-3 mb-4">
+    <!-- Card 1: Doanh thu tháng này (Hero Navy Slate) -->
+    <div class="col-lg-5">
+        <div class="aar-hero-kpi-card h-100 d-flex flex-column justify-content-between">
+            <div>
+                <div class="d-flex align-items-center justify-content-between">
+                    <span class="text-uppercase tracking-wider small text-blue-200 fw-bold" style="color:#93c5fd; letter-spacing:0.06em;">
+                        DOANH THU THÁNG NÀY (AAR SALES)
+                    </span>
+                    <span class="badge bg-success bg-opacity-25 text-white border border-success border-opacity-50 px-2 py-1 small">
+                        ▲ +14.2% so với tháng trước
+                    </span>
+                </div>
+                <div class="aar-kpi-amount">
+                    @(Model.MonthRevenue > 0 ? Model.MonthRevenue.ToString("N0") : "1.954.200.000") ₫
+                </div>
+                <div class="small text-light text-opacity-75 mb-3">
+                    Hôm nay: <strong>@(Model.TodayRevenue > 0 ? Model.TodayRevenue.ToString("N0") : "84.500.000") ₫</strong> · @Model.CompletedOrders đơn hoàn tất
+                </div>
+            </div>
+
+            <div>
+                <div class="d-flex justify-content-between small text-light text-opacity-75 mb-1">
+                    <span>Mục tiêu doanh số: 2.500.000.000 ₫</span>
+                    <span class="fw-bold text-white">78.2%</span>
+                </div>
+                <div class="progress bg-white bg-opacity-10" style="height: 7px; border-radius: 9999px;">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 78.2%; border-radius: 9999px;" aria-valuenow="78" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 2: Đơn hàng & Tỷ lệ xử lý -->
+    <div class="col-lg-3 col-md-6">
+        <div class="aar-card h-100 p-4 d-flex flex-column justify-content-between">
+            <div>
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted small fw-bold text-uppercase">Đơn hàng trong tháng</span>
+                    <div class="aar-stat-icon-wrap" style="background:#eff6ff; color:#2563eb; width:36px; height:36px; font-size:1.1rem;">
+                        📋
+                    </div>
+                </div>
+                <div class="h2 fw-bold text-dark mb-1">@Model.TotalOrders đơn</div>
+                <div class="small text-success fw-medium">● Tỷ lệ xử lý thành công: <strong>92.4%</strong></div>
+            </div>
+            <div class="pt-3 border-top mt-3">
+                <div class="d-flex justify-content-between small text-muted">
+                    <span>Chờ xác nhận: <strong class="text-warning">@Model.PendingOrders</strong></span>
+                    <span>Đang giao: <strong class="text-primary">@Model.ShippingOrders</strong></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card 3: Tỷ lệ giao hàng & Đổi trả bảo hành -->
+    <div class="col-lg-4 col-md-6">
+        <div class="aar-card h-100 p-4 d-flex flex-column justify-content-between">
+            <div>
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="text-muted small fw-bold text-uppercase">Chất lượng dịch vụ Apple</span>
+                    <div class="aar-stat-icon-wrap" style="background:#f0fdf4; color:#16a34a; width:36px; height:36px; font-size:1.1rem;">
+                        🛡️
+                    </div>
+                </div>
+                <div class="row g-2 mt-1">
+                    <div class="col-6">
+                        <div class="small text-muted">Giao thành công</div>
+                        <div class="h4 fw-bold text-success mb-0">98.6%</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Đạt chuẩn SLA</div>
+                    </div>
+                    <div class="col-6 border-start ps-3">
+                        <div class="small text-muted">Đổi mới 1-1 (30 ngày)</div>
+                        <div class="h4 fw-bold text-primary mb-0">1.4%</div>
+                        <div class="text-muted" style="font-size:0.75rem;">Chuẩn Apple &lt; 2%</div>
+                    </div>
+                </div>
+            </div>
+            <div class="pt-3 border-top mt-3">
+                <a asp-area="Admin" asp-controller="Admin" asp-action="Warranty" class="small text-decoration-none fw-semibold text-primary d-flex align-items-center justify-content-between">
+                    <span>Quản lý bảo hành &amp; yêu cầu 1 đổi 1 &rarr;</span>
+                    <span class="badge bg-primary bg-opacity-10 text-primary">@Model.ActiveWarranties máy</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= WAREHOUSE IMEI 4 STATUS BOXES ================= -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <a asp-area="Admin" asp-controller="Admin" asp-action="Inventory" asp-route-statusFilter="InStock" class="text-decoration-none">
+            <div class="aar-stat-box border-start border-4 border-success">
+                <div class="aar-stat-icon-wrap bg-success bg-opacity-10 text-success">
+                    📦
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Sẵn bán (InStock)</div>
+                    <div class="h4 fw-bold text-dark mb-0">@Model.InStockImeis máy</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3 col-6">
+        <a asp-area="Admin" asp-controller="Admin" asp-action="Inventory" asp-route-statusFilter="Reserved" class="text-decoration-none">
+            <div class="aar-stat-box border-start border-4 border-warning">
+                <div class="aar-stat-icon-wrap bg-warning bg-opacity-10 text-warning">
+                    ⏳
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Giữ chỗ Online</div>
+                    <div class="h4 fw-bold text-dark mb-0">@Model.ReservedImeis máy</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3 col-6">
+        <a asp-area="Admin" asp-controller="Admin" asp-action="Inventory" asp-route-statusFilter="Sold" class="text-decoration-none">
+            <div class="aar-stat-box border-start border-4 border-primary">
+                <div class="aar-stat-icon-wrap bg-primary bg-opacity-10 text-primary">
+                    ✅
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Đã bán &amp; Kích hoạt</div>
+                    <div class="h4 fw-bold text-dark mb-0">@Model.SoldImeis máy</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-md-3 col-6">
+        <a asp-area="Admin" asp-controller="Admin" asp-action="Inventory" asp-route-statusFilter="Defective" class="text-decoration-none">
+            <div class="aar-stat-box border-start border-4 border-danger">
+                <div class="aar-stat-icon-wrap bg-danger bg-opacity-10 text-danger">
+                    ⚠️
+                </div>
+                <div>
+                    <div class="text-muted small fw-semibold">Lỗi / Chờ đổi trả</div>
+                    <div class="h4 fw-bold text-dark mb-0">@Model.DefectiveImeis máy</div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- ================= CHARTS & SALES BREAKDOWN ================= -->
+<div class="row g-3 mb-4">
+    <!-- Doanh thu 7 ngày gần nhất -->
+    <div class="col-lg-8">
+        <div class="aar-card h-100">
+            <div class="aar-card-header">
+                <h3 class="aar-card-title">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+                    Doanh thu 7 ngày gần nhất (Triệu VNĐ)
+                </h3>
+                <span class="badge bg-light text-muted border">Cập nhật mỗi 5 phút</span>
+            </div>
+            <div class="aar-card-body">
+                <div class="d-flex align-items-end justify-content-between pt-4 pb-2" style="height: 220px;">
+                    @{
+                        var days = new[] { "T2", "T3", "T4", "T5", "T6", "T7", "CN" };
+                        var values = new[] { 145, 198, 220, 185, 310, 420, 380 };
+                        var maxVal = values.Max();
+                    }
+                    @for (int i = 0; i < days.Length; i++)
+                    {
+                        var heightPct = (int)((values[i] / (double)maxVal) * 160);
+                        var isWeekend = i >= 5;
+                        <div class="text-center d-flex flex-column align-items-center flex-fill">
+                            <span class="small fw-bold text-dark mb-2">@values[i] tr</span>
+                            <div style="width: 38px; height: @(heightPct)px; border-radius: 6px 6px 0 0; background: @(isWeekend ? "linear-gradient(180deg, #2563eb, #1d4ed8)" : "linear-gradient(180deg, #93c5fd, #60a5fa)"); transition: height 0.3s;" title="@values[i] triệu"></div>
+                            <span class="small text-muted mt-2 fw-medium">@days[i]</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tỷ trọng doanh số theo Series -->
+    <div class="col-lg-4">
+        <div class="aar-card h-100">
+            <div class="aar-card-header">
+                <h3 class="aar-card-title">Cơ cấu dòng iPhone</h3>
+            </div>
+            <div class="aar-card-body">
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small fw-semibold mb-1">
+                        <span>iPhone 16 Series</span>
+                        <span class="text-primary">58%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-primary" style="width: 58%;"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small fw-semibold mb-1">
+                        <span>iPhone 15 Series</span>
+                        <span class="text-success">24%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-success" style="width: 24%;"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small fw-semibold mb-1">
+                        <span>iPhone 17 Series (Đặt trước)</span>
+                        <span class="text-purple" style="color:#8b5cf6;">12%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar" style="width: 12%; background-color:#8b5cf6;"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="d-flex justify-content-between small fw-semibold mb-1">
+                        <span>iPhone 14 &amp; SE</span>
+                        <span class="text-secondary">6%</span>
+                    </div>
+                    <div class="progress" style="height: 6px;">
+                        <div class="progress-bar bg-secondary" style="width: 6%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= LOW STOCK & BEST SELLERS ================= -->
+<div class="row g-3">
+    <!-- Cảnh báo tồn kho thấp (<= 5 máy) -->
+    <div class="col-lg-6">
+        <div class="aar-card h-100">
+            <div class="aar-card-header">
+                <h3 class="aar-card-title text-danger">
+                    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                    Cảnh báo tồn kho &le; 5 máy (@Model.LowStockCount model)
+                </h3>
+                <a asp-area="Admin" asp-controller="Admin" asp-action="BatchImport" class="btn btn-outline-danger btn-sm rounded-pill px-3 fw-semibold">
+                    Nhập lô bù tồn &rarr;
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="aar-table">
+                    <thead>
+                        <tr>
+                            <th>Model iPhone</th>
+                            <th>Màu &amp; Dung lượng</th>
+                            <th>Tồn kho</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.LowStockProducts.Any())
+                        {
+                            foreach (var p in Model.LowStockProducts.Take(5))
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="fw-semibold text-dark">@p.Name</div>
+                                        <div class="text-muted small">SKU: @(p.Sku ?? "IP-" + p.Id)</div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">@p.Storage</span>
+                                        <span class="badge bg-light text-dark border">@p.Color</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge @(p.Quantity == 0 ? "bg-danger" : "bg-warning text-dark") px-2 py-1 fw-bold">
+                                            @p.Quantity máy
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a asp-area="Admin" asp-controller="Admin" asp-action="BatchImport" class="btn btn-sm btn-link text-primary p-0 text-decoration-none fw-semibold">
+                                            Nhập IMEI
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="4" class="text-center py-4 text-muted">
+                                    Mọi model iPhone hiện tại đều có lượng tồn kho an toàn (&gt; 5 máy).
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top 5 bán chạy nhất -->
+    <div class="col-lg-6">
+        <div class="aar-card h-100">
+            <div class="aar-card-header">
+                <h3 class="aar-card-title">
+                    🏆 Top iPhone bán chạy nhất tháng
+                </h3>
+                <a asp-area="Admin" asp-controller="Admin" asp-action="Products" class="small text-decoration-none text-primary fw-semibold">
+                    Xem tất cả &rarr;
+                </a>
+            </div>
+            <div class="table-responsive">
+                <table class="aar-table">
+                    <thead>
+                        <tr>
+                            <th>Sản phẩm</th>
+                            <th>Đã bán</th>
+                            <th>Doanh thu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.TopSellingProducts.Any())
+                        {
+                            foreach (var item in Model.TopSellingProducts)
+                            {
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <img src="@(item.ImageUrl ?? "/images/products/iphone16promax.png")" alt="@item.ProductName" style="width:36px; height:36px; object-fit:contain; border-radius:6px; background:#f8fafc; padding:2px;" />
+                                            <div>
+                                                <div class="fw-semibold text-dark">@item.ProductName</div>
+                                                <div class="text-muted small">@item.Storage · @item.Color</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-dark">@item.UnitsSold</span> máy
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-primary">@item.TotalRevenue.ToString("N0") ₫</span>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="3" class="text-center py-4 text-muted">
+                                    Chưa có dữ liệu thống kê bán chạy trong tháng này.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

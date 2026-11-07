@@ -1,0 +1,484 @@
+@page "/admin/products"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin,Manager,Staff,Cashier,Shipper")]
+@inject IDbContextFactory<IPhoneStoreDbContext> DbFactory
+@inject NavigationManager Nav
+
+<PageTitle>3. Sản Phẩm & Biến Thể - Admin</PageTitle>
+
+<div>
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1">CATALOG &amp; INVENTORY</span>
+                <span class="text-secondary small">Quản lý SKU, giá bán và bảo hành</span>
+            </div>
+            <h1 class="fs-3 fw-bold text-dark mb-0">3. Sản Phẩm &amp; Biến Thể iPhone</h1>
+        </div>
+        <button type="button" class="apple-cta-primary py-2 px-3 fs-6" @onclick="OpenAdd">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>+ Thêm Sản Phẩm Mới (Mockup 4)</span>
+        </button>
+    </div>
+
+    @if (!string.IsNullOrEmpty(_alert))
+    {
+        <div class="alert alert-@_alertType alert-dismissible fade show border-0 rounded-3 shadow-sm mb-4" role="alert">
+            <div class="d-flex align-items-center gap-2">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                <span>@_alert</span>
+            </div>
+            <button type="button" class="btn-close" @onclick="() => _alert = null"></button>
+        </div>
+    }
+
+    <!-- Filter Bar (Mockup 3) -->
+    <div class="bg-white border rounded-3 p-3 mb-4 shadow-sm">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+                <input type="text" @bind="_keyword" @bind:event="oninput" class="form-control rounded-3 py-2 px-3" placeholder="Tìm theo tên máy, màu sắc..." />
+            </div>
+            <div class="col-md-3">
+                <select @bind="_filterCategory" class="form-select rounded-3 py-2">
+                    <option value="0">Tất cả dòng máy (Series)</option>
+                    @foreach (var c in _categories)
+                    {
+                        <option value="@c.Id">@c.Name</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select @bind="_filterStorage" class="form-select rounded-3 py-2">
+                    <option value="">Tất cả dung lượng</option>
+                    <option value="128GB">128GB</option>
+                    <option value="256GB">256GB</option>
+                    <option value="512GB">512GB</option>
+                    <option value="1TB">1TB</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="button" class="apple-cta-primary btn-sm flex-fill py-2" @onclick="ApplyFilter">Lọc</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3 py-2" @onclick="ResetFilter">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product / Variant Table (Mockup 3) -->
+    <div class="admin-table-container">
+        <div class="admin-table-header">
+            <div>
+                <h3 class="fs-6 fw-bold text-dark mb-0">Danh Sách SKU iPhone (@_totalCount biến thể)</h3>
+                <div class="text-secondary small">Theo dõi giá bán niêm yết, số lượng tồn kho khả dụng</div>
+            </div>
+            <span class="badge bg-light text-dark border">Trang @_page / @_totalPages</span>
+        </div>
+
+        <div class="table-responsive">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th style="width: 70px;">Ảnh</th>
+                        <th>Tên sản phẩm</th>
+                        <th>Dòng máy</th>
+                        <th>Màu sắc</th>
+                        <th>Bộ nhớ</th>
+                        <th>Giá niêm yết</th>
+                        <th>Tồn kho</th>
+                        <th>Bảo hành</th>
+                        <th>Trạng thái</th>
+                        <th class="text-end" style="width: 140px;">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (_products.Count == 0)
+                    {
+                        <tr>
+                            <td colspan="10" class="text-center text-secondary py-5">
+                                Không tìm thấy sản phẩm iPhone nào phù hợp bộ lọc.
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var p in _products)
+                        {
+                            <tr @key="p.Id">
+                                <td>
+                                    <img src="@(string.IsNullOrEmpty(p.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : p.ImageUrl)"
+                                         alt="@p.Name" class="rounded-2" style="width: 48px; height: 48px; object-fit: contain; background: #fbfbfd; border: 1px solid #f0f0f2;" />
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark small">@p.Name</div>
+                                    <div class="text-secondary" style="font-size: 0.72rem;">SKU: #VN-@p.Id.ToString("D5")</div>
+                                </td>
+                                <td><span class="badge bg-light text-dark border">@(p.Category?.Name ?? p.ModelSeries)</span></td>
+                                <td>
+                                    <span class="small text-dark fw-semibold">@p.Color</span>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-primary border fw-semibold">@p.Storage</span>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark small">@p.Price.ToString("N0") ₫</div>
+                                </td>
+                                <td>
+                                    @if (p.Quantity <= 5)
+                                    {
+                                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger fw-bold">@p.Quantity máy (Thấp)</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success bg-opacity-10 text-success fw-bold">@p.Quantity máy</span>
+                                    }
+                                </td>
+                                <td><span class="small text-secondary">@p.WarrantyMonths tháng</span></td>
+                                <td>
+                                    @if (p.IsActive)
+                                    {
+                                        <span class="status-pill success">Kinh doanh</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-pill danger">Tạm dừng</span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="d-inline-flex gap-2">
+                                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" @onclick="() => OpenEdit(p)">
+                                            Sửa
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger btn-sm rounded-pill px-3" @onclick="() => DeleteAsync(p)">
+                                            Xóa
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination (Mockup 3) -->
+        @if (_totalPages > 1)
+        {
+            <div class="p-3 border-top">
+                <nav class="apple-pagination mb-0">
+                    @if (_page > 1)
+                    {
+                        <a href="javascript:void(0);" class="page-link" @onclick="() => ChangePage(_page - 1)">‹ Trước</a>
+                    }
+                    else
+                    {
+                        <span class="page-item disabled">‹ Trước</span>
+                    }
+
+                    @for (int i = 1; i <= _totalPages; i++)
+                    {
+                        var pageNum = i;
+                        if (_page == pageNum)
+                        {
+                            <span class="page-item active">@pageNum</span>
+                        }
+                        else
+                        {
+                            <a href="javascript:void(0);" class="page-link" @onclick="() => ChangePage(pageNum)">@pageNum</a>
+                        }
+                    }
+
+                    @if (_page < _totalPages)
+                    {
+                        <a href="javascript:void(0);" class="page-link" @onclick="() => ChangePage(_page + 1)">Sau ›</a>
+                    }
+                    else
+                    {
+                        <span class="page-item disabled">Sau ›</span>
+                    }
+                </nav>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ================= 4. ADD / EDIT PRODUCT MODAL (MOCKUP 4) ================= -->
+@if (_showModal)
+{
+    <div class="modal fade show d-block" style="background: rgba(0,0,0,0.5);" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg rounded-3">
+                <div class="modal-header border-bottom py-3">
+                    <h5 class="modal-title fw-bold text-dark mb-0">@(_model.Id == 0 ? "4. Thêm Sản Phẩm iPhone Mới" : $"4. Chỉnh Sửa Biến Thể #{_model.Id}")</h5>
+                    <button type="button" class="btn-close" @onclick="() => _showModal = false"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Dòng Máy (Category): <span class="text-danger">*</span></label>
+                            <select @bind="_model.CategoryId" class="form-select rounded-3 py-2">
+                                <option value="0">-- Chọn danh mục --</option>
+                                @foreach (var c in _categories)
+                                {
+                                    <option value="@c.Id">@c.Name</option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Model Series (Tiêu đề): <span class="text-danger">*</span></label>
+                            <input type="text" @bind="_model.ModelSeries" class="form-control rounded-3 py-2" placeholder="Ví dụ: iPhone 16 Pro Max" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">Tên Đầy Đủ Sản Phẩm (Full Name): <span class="text-danger">*</span></label>
+                        <input type="text" @bind="_model.Name" class="form-control rounded-3 py-2" placeholder="Ví dụ: iPhone 16 Pro Max 256GB Titan Sa Mạc" />
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small">Màu Sắc: <span class="text-danger">*</span></label>
+                            <input type="text" @bind="_model.Color" class="form-control rounded-3 py-2" placeholder="Ví dụ: Titan Sa Mạc, Titan Đen..." />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small">Bộ Nhớ / Dung Lượng: <span class="text-danger">*</span></label>
+                            <select @bind="_model.Storage" class="form-select rounded-3 py-2">
+                                <option value="128GB">128GB</option>
+                                <option value="256GB">256GB</option>
+                                <option value="512GB">512GB</option>
+                                <option value="1TB">1TB</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold text-dark small">Thời Hạn Bảo Hành (Tháng):</label>
+                            <input type="number" @bind="_model.WarrantyMonths" class="form-control rounded-3 py-2" min="1" />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Giá Bán Niêm Yết (VNĐ): <span class="text-danger">*</span></label>
+                            <input type="number" @bind="_model.Price" class="form-control rounded-3 py-2" placeholder="34990000" min="1000000" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark small">Số Lượng Tồn Kho Sẵn Có: <span class="text-danger">*</span></label>
+                            <input type="number" @bind="_model.Quantity" class="form-control rounded-3 py-2" placeholder="10" min="0" />
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">Link Ảnh Sản Phẩm (CDN Apple):</label>
+                        <input type="url" @bind="_model.ImageUrl" class="form-control rounded-3 py-2" placeholder="https://store.storeimages.cdn-apple.com/..." />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">Thông Số Kỹ Thuật (JSON hoặc Ghi chú):</label>
+                        <textarea @bind="_model.Specifications" class="form-control rounded-3" rows="2" placeholder='Chip A18 Pro, Màn hình 6.9" Super Retina XDR 120Hz...'></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark small">Mô Tả Sản Phẩm:</label>
+                        <textarea @bind="_model.Description" class="form-control rounded-3" rows="3" placeholder="Đặc điểm nổi bật của dòng sản phẩm..."></textarea>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" @bind="_model.IsActive" id="prodActiveSwitch" />
+                        <label class="form-check-label small text-dark fw-bold" for="prodActiveSwitch">Bật kinh doanh trên Store</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-top py-2">
+                    <button type="button" class="btn btn-secondary btn-sm rounded-pill px-4" @onclick="() => _showModal = false">Hủy</button>
+                    <button type="button" class="apple-cta-primary px-4 py-2" @onclick="SaveAsync">
+                        Lưu Sản Phẩm &rarr;
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private const int PageSize = 6;
+    private List<Product> _products = new();
+    private List<Category> _categories = new();
+    private Product _model = new();
+    private bool _showModal;
+    private string? _alert;
+    private string _alertType = "success";
+
+    private string _keyword = "";
+    private int _filterCategory = 0;
+    private string _filterStorage = "";
+    private int _page = 1, _totalPages = 1, _totalCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _categories = await db.Categories.OrderBy(c => c.DisplayOrder).ToListAsync();
+        await LoadProductsAsync();
+    }
+
+    private async Task LoadProductsAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var query = db.Products.Include(p => p.Category).AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(_keyword))
+        {
+            var kw = _keyword.Trim().ToLower();
+            query = query.Where(p => p.Name.ToLower().Contains(kw) ||
+                                     p.ModelSeries.ToLower().Contains(kw) ||
+                                     p.Color.ToLower().Contains(kw));
+        }
+
+        if (_filterCategory > 0)
+        {
+            query = query.Where(p => p.CategoryId == _filterCategory);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_filterStorage))
+        {
+            query = query.Where(p => p.Storage == _filterStorage);
+        }
+
+        _totalCount = await query.CountAsync();
+        _totalPages = (int)Math.Ceiling(_totalCount / (double)PageSize);
+        if (_totalPages < 1) _totalPages = 1;
+        if (_page < 1) _page = 1;
+        if (_page > _totalPages) _page = _totalPages;
+
+        _products = await query
+            .OrderByDescending(p => p.Id)
+            .Skip((_page - 1) * PageSize)
+            .Take(PageSize)
+            .ToListAsync();
+    }
+
+    private async Task ApplyFilter()
+    {
+        _page = 1;
+        await LoadProductsAsync();
+    }
+
+    private async Task ResetFilter()
+    {
+        _keyword = "";
+        _filterCategory = 0;
+        _filterStorage = "";
+        _page = 1;
+        await LoadProductsAsync();
+    }
+
+    private async Task ChangePage(int newPage)
+    {
+        _page = newPage;
+        await LoadProductsAsync();
+    }
+
+    private void OpenAdd()
+    {
+        _model = new Product
+        {
+            CategoryId = _categories.FirstOrDefault()?.Id ?? 0,
+            ModelSeries = "iPhone 16 Pro Max",
+            Storage = "256GB",
+            WarrantyMonths = 12,
+            Quantity = 10,
+            IsActive = true
+        };
+        _showModal = true;
+    }
+
+    private void OpenEdit(Product p)
+    {
+        _model = new Product
+        {
+            Id = p.Id,
+            CategoryId = p.CategoryId,
+            Name = p.Name,
+            ModelSeries = p.ModelSeries,
+            Color = p.Color,
+            Storage = p.Storage,
+            Price = p.Price,
+            Quantity = p.Quantity,
+            WarrantyMonths = p.WarrantyMonths,
+            ImageUrl = p.ImageUrl,
+            Specifications = p.Specifications,
+            Description = p.Description,
+            IsActive = p.IsActive
+        };
+        _showModal = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.Name) || _model.Price <= 0 || _model.CategoryId <= 0)
+        {
+            _alert = "Vui lòng nhập đầy đủ tên máy, dòng máy và giá bán hợp lệ (> 0 VNĐ)!";
+            _alertType = "danger";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_model.ImageUrl))
+        {
+            _model.ImageUrl = "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha";
+        }
+
+        await using var db = await DbFactory.CreateDbContextAsync();
+        if (_model.Id == 0)
+        {
+            db.Products.Add(_model);
+            _alert = $"Đã thêm thành công iPhone: {_model.Name}";
+        }
+        else
+        {
+            var existing = await db.Products.FindAsync(_model.Id);
+            if (existing != null)
+            {
+                existing.CategoryId = _model.CategoryId;
+                existing.Name = _model.Name;
+                existing.ModelSeries = _model.ModelSeries;
+                existing.Color = _model.Color;
+                existing.Storage = _model.Storage;
+                existing.Price = _model.Price;
+                existing.Quantity = _model.Quantity;
+                existing.WarrantyMonths = _model.WarrantyMonths;
+                existing.ImageUrl = _model.ImageUrl;
+                existing.Specifications = _model.Specifications;
+                existing.Description = _model.Description;
+                existing.IsActive = _model.IsActive;
+                _alert = $"Cập nhật thành công thông tin iPhone: {existing.Name}";
+            }
+        }
+
+        await db.SaveChangesAsync();
+        _alertType = "success";
+        _showModal = false;
+        await LoadProductsAsync();
+    }
+
+    private async Task DeleteAsync(Product p)
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        var entity = await db.Products.FindAsync(p.Id);
+        if (entity != null)
+        {
+            var hasOrders = await db.OrderDetails.AnyAsync(od => od.ProductId == p.Id);
+            var hasImeis = await db.ProductImeis.AnyAsync(pi => pi.ProductId == p.Id);
+
+            if (hasOrders || hasImeis)
+            {
+                entity.IsActive = false;
+                await db.SaveChangesAsync();
+                _alert = $"Sản phẩm {entity.Name} đã có lịch sử đơn hàng hoặc tồn kho IMEI, hệ thống tự động chuyển sang trạng thái Tạm dừng kinh doanh!";
+                _alertType = "warning";
+            }
+            else
+            {
+                db.Products.Remove(entity);
+                await db.SaveChangesAsync();
+                _alert = $"Đã xóa vĩnh viễn sản phẩm: {p.Name}";
+                _alertType = "success";
+            }
+            await LoadProductsAsync();
+        }
+    }
+}

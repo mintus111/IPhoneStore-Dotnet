@@ -1,0 +1,264 @@
+@model InventoryViewModel
+@{
+    ViewData["Title"] = "Kho định danh IMEI / Serial Number";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <h1 class="h3 fw-bold text-dark mb-1">Kho định danh IMEI / Serial Number</h1>
+        <p class="text-muted small mb-0">Theo dõi định danh duy nhất của từng máy iPhone theo vòng đời: Nhập kho &rarr; Giữ chỗ &rarr; Bán lẻ &rarr; Bảo hành.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-area="Admin" asp-controller="Admin" asp-action="BatchImport" class="btn btn-primary btn-sm px-3 rounded-pill fw-semibold shadow-sm">
+            📥 Nhập lô IMEI mới
+        </a>
+    </div>
+</div>
+
+<!-- ================= 4 KPI STATUS CARDS ================= -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="aar-stat-box border-start border-4 border-success">
+            <div class="aar-stat-icon-wrap bg-success bg-opacity-10 text-success">
+                📦
+            </div>
+            <div>
+                <div class="text-muted small fw-semibold">Sẵn bán (InStock)</div>
+                <div class="h4 fw-bold text-dark mb-0">@Model.InStockCount máy</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="aar-stat-box border-start border-4 border-warning">
+            <div class="aar-stat-icon-wrap bg-warning bg-opacity-10 text-warning">
+                ⏳
+            </div>
+            <div>
+                <div class="text-muted small fw-semibold">Giữ chỗ online</div>
+                <div class="h4 fw-bold text-dark mb-0">@Model.ReservedCount máy</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="aar-stat-box border-start border-4 border-primary">
+            <div class="aar-stat-icon-wrap bg-primary bg-opacity-10 text-primary">
+                ✅
+            </div>
+            <div>
+                <div class="text-muted small fw-semibold">Đã bán &amp; Kích hoạt</div>
+                <div class="h4 fw-bold text-dark mb-0">@Model.SoldCount máy</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="aar-stat-box border-start border-4 border-danger">
+            <div class="aar-stat-icon-wrap bg-danger bg-opacity-10 text-danger">
+                ⚠️
+            </div>
+            <div>
+                <div class="text-muted small fw-semibold">Lỗi / Chờ đổi trả</div>
+                <div class="h4 fw-bold text-dark mb-0">@Model.DefectiveCount máy</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= WARNING BANNER ================= -->
+@if (Model.LowStockProducts.Any())
+{
+    <div class="alert alert-warning border-warning border-opacity-50 d-flex align-items-center justify-content-between mb-4 p-3 rounded-3" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fs-5">⚠️</span>
+            <div>
+                <strong class="text-dark">Cảnh báo lượng tồn kho:</strong> Có <strong>@Model.LowStockProducts.Count model iPhone</strong> đang có lượng máy sẵn bán &le; 5 máy trong kho!
+                <div class="small text-muted mt-1">
+                    @string.Join(" · ", Model.LowStockProducts.Take(4).Select(p => $"{p.Name} ({p.Quantity} máy)"))
+                </div>
+            </div>
+        </div>
+        <a asp-area="Admin" asp-controller="Admin" asp-action="BatchImport" class="btn btn-warning btn-sm fw-bold px-3 text-dark rounded-pill">
+            Nhập bổ sung &rarr;
+        </a>
+    </div>
+}
+
+<!-- ================= SEARCH & FILTERS ================= -->
+<div class="aar-card p-3 mb-4">
+    <form asp-area="Admin" asp-controller="Admin" asp-action="Inventory" method="get" class="row g-2 align-items-center">
+        <div class="col-lg-4 col-md-5">
+            <div class="input-group input-group-sm">
+                <span class="input-group-text bg-light border-end-0">🔍</span>
+                <input type="text" name="searchKeyword" value="@Model.SearchKeyword" class="form-control border-start-0" placeholder="Quét hoặc nhập 15 số IMEI, Serial..." />
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-4">
+            <select name="skuFilter" class="form-select form-select-sm">
+                <option value="">-- Tất cả SKU / Dòng máy --</option>
+                @foreach (var p in Model.AllProducts)
+                {
+                    <option value="@p.Sku" selected="@(Model.SkuFilter == p.Sku)">@(p.Sku ?? p.Name) - @p.Name</option>
+                }
+            </select>
+        </div>
+
+        <div class="col-lg-3 col-md-3">
+            <select name="statusFilter" class="form-select form-select-sm">
+                <option value="">-- Tất cả trạng thái IMEI --</option>
+                <option value="InStock" selected="@(Model.StatusFilter == "InStock")">Sẵn bán (InStock)</option>
+                <option value="Reserved" selected="@(Model.StatusFilter == "Reserved")">Giữ chỗ online (Reserved)</option>
+                <option value="Sold" selected="@(Model.StatusFilter == "Sold")">Đã bán (Sold)</option>
+                <option value="Defective" selected="@(Model.StatusFilter == "Defective")">Lỗi / Hỏng (Defective)</option>
+            </select>
+        </div>
+
+        <div class="col-lg-2 col-md-12 d-flex gap-2 justify-content-end">
+            <button type="submit" class="btn btn-primary btn-sm px-3 fw-semibold">Lọc kho</button>
+            <a asp-area="Admin" asp-controller="Admin" asp-action="Inventory" class="btn btn-light btn-sm px-3">Đặt lại</a>
+        </div>
+    </form>
+</div>
+
+<!-- ================= IMEI TABLE ================= -->
+<div class="aar-card">
+    <div class="aar-card-header">
+        <h3 class="aar-card-title">
+            Danh sách thiết bị định danh IMEI
+        </h3>
+        <span class="badge bg-light text-muted border">Tổng số: @Model.TotalCount thiết bị</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="aar-table">
+            <thead>
+                <tr>
+                    <th style="width: 200px;">Mã IMEI (15 số)</th>
+                    <th>Số Serial</th>
+                    <th>Sản phẩm &amp; SKU</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày nhập kho</th>
+                    <th>Đơn hàng liên kết</th>
+                    <th style="text-align: right; width: 140px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Imeis.Any())
+                {
+                    foreach (var item in Model.Imeis)
+                    {
+                        <tr>
+                            <td>
+                                <span class="font-monospace fw-bold text-dark fs-6">@item.Imei</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border font-monospace">
+                                    @(item.SerialNumber ?? "-")
+                                </span>
+                            </td>
+                            <td>
+                                <div class="fw-semibold text-dark">@(item.Product?.Name ?? "iPhone")</div>
+                                <div class="text-muted small">SKU: @(item.Product?.Sku ?? "-")</div>
+                            </td>
+                            <td>
+                                @if (item.Status == "InStock")
+                                {
+                                    <span class="aar-pill aar-pill-green">Sẵn bán</span>
+                                }
+                                else if (item.Status == "Reserved")
+                                {
+                                    <span class="aar-pill aar-pill-amber">Giữ chỗ Online</span>
+                                }
+                                else if (item.Status == "Sold")
+                                {
+                                    <span class="aar-pill aar-pill-blue">Đã xuất bán</span>
+                                }
+                                else if (item.Status == "Defective")
+                                {
+                                    <span class="aar-pill aar-pill-red">Lỗi kỹ thuật</span>
+                                }
+                                else
+                                {
+                                    <span class="aar-pill aar-pill-gray">@item.Status</span>
+                                }
+                            </td>
+                            <td class="small text-muted">
+                                @item.ImportDate.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+                            <td>
+                                @if (item.OrderId.HasValue)
+                                {
+                                    <a asp-area="Admin" asp-controller="Admin" asp-action="OrderDetail" asp-route-id="@item.OrderId.Value" class="badge bg-blue-50 text-primary border border-primary border-opacity-25 text-decoration-none fw-semibold">
+                                        #@(item.Order?.OrderCode ?? item.OrderId.Value.ToString())
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">Chưa gán</span>
+                                }
+                            </td>
+                            <td style="text-align: right;">
+                                <div class="dropdown d-inline-block">
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle py-1 px-2" type="button" data-bs-toggle="dropdown">
+                                        Đổi trạng thái
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                        <li>
+                                            <form asp-area="Admin" asp-controller="Admin" asp-action="UpdateImeiStatus" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <input type="hidden" name="newStatus" value="InStock" />
+                                                <button type="submit" class="dropdown-item small text-success">● Chuyển Sẵn bán (InStock)</button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form asp-area="Admin" asp-controller="Admin" asp-action="UpdateImeiStatus" method="post">
+                                                @Html.AntiForgeryToken()
+                                                <input type="hidden" name="id" value="@item.Id" />
+                                                <input type="hidden" name="newStatus" value="Defective" />
+                                                <button type="submit" class="dropdown-item small text-danger">● Chuyển Lỗi (Defective)</button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">
+                            <div class="h5 mb-2">Không tìm thấy mã IMEI nào trong kho</div>
+                            <p class="small">Vui lòng kiểm tra lại bộ lọc hoặc thực hiện nhập lô IMEI mới.</p>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    @if (Model.TotalPages > 1)
+    {
+        <div class="aar-card-header bg-light d-flex justify-content-between align-items-center">
+            <span class="small text-muted">Hiển thị trang @Model.CurrentPage / @Model.TotalPages (Tổng @Model.TotalCount thiết bị)</span>
+            <ul class="pagination pagination-sm mb-0">
+                <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                    <a class="page-link" asp-area="Admin" asp-controller="Admin" asp-action="Inventory"
+                       asp-route-currentPage="@(Model.CurrentPage - 1)" asp-route-skuFilter="@Model.SkuFilter" asp-route-statusFilter="@Model.StatusFilter" asp-route-searchKeyword="@Model.SearchKeyword">Trước</a>
+                </li>
+                @for (int p = 1; p <= Model.TotalPages; p++)
+                {
+                    <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                        <a class="page-link" asp-area="Admin" asp-controller="Admin" asp-action="Inventory"
+                           asp-route-currentPage="@p" asp-route-skuFilter="@Model.SkuFilter" asp-route-statusFilter="@Model.StatusFilter" asp-route-searchKeyword="@Model.SearchKeyword">@p</a>
+                    </li>
+                }
+                <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                    <a class="page-link" asp-area="Admin" asp-controller="Admin" asp-action="Inventory"
+                       asp-route-currentPage="@(Model.CurrentPage + 1)" asp-route-skuFilter="@Model.SkuFilter" asp-route-statusFilter="@Model.StatusFilter" asp-route-searchKeyword="@Model.SearchKeyword">Sau</a>
+                </li>
+            </ul>
+        </div>
+    }
+</div>

@@ -1,0 +1,395 @@
+@page "/product/{Id:int}"
+@rendermode InteractiveServer
+@inject IDbContextFactory<IPhoneStoreDbContext> DbFactory
+@inject CartService Cart
+@inject ToastService Toast
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthProvider
+
+<PageTitle>@(_product?.Name ?? "Chi Tiết iPhone") - BomChelsea Authorized Reseller</PageTitle>
+
+<div class="container py-4">
+    @if (_loading)
+    {
+        <div class="text-center py-5 text-secondary"><span class="spinner-border spinner-border-sm me-2"></span>Đang tải thông tin sản phẩm...</div>
+    }
+    else if (_product == null)
+    {
+        <div class="bg-white border rounded-3 p-5 text-center shadow-sm">
+            <h4 class="fw-bold text-dark">Không tìm thấy sản phẩm iPhone này</h4>
+            <a href="/" class="apple-cta-primary mt-3">Về trang chủ</a>
+        </div>
+    }
+    else
+    {
+        <!-- Breadcrumb (Mockup 03) -->
+        <nav class="mb-4">
+            <ol class="breadcrumb small">
+                <li class="breadcrumb-item"><a href="/" class="text-secondary text-decoration-none">Trang chủ</a></li>
+                <li class="breadcrumb-item"><a href="/?categoryId=@_product.CategoryId" class="text-secondary text-decoration-none">@(_product.Category?.Name ?? "iPhone")</a></li>
+                <li class="breadcrumb-item active text-dark fw-semibold" aria-current="page">@_product.Name</li>
+            </ol>
+        </nav>
+
+        <div class="row g-5">
+            <!-- Left: Gallery / Image Preview -->
+            <div class="col-lg-6">
+                <div class="product-gallery-container bg-white border rounded-4 p-4 text-center shadow-sm position-sticky" style="top: 90px;">
+                    <div class="product-main-image-wrap mb-3" style="min-height: 420px; display:flex; align-items:center; justify-content:center;">
+                        <img src="@(string.IsNullOrEmpty(_product.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : _product.ImageUrl)"
+                             alt="@_product.Name"
+                             class="img-fluid"
+                             style="max-height: 400px; object-fit: contain; filter: drop-shadow(0 15px 25px rgba(0,0,0,0.15));"
+                             onerror="this.onerror=null;this.src='/images/hero-iphone16.jpg';" />
+                    </div>
+                    <div class="d-flex justify-content-center gap-2">
+                        <span class="badge bg-light text-secondary border px-3 py-2 small">Chính Hãng VN/A</span>
+                        <span class="badge bg-light text-secondary border px-3 py-2 small">Nguyên Seal Apple</span>
+                        <span class="badge bg-light text-secondary border px-3 py-2 small">Bảo hành 12 Tháng</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Product Config & Purchase (Mockup 03) -->
+            <div class="col-lg-6">
+                <div class="product-info-panel">
+                    <!-- Series & Stock Badge -->
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-3 py-1" style="font-size: 0.8rem;">
+                            @(_product.ModelSeries ?? _product.Category?.Name ?? "Apple VN/A")
+                        </span>
+                        @if (_inStockCount > 0)
+                        {
+                            <span class="text-success small fw-bold d-flex align-items-center gap-1">
+                                <span class="rounded-circle bg-success d-inline-block" style="width: 8px; height: 8px;"></span>
+                                Còn hàng sẵn (@_inStockCount máy sẵn sàng giao)
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-danger small fw-bold">Tạm hết hàng</span>
+                        }
+                    </div>
+
+                    <h1 class="fs-2 fw-bold text-dark mb-2">@_product.Name</h1>
+                    <div class="text-secondary small mb-3">Mã SKU: <strong class="text-dark">@_product.Sku</strong> | Hàng chính hãng Apple Việt Nam</div>
+
+                    <!-- Price Box -->
+                    <div class="price-hero-box p-3 rounded-3 mb-4" style="background: #fbfbfd; border: 1px solid #e5e5ea;">
+                        <div class="d-flex align-items-baseline gap-3">
+                            <span class="fs-2 fw-bold text-danger">@(_product.Price > 0 ? _product.Price.ToString("N0") + " ₫" : "Liên hệ")</span>
+                            @if (_product.ListedPrice.HasValue && _product.ListedPrice > _product.Price)
+                            {
+                                <span class="fs-6 text-secondary text-decoration-line-through">@_product.ListedPrice.Value.ToString("N0") ₫</span>
+                                <span class="badge bg-danger fs-6 fw-bold">Tiết kiệm @((_product.ListedPrice.Value - _product.Price).ToString("N0")) ₫</span>
+                            }
+                        </div>
+                        <div class="text-secondary small mt-1">Đã bao gồm thuế VAT &bull; Miễn phí vận chuyển toàn quốc</div>
+                    </div>
+
+                    <!-- 1. Chọn Phiên Bản Dung Lượng -->
+                    @if (_siblingVariants.Any(v => !string.IsNullOrEmpty(v.Storage)))
+                    {
+                        <div class="config-section mb-4">
+                            <label class="form-label fw-bold text-dark mb-2">1. Chọn Dung Lượng Bộ Nhớ</label>
+                            <div class="row g-2">
+                                @foreach (var v in _siblingVariants.GroupBy(x => x.Storage).Select(g => g.First()))
+                                {
+                                    var isSelected = v.Storage == _product.Storage;
+                                    <div class="col-4">
+                                        <button type="button"
+                                                class="btn w-100 py-3 rounded-3 text-start position-relative @(isSelected ? "btn-outline-primary border-2 bg-primary bg-opacity-10 fw-bold" : "btn-outline-secondary")"
+                                                @onclick="() => SwitchVariant(v.Id)">
+                                            <div class="small text-dark fw-bold">@v.Storage</div>
+                                            <div class="small text-secondary" style="font-size: 0.75rem;">@(v.Price.ToString("N0")) ₫</div>
+                                            @if (isSelected)
+                                            {
+                                                <span class="position-absolute top-0 end-0 translate-middle-y me-2 badge rounded-pill bg-primary" style="font-size: 0.65rem;">Đang chọn</span>
+                                            }
+                                        </button>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- 2. Chọn Màu Sắc -->
+                    @if (_siblingVariants.Any(v => !string.IsNullOrEmpty(v.Color)))
+                    {
+                        <div class="config-section mb-4">
+                            <label class="form-label fw-bold text-dark mb-2">2. Chọn Màu Sắc Apple</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var v in _siblingVariants.Where(x => x.Storage == _product.Storage).GroupBy(x => x.Color).Select(g => g.First()))
+                                {
+                                    var isSelected = v.Color == _product.Color;
+                                    <button type="button"
+                                            class="btn rounded-pill px-3 py-2 d-flex align-items-center gap-2 @(isSelected ? "btn-primary text-white fw-bold shadow-sm" : "btn-outline-secondary")"
+                                            @onclick="() => SwitchVariant(v.Id)">
+                                        <span class="rounded-circle border" style="width: 14px; height: 14px; background-color: @GetColorHex(v.Color);"></span>
+                                        <span>@v.Color</span>
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <!-- Khuyến Mãi Đặc Quyền (Mockup 03) -->
+                    <div class="special-promos-card border rounded-3 p-3 mb-4 bg-light">
+                        <div class="fw-bold text-dark mb-2 d-flex align-items-center gap-2">
+                            <span>🎁</span> Ưu Đãi Đặc Quyền BomChelsea AAR
+                        </div>
+                        <ul class="list-unstyled small text-secondary mb-0 d-flex flex-column gap-2">
+                            <li class="d-flex align-items-start gap-2">
+                                <span class="text-success">✓</span>
+                                <span>Giảm thêm <strong class="text-dark">500.000 ₫</strong> khi thanh toán qua thẻ tín dụng quốc tế hoặc Apple Pay.</span>
+                            </li>
+                            <li class="d-flex align-items-start gap-2">
+                                <span class="text-success">✓</span>
+                                <span>Tặng gói bảo hành độc quyền <strong class="text-dark">1 Đổi 1 trong 30 ngày</strong> tại toàn bộ hệ thống AASP.</span>
+                            </li>
+                            <li class="d-flex align-items-start gap-2">
+                                <span class="text-success">✓</span>
+                                <span>Giảm 20% khi mua kèm phụ kiện Apple chính hãng (Củ sạc nhanh 20W/30W, Ốp lưng MagSafe).</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Quantity & Action Buttons -->
+                    <div class="purchase-actions-box mb-4">
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            <span class="fw-semibold small text-secondary">Số lượng:</span>
+                            <div class="input-group" style="width: 130px;">
+                                <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="DecQty" disabled="@(_qty <= 1)">-</button>
+                                <input type="text" class="form-control form-control-sm text-center fw-bold bg-white" readonly value="@_qty" />
+                                <button class="btn btn-outline-secondary btn-sm" type="button" @onclick="IncQty" disabled="@(_qty >= _inStockCount)">+</button>
+                            </div>
+                            <span class="text-muted small">Kho: @_inStockCount máy</span>
+                        </div>
+
+                        <div class="d-flex flex-column flex-sm-row gap-3">
+                            <button type="button"
+                                    class="btn btn-outline-primary rounded-pill py-3 px-4 fw-semibold flex-fill d-flex align-items-center justify-content-center gap-2"
+                                    disabled="@(_inStockCount <= 0)"
+                                    @onclick="AddToCart">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                                <span>Thêm Vào Giỏ Hàng</span>
+                            </button>
+                            <button type="button"
+                                    class="apple-cta-primary py-3 px-4 fs-6 flex-fill text-center"
+                                    disabled="@(_inStockCount <= 0)"
+                                    @onclick="BuyNow">
+                                Mua Ngay (Giao 2H)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Thông Tin Bảo Hành & Cam Kết -->
+                    <div class="row g-2 border-top pt-3 text-secondary small">
+                        <div class="col-6 d-flex align-items-center gap-2">
+                            <span>🛡️</span> Bảo hành 12 tháng Apple AAR
+                        </div>
+                        <div class="col-6 d-flex align-items-center gap-2">
+                            <span>🚚</span> Giao nhanh 2H nội thành
+                        </div>
+                        <div class="col-6 d-flex align-items-center gap-2">
+                            <span>🔄</span> 1 Đổi 1 30 ngày lỗi nhà sản xuất
+                        </div>
+                        <div class="col-6 d-flex align-items-center gap-2">
+                            <span>💳</span> Trả góp 0% qua 24 ngân hàng
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= THÔNG SỐ KỸ THUẬT (MOCKUP 03) ================= -->
+        <div class="row mt-5">
+            <div class="col-lg-8">
+                <div class="bg-white border rounded-4 p-4 shadow-sm mb-4">
+                    <h3 class="fs-4 fw-bold text-dark mb-3">Đặc Điểm Nổi Bật</h3>
+                    <div class="text-secondary" style="line-height: 1.8;">
+                        @if (!string.IsNullOrEmpty(_product.Description))
+                        {
+                            <p>@_product.Description</p>
+                        }
+                        else
+                        {
+                            <p>iPhone chính hãng VN/A được phân phối chính thức bởi Apple BomChelsea Authorized Reseller. Sản phẩm mới 100% nguyên seal chưa kích hoạt, hưởng trọn vẹn chính sách bảo hành cao cấp nhất từ Apple tại Việt Nam.</p>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="bg-white border rounded-4 p-4 shadow-sm">
+                    <h3 class="fs-5 fw-bold text-dark mb-3">Thông Số Kỹ Thuật</h3>
+                    <table class="table table-sm small mb-0">
+                        <tbody>
+                            <tr>
+                                <td class="text-secondary py-2">Dòng máy</td>
+                                <td class="text-dark fw-semibold py-2">@(_product.ModelSeries ?? _product.Name)</td>
+                            </tr>
+                            <tr>
+                                <td class="text-secondary py-2">Dung lượng</td>
+                                <td class="text-dark fw-semibold py-2">@(_product.Storage ?? "Tiêu chuẩn")</td>
+                            </tr>
+                            <tr>
+                                <td class="text-secondary py-2">Màu sắc</td>
+                                <td class="text-dark fw-semibold py-2">@(_product.Color ?? "Tiêu chuẩn")</td>
+                            </tr>
+                            <tr>
+                                <td class="text-secondary py-2">Bảo hành</td>
+                                <td class="text-dark fw-semibold py-2">@_product.WarrantyMonths Tháng chính hãng</td>
+                            </tr>
+                            <tr>
+                                <td class="text-secondary py-2">Tình trạng máy</td>
+                                <td class="text-success fw-bold py-2">Mới 100% Nguyên Seal</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Product? _product;
+    private List<Product> _siblingVariants = new();
+    private int _inStockCount = 0;
+    private int _qty = 1;
+    private bool _loading = true;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _qty = 1;
+        await LoadProductAsync();
+        _loading = false;
+    }
+
+    private async Task LoadProductAsync()
+    {
+        await using var db = await DbFactory.CreateDbContextAsync();
+        _product = await db.Products
+            .Include(p => p.Category)
+            .FirstOrDefaultAsync(p => p.Id == Id && p.IsActive);
+
+        if (_product != null)
+        {
+            _inStockCount = await db.ProductImeis
+                .CountAsync(i => i.ProductId == _product.Id && i.Status == "InStock");
+
+            if (!string.IsNullOrEmpty(_product.ModelSeries))
+            {
+                _siblingVariants = await db.Products
+                    .Where(p => p.CategoryId == _product.CategoryId &&
+                                p.ModelSeries == _product.ModelSeries &&
+                                p.IsActive)
+                    .OrderBy(p => p.Price)
+                    .ToListAsync();
+            }
+            else
+            {
+                _siblingVariants = new List<Product> { _product };
+            }
+        }
+    }
+
+    private void SwitchVariant(int variantId)
+    {
+        if (variantId != Id)
+        {
+            Nav.NavigateTo($"/product/{variantId}");
+        }
+    }
+
+    private void IncQty()
+    {
+        if (_qty < _inStockCount) _qty++;
+    }
+    private void DecQty() { if (_qty > 1) _qty--; }
+
+    private async Task AddToCart()
+    {
+        if (_product == null)
+        {
+            Toast.Error("Sản phẩm này hiện đang tạm hết hàng trong kho!");
+            return;
+        }
+
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        var user = state.User;
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            Nav.NavigateTo($"/Account/Login?returnUrl={Uri.EscapeDataString($"/product/{Id}")}", forceLoad: true);
+            return;
+        }
+
+        if ((user.IsInRole("Admin") || user.IsInRole("Manager") || user.IsInRole("Staff") || user.IsInRole("Cashier") || user.IsInRole("Shipper")) &&
+            !user.IsInRole("Customer"))
+        {
+            Toast.Warning("Tài khoản quản trị viên / nội bộ không được phép mua hàng theo chuẩn AAR!");
+            return;
+        }
+
+        var res = await Cart.AddToCartAsync(_product, _qty);
+        if (res.Success)
+        {
+            Toast.Success(res.Message);
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
+    }
+
+    private async Task BuyNow()
+    {
+        if (_product == null)
+        {
+            Toast.Error("Sản phẩm này hiện đang tạm hết hàng trong kho!");
+            return;
+        }
+
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        var user = state.User;
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            Nav.NavigateTo($"/Account/Login?returnUrl={Uri.EscapeDataString($"/product/{Id}")}", forceLoad: true);
+            return;
+        }
+
+        if ((user.IsInRole("Admin") || user.IsInRole("Manager") || user.IsInRole("Staff") || user.IsInRole("Cashier") || user.IsInRole("Shipper")) &&
+            !user.IsInRole("Customer"))
+        {
+            Toast.Warning("Tài khoản quản trị viên / nội bộ không được phép mua hàng theo chuẩn AAR!");
+            return;
+        }
+
+        var res = await Cart.AddToCartAsync(_product, _qty);
+        if (res.Success)
+        {
+            Nav.NavigateTo("/cart");
+        }
+        else
+        {
+            Toast.Error(res.Message);
+        }
+    }
+
+    private static string GetColorHex(string? colorName)
+    {
+        if (string.IsNullOrEmpty(colorName)) return "#d1d5db";
+        var c = colorName.ToLower();
+        if (c.Contains("sa mạc") || c.Contains("desert")) return "#c9b19e";
+        if (c.Contains("tự nhiên") || c.Contains("natural")) return "#9f9b96";
+        if (c.Contains("trắng") || c.Contains("white")) return "#f2f1ed";
+        if (c.Contains("đen") || c.Contains("black")) return "#3c3b3e";
+        if (c.Contains("xanh") || c.Contains("blue")) return "#2563eb";
+        if (c.Contains("hồng") || c.Contains("pink")) return "#f472b6";
+        if (c.Contains("vàng") || c.Contains("gold")) return "#eab308";
+        return "#64748b";
+    }
+}

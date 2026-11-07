@@ -1,0 +1,631 @@
+@inject IPhoneStore_Razor.Services.CartService CartService
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - BomChelsea | Apple Authorized Reseller VN (Razor)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    @Html.AntiForgeryToken()
+
+    <!-- ================= 1. TOP UTILITY BAR ================= -->
+    <div class="apple-top-utility">
+        <div class="container">
+            <div class="utility-left">
+                <span class="utility-link">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+                    Hotline: <strong class="text-white ms-1">1900.6789</strong> (8:00 - 21:30)
+                </span>
+                <span class="d-none d-md-inline text-secondary">|</span>
+                <span class="d-none d-md-inline utility-link">
+                    <span class="utility-badge">FREESHIP</span> Miễn phí giao hàng 2H toàn quốc
+                </span>
+            </div>
+            <div class="utility-right">
+                <a asp-page="/Warranty" class="utility-link">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                    Tra cứu bảo hành chính hãng
+                </a>
+                <span class="text-secondary">|</span>
+                <span class="text-white-50 small">Đại lý Apple uỷ quyền</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= 2. APPLE NAVBAR ================= -->
+    <header class="apple-navbar">
+        <div class="container py-2">
+            <div class="d-flex align-items-center justify-content-between">
+                <!-- Brand Logo -->
+                <a class="navbar-brand d-flex align-items-center gap-2 me-4 text-decoration-none" asp-page="/Index">
+                    <img src="~/images/chelsea-logo.svg" alt="Chelsea FC" width="36" height="36" class="rounded-circle shadow-sm" style="border: 1.5px solid #d1ab3e;" />
+                    <span class="fw-bold tracking-tight text-dark fs-5">Bom<span style="color: #034694;">Chelsea</span></span>
+                </a>
+
+                <!-- Nav Series Links -->
+                <nav class="d-none d-lg-flex align-items-center gap-1">
+                    <a class="apple-nav-link" href="/?categoryId=1#danh-sach-iphone">iPhone 16 Series</a>
+                    <a class="apple-nav-link" href="/?categoryId=2#danh-sach-iphone">iPhone 15 Series</a>
+                    <a class="apple-nav-link" href="/?categoryId=3#danh-sach-iphone">iPhone 14 Series</a>
+                    <a class="apple-nav-link" href="/?categoryId=4#danh-sach-iphone">iPhone 13 & Cũ</a>
+                    <a class="apple-nav-link" asp-page="/MyOrders">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="me-1"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+                        Đơn hàng
+                    </a>
+                    <a class="apple-nav-link text-primary fw-semibold" asp-page="/Warranty">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="me-1"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        Tra cứu bảo hành
+                    </a>
+                </nav>
+
+                <!-- Search Pill & Actions -->
+                <div class="apple-nav-actions">
+                    <!-- Search Form -->
+                    <form action="/#danh-sach-iphone" method="get" class="apple-search-pill-container d-none d-md-flex align-items-center">
+                        <button type="submit" class="border-0 bg-transparent p-0 me-2 text-secondary d-flex align-items-center" title="Tìm kiếm">
+                            <svg class="search-icon-inside" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                        </button>
+                        <input type="text" name="searchKeyword" class="apple-search-pill" placeholder="Tìm iPhone theo tên, màu..." />
+                    </form>
+
+                    <!-- Cart Button with Counter -->
+                    @{
+                        var cartCount = CartService.GetCount();
+                    }
+                    <a asp-page="/Cart" class="apple-cart-btn" title="Giỏ hàng">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                        </svg>
+                        @if (cartCount > 0)
+                        {
+                            <span class="apple-cart-count">@cartCount</span>
+                        }
+                    </a>
+
+                    <!-- User Account Dropdown -->
+                    @if (User.Identity != null && User.Identity.IsAuthenticated)
+                    {
+                        bool isInternal = (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Staff") || User.IsInRole("Cashier") || User.IsInRole("Shipper")) && !User.IsInRole("Customer");
+                        <div class="dropdown">
+                            <button class="apple-user-btn dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <span class="user-avatar-circle">@(User.Identity.Name?.Substring(0, 1).ToUpper() ?? "U")</span>
+                                <span class="d-none d-sm-inline">@User.Identity.Name</span>
+                                @if (isInternal)
+                                {
+                                    <span class="badge bg-warning text-dark ms-1" style="font-size:0.65rem;">Quản trị</span>
+                                }
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 py-2" style="border-radius:12px;">
+                                @if (!isInternal)
+                                {
+                                    <li><a class="dropdown-item py-2 fw-medium" asp-page="/MyOrders">📦 Đơn hàng của tôi</a></li>
+                                    <li><a class="dropdown-item py-2 fw-medium" asp-page="/Warranty">🛡️ Bảo hành thiết bị</a></li>
+                                }
+                                @if (User.IsInRole("Admin") || User.IsInRole("Manager") || User.IsInRole("Staff") || User.IsInRole("Cashier") || User.IsInRole("Shipper"))
+                                {
+                                    @if (!isInternal)
+                                    {
+                                        <li><hr class="dropdown-divider"></li>
+                                    }
+                                    <li><a class="dropdown-item py-2 text-primary fw-bold" asp-page="/Admin/Products">⚙️ Quản trị hệ thống</a></li>
+                                }
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item py-2 text-danger fw-medium" asp-page="/Account/Login" asp-page-handler="Logout">Đăng xuất</a></li>
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <button type="button" class="apple-cta-primary py-2 px-3 fs-6" data-bs-toggle="modal" data-bs-target="#authModal">
+                            Đăng nhập
+                        </button>
+                    }
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main role="main" class="flex-grow-1">
+        @RenderBody()
+    </main>
+
+    <!-- ================= 13. APPLE FOOTER ================= -->
+    <footer class="apple-footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <img src="~/images/chelsea-logo.svg" alt="Chelsea FC" width="28" height="28" class="rounded-circle shadow-sm" style="border: 1px solid #d1ab3e;" />
+                        <span class="fw-bold fs-5 text-dark">BomChelsea</span>
+                        <span class="badge bg-primary text-white small">Apple Authorized Reseller</span>
+                    </div>
+                    <p class="text-secondary mb-3" style="line-height:1.6;">
+                        Hệ thống cửa hàng chuẩn uỷ quyền cao cấp nhất của Apple tại Việt Nam. Cam kết 100% sản phẩm chính hãng VN/A, bảo hành tại hệ thống Apple AASP toàn quốc.
+                    </p>
+                    <div class="fw-bold text-dark">Tổng đài hỗ trợ:</div>
+                    <div class="text-primary fs-5 fw-bold mb-2">1900.6789 <span class="fs-6 fw-normal text-secondary">(Miễn phí)</span></div>
+                </div>
+                <div>
+                    <div class="footer-heading">Sản Phẩm Apple</div>
+                    <ul class="footer-links">
+                        <li><a asp-page="/Index" asp-route-categoryId="1">iPhone 16 Pro Max</a></li>
+                        <li><a asp-page="/Index" asp-route-categoryId="1">iPhone 16 Pro</a></li>
+                        <li><a asp-page="/Index" asp-route-categoryId="1">iPhone 16 / 16 Plus</a></li>
+                        <li><a asp-page="/Index" asp-route-categoryId="2">iPhone 15 Series</a></li>
+                        <li><a asp-page="/Index" asp-route-categoryId="3">iPhone 14 Series</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="footer-heading">Chính Sách & Hỗ Trợ</div>
+                    <ul class="footer-links">
+                        <li><a asp-page="/Warranty">Chính sách bảo hành 12 tháng</a></li>
+                        <li><a href="javascript:void(0);">1 Đổi 1 trong 30 ngày</a></li>
+                        <li><a href="javascript:void(0);">Chính sách giao hàng siêu tốc 2H</a></li>
+                        <li><a href="javascript:void(0);">Chính sách trả góp 0%</a></li>
+                        <li><a href="javascript:void(0);">Trung tâm Apple AASP uỷ quyền</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <div class="footer-heading">Thanh Toán & Xác Thực</div>
+                    <ul class="footer-links">
+                        <li>VietQR - Quét mã tự động</li>
+                        <li>VNPay - Thẻ ATM / Visa / Master</li>
+                        <li>Apple Pay chính hãng</li>
+                        <li>COD - Thanh toán khi nhận máy</li>
+                    </ul>
+                    <div class="mt-3">
+                        <span class="badge bg-success bg-opacity-10 text-success fw-bold p-2">✓ ĐÃ XÁC THỰC BỘ CÔNG THƯƠNG</span>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <div>© 2026 BomChelsea - Hệ Thống Chuỗi Bán Lẻ Apple Chính Hãng VN/A (Razor Pages). All rights reserved.</div>
+                <div class="d-flex gap-3">
+                    <a href="javascript:void(0);" class="text-secondary">Điều khoản sử dụng</a>
+                    <a href="javascript:void(0);" class="text-secondary">Chính sách bảo mật</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ================= AUTH POPUP MODAL (ĐĂNG NHẬP / ĐĂNG KÝ) ================= -->
+    <div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden; background: #fff;">
+                <div class="modal-header border-0 pb-0 pt-4 px-4 position-relative">
+                    <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="w-100 text-center">
+                        <img src="~/images/chelsea-logo.svg" alt="Chelsea FC" width="48" height="48" class="rounded-circle shadow-sm mb-2" style="border: 2px solid #d1ab3e;" />
+                        <h4 class="fw-bold text-dark mb-1">Tài Khoản Apple BomChelsea</h4>
+                        <p class="text-secondary small mb-3">Đăng nhập để nhận bảo hành chính hãng và theo dõi đơn</p>
+
+                        <!-- Nav tabs -->
+                        <ul class="nav nav-pills nav-fill p-1 bg-light rounded-pill mb-2" id="authTabs" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active rounded-pill fw-semibold py-2" id="login-tab" data-bs-toggle="pill" data-bs-target="#login-pane" type="button" role="tab">Đăng Nhập</button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link rounded-pill fw-semibold py-2" id="register-tab" data-bs-toggle="pill" data-bs-target="#register-pane" type="button" role="tab">Đăng Ký</button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="modal-body p-4 pt-2">
+                    <div class="tab-content" id="authTabsContent">
+                        @{
+                            var modalPath = Context.Request.Path.Value ?? "";
+                            var modalQuery = Context.Request.QueryString.Value ?? "";
+                            var modalReturnUrl = (modalPath.Contains("/Account/Login", StringComparison.OrdinalIgnoreCase) || 
+                                                  modalPath.Contains("/Account/Register", StringComparison.OrdinalIgnoreCase))
+                                ? "/"
+                                : $"{modalPath}{modalQuery}";
+                        }
+                        <!-- Tab Login -->
+                        <div class="tab-pane fade show active" id="login-pane" role="tabpanel">
+                            <form asp-page="/Account/Login" method="post">
+                                <input type="hidden" name="ReturnUrl" value="@modalReturnUrl" />
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">Tên đăng nhập / Email / SĐT</label>
+                                    <input type="text" name="Identifier" id="modalRazorIdentifier" class="form-control rounded-3 py-2 px-3" placeholder="Username, email hoặc số điện thoại" required />
+                                </div>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <label class="form-label small fw-semibold text-secondary mb-0">Mật khẩu</label>
+                                        <a href="javascript:void(0);" onclick="alert('Tính năng khôi phục mật khẩu qua mã OTP SMS/Email đang được kết nối tổng đài. Vui lòng liên hệ Hotline 1900.6789 nếu cần hỗ trợ khẩn cấp!');" class="small text-primary text-decoration-none">Quên mật khẩu?</a>
+                                    </div>
+                                    <div class="position-relative">
+                                        <input type="password" name="Password" id="modalRazorPassword" class="form-control rounded-3 py-2 px-3 pe-5" placeholder="Nhập mật khẩu" required />
+                                        <button type="button" class="btn btn-sm position-absolute top-50 end-0 translate-middle-y text-secondary pe-3 border-0 bg-transparent" id="toggleModalLoginPwdBtn" tabindex="-1" title="Ẩn/Hiện mật khẩu">
+                                            <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" name="RememberMe" value="true" id="modalRememberMe" checked />
+                                    <label class="form-check-label small text-secondary" for="modalRememberMe">
+                                        Ghi nhớ đăng nhập (30 ngày)
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100 py-2 rounded-pill fw-semibold mb-2">
+                                    Đăng Nhập Ngay &rarr;
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Tab Register -->
+                        <div class="tab-pane fade" id="register-pane" role="tabpanel">
+                            <form asp-page="/Account/Register" method="post" id="modalRegisterForm">
+                                <input type="hidden" name="ReturnUrl" value="@modalReturnUrl" />
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">Họ và tên <span class="text-danger">*</span></label>
+                                    <input type="text" name="FullName" id="modalRegFullName" class="form-control rounded-3 py-2 px-3" placeholder="Nguyễn Văn A" required />
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Số điện thoại <span class="text-danger">*</span></label>
+                                        <input type="tel" name="PhoneNumber" id="modalRegPhone" class="form-control rounded-3 py-2 px-3" placeholder="0912345678" required />
+                                        <div id="modalPhoneFeedback" class="form-text" style="font-size:0.7rem;"></div>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Tên đăng nhập</label>
+                                        <input type="text" name="Username" id="modalRegUsername" class="form-control rounded-3 py-2 px-3" placeholder="Tùy chọn" />
+                                        <div id="modalUsernameFeedback" class="form-text" style="font-size:0.7rem;"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">Email <span class="text-muted fw-normal">(Tùy chọn)</span></label>
+                                    <input type="email" name="Email" id="modalRegEmail" class="form-control rounded-3 py-2 px-3" placeholder="name@example.com" />
+                                    <div id="modalEmailFeedback" class="form-text" style="font-size:0.7rem;"></div>
+                                </div>
+                                <div class="row g-2 mb-2">
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Mật khẩu <span class="text-danger">*</span></label>
+                                        <div class="position-relative">
+                                            <input type="password" name="Password" id="modalRegPassword" class="form-control rounded-3 py-2 px-3 pe-5" placeholder="Ít nhất 8 ký tự" required autocomplete="new-password" />
+                                            <button type="button" class="btn btn-sm position-absolute top-50 end-0 translate-middle-y text-secondary pe-2 border-0 bg-transparent" id="toggleModalPwdBtn" tabindex="-1" title="Ẩn/Hiện mật khẩu">
+                                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                            </button>
+                                        </div>
+                                        <div class="progress mt-1 d-none" id="modalPwdProgressBar" style="height: 3px;">
+                                            <div id="modalPwdStrengthBar" class="progress-bar bg-danger" role="progressbar" style="width: 0%;"></div>
+                                        </div>
+                                        <div id="modalPwdFeedback" class="form-text mt-1" style="font-size:0.7rem; line-height: 1.25;"></div>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="form-label small fw-semibold text-secondary mb-1">Xác nhận MK <span class="text-danger">*</span></label>
+                                        <div class="position-relative">
+                                            <input type="password" name="ConfirmPassword" id="modalRegConfirmPassword" class="form-control rounded-3 py-2 px-3 pe-5" placeholder="Nhập lại" required autocomplete="new-password" />
+                                            <button type="button" class="btn btn-sm position-absolute top-50 end-0 translate-middle-y text-secondary pe-2 border-0 bg-transparent" id="toggleModalConfirmBtn" tabindex="-1" title="Ẩn/Hiện mật khẩu">
+                                                <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                                            </button>
+                                        </div>
+                                        <div id="modalConfirmFeedback" class="form-text mt-1" style="font-size:0.7rem; line-height: 1.25;"></div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-semibold text-secondary mb-1">Địa chỉ nhận hàng <span class="text-muted fw-normal">(Tùy chọn)</span></label>
+                                    <input type="text" name="Address" class="form-control rounded-3 py-2 px-3" placeholder="Số nhà, đường... (Có thể bổ sung sau)" />
+                                </div>
+                                <button type="submit" id="modalRegisterBtn" class="btn btn-primary w-100 py-2 rounded-pill fw-semibold">
+                                    Đăng Ký Tài Khoản BomChelsea
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Smooth scroll to catalog anchor if present
+        window.addEventListener('DOMContentLoaded', function () {
+            if (window.location.hash) {
+                var target = document.querySelector(window.location.hash);
+                if (target) {
+                    setTimeout(function () {
+                        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                }
+            }
+
+            // Toggle show/hide password buttons
+            function setupModalEyeToggle(btnId, inputId) {
+                var btn = document.getElementById(btnId);
+                var input = document.getElementById(inputId);
+                if (btn && input) {
+                    btn.addEventListener('click', function () {
+                        var isPwd = input.getAttribute('type') === 'password';
+                        input.setAttribute('type', isPwd ? 'text' : 'password');
+                        btn.classList.toggle('text-primary');
+                    });
+                }
+            }
+            setupModalEyeToggle('toggleModalLoginPwdBtn', 'modalRazorPassword');
+            setupModalEyeToggle('toggleModalPwdBtn', 'modalRegPassword');
+            setupModalEyeToggle('toggleModalConfirmBtn', 'modalRegConfirmPassword');
+
+            // Real-time check cho Modal Register
+            var modalPhone = document.getElementById('modalRegPhone');
+            var modalPhoneFeedback = document.getElementById('modalPhoneFeedback');
+            var modalUser = document.getElementById('modalRegUsername');
+            var modalUserFeedback = document.getElementById('modalUsernameFeedback');
+            var modalEmail = document.getElementById('modalRegEmail');
+            var modalEmailFeedback = document.getElementById('modalEmailFeedback');
+            var modalPwd = document.getElementById('modalRegPassword');
+            var modalPwdFeedback = document.getElementById('modalPwdFeedback');
+            var modalPwdProgressBar = document.getElementById('modalPwdProgressBar');
+            var modalPwdStrengthBar = document.getElementById('modalPwdStrengthBar');
+            var modalConfirm = document.getElementById('modalRegConfirmPassword');
+            var modalConfirmFeedback = document.getElementById('modalConfirmFeedback');
+            var modalForm = document.getElementById('modalRegisterForm');
+
+            var modalStatus = { phone: null, username: null, email: null, password: null, confirm: null };
+            var commonPasswords = ['12345678', '123456789', 'password', 'qwertyuiop', 'admin123', 'iloveyou', '11111111', '00000000'];
+
+            function debounceModal(func, wait) {
+                var timeout;
+                return function () {
+                    var context = this, args = arguments;
+                    clearTimeout(timeout);
+                    timeout = setTimeout(function () { func.apply(context, args); }, wait);
+                };
+            }
+
+            function checkModalField(type, inputEl, feedbackEl) {
+                if (!inputEl || !feedbackEl) return;
+                var val = inputEl.value.trim();
+                if (val.length === 0) {
+                    inputEl.classList.remove('is-valid', 'is-invalid');
+                    feedbackEl.innerHTML = '';
+                    modalStatus[type] = null;
+                    return;
+                }
+
+                feedbackEl.innerHTML = '<span class="text-muted">Kiểm tra...</span>';
+                fetch('/Account/CheckAvailability?type=' + encodeURIComponent(type) + '&value=' + encodeURIComponent(val))
+                    .then(function (res) { return res.json(); })
+                    .then(function (data) {
+                        if (data.available) {
+                            inputEl.classList.remove('is-invalid');
+                            inputEl.classList.add('is-valid');
+                            feedbackEl.className = 'form-text text-success fw-semibold';
+                            feedbackEl.innerHTML = '✓ Khả dụng';
+                            modalStatus[type] = true;
+                        } else {
+                            inputEl.classList.remove('is-valid');
+                            inputEl.classList.add('is-invalid');
+                            feedbackEl.className = 'form-text text-danger fw-semibold';
+                            feedbackEl.innerHTML = '✕ ' + data.message;
+                            modalStatus[type] = false;
+                        }
+                    })
+                    .catch(function () {
+                        feedbackEl.innerHTML = '';
+                    });
+            }
+
+            function validateModalPassword(showRequiredMsg) {
+                if (!modalPwd || !modalPwdFeedback) return true;
+                var val = modalPwd.value;
+
+                if (!val) {
+                    modalPwd.classList.remove('is-valid', 'is-invalid');
+                    if (modalPwdProgressBar) modalPwdProgressBar.classList.add('d-none');
+                    if (showRequiredMsg) {
+                        modalPwd.classList.add('is-invalid');
+                        modalPwdFeedback.className = 'form-text text-danger fw-semibold';
+                        modalPwdFeedback.innerHTML = '✕ Vui lòng nhập mật khẩu';
+                        modalStatus.password = false;
+                        return false;
+                    }
+                    modalPwdFeedback.innerHTML = '';
+                    modalStatus.password = null;
+                    return false;
+                }
+
+                if (modalPwdProgressBar) modalPwdProgressBar.classList.remove('d-none');
+
+                var score = 0;
+                var groups = 0;
+                if (val.length >= 8) score += 25;
+                if (/[A-Z]/.test(val)) { score += 25; groups++; }
+                if (/[a-z]/.test(val)) { score += 25; groups++; }
+                if (/[0-9]/.test(val)) { score += 25; groups++; }
+                if (/[!#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(val) || val.indexOf(String.fromCharCode(64)) >= 0) { score += 25; groups++; }
+
+                var pct = Math.min(score, 100);
+                if (modalPwdStrengthBar) {
+                    modalPwdStrengthBar.style.width = pct + '%';
+                    if (groups < 3 || val.length < 8) {
+                        modalPwdStrengthBar.className = 'progress-bar bg-danger';
+                    } else if (groups === 3) {
+                        modalPwdStrengthBar.className = 'progress-bar bg-warning';
+                    } else {
+                        modalPwdStrengthBar.className = 'progress-bar bg-success';
+                    }
+                }
+
+                if (val.length < 8) {
+                    modalPwd.classList.remove('is-valid');
+                    modalPwd.classList.add('is-invalid');
+                    modalPwdFeedback.className = 'form-text text-danger fw-semibold';
+                    modalPwdFeedback.innerHTML = '✕ Tối thiểu 8 ký tự (hiện có ' + val.length + ')';
+                    modalStatus.password = false;
+                    return false;
+                }
+
+                if (val.length > 64) {
+                    modalPwd.classList.remove('is-valid');
+                    modalPwd.classList.add('is-invalid');
+                    modalPwdFeedback.className = 'form-text text-danger fw-semibold';
+                    modalPwdFeedback.innerHTML = '✕ Mật khẩu tối đa 64 ký tự';
+                    modalStatus.password = false;
+                    return false;
+                }
+
+                if (groups < 3) {
+                    modalPwd.classList.remove('is-valid');
+                    modalPwd.classList.add('is-invalid');
+                    modalPwdFeedback.className = 'form-text text-danger fw-semibold';
+                    modalPwdFeedback.innerHTML = '✕ Cần ít nhất 3/4 nhóm: chữ hoa, chữ thường, số, ký tự đặc biệt';
+                    modalStatus.password = false;
+                    return false;
+                }
+
+                if (commonPasswords.indexOf(val.toLowerCase()) !== -1) {
+                    modalPwd.classList.remove('is-valid');
+                    modalPwd.classList.add('is-invalid');
+                    modalPwdFeedback.className = 'form-text text-danger fw-semibold';
+                    modalPwdFeedback.innerHTML = '✕ Mật khẩu quá đơn giản, dễ đoán!';
+                    modalStatus.password = false;
+                    return false;
+                }
+
+                var uVal = modalUser ? modalUser.value.trim().toLowerCase() : '';
+                if (uVal && uVal.length >= 3 && val.toLowerCase() === uVal) {
+                    modalPwd.classList.remove('is-valid');
+                    modalPwd.classList.add('is-invalid');
+                    modalPwdFeedback.className = 'form-text text-danger fw-semibold';
+                    modalPwdFeedback.innerHTML = '✕ Mật khẩu không được trùng tên đăng nhập!';
+                    modalStatus.password = false;
+                    return false;
+                }
+
+                var pVal = modalPhone ? modalPhone.value.trim().replace(/\D/g, '') : '';
+                if (pVal && pVal.length >= 8 && val.replace(/\D/g, '') === pVal) {
+                    modalPwd.classList.remove('is-valid');
+                    modalPwd.classList.add('is-invalid');
+                    modalPwdFeedback.className = 'form-text text-danger fw-semibold';
+                    modalPwdFeedback.innerHTML = '✕ Mật khẩu không được trùng số điện thoại!';
+                    modalStatus.password = false;
+                    return false;
+                }
+
+                modalPwd.classList.remove('is-invalid');
+                modalPwd.classList.add('is-valid');
+                modalPwdFeedback.className = 'form-text text-success fw-semibold';
+                modalPwdFeedback.innerHTML = (groups >= 4 ? '✓ Mật khẩu rất mạnh (chuẩn Apple)' : '✓ Mật khẩu hợp lệ (3/4 nhóm)');
+                modalStatus.password = true;
+                return true;
+            }
+
+            function validateModalConfirm(showRequiredMsg) {
+                if (!modalConfirm || !modalConfirmFeedback) return true;
+                var p1 = modalPwd ? modalPwd.value : '';
+                var p2 = modalConfirm.value;
+
+                if (!p2) {
+                    modalConfirm.classList.remove('is-valid', 'is-invalid');
+                    if (showRequiredMsg) {
+                        modalConfirm.classList.add('is-invalid');
+                        modalConfirmFeedback.className = 'form-text text-danger fw-semibold';
+                        modalConfirmFeedback.innerHTML = '✕ Vui lòng xác nhận mật khẩu';
+                        modalStatus.confirm = false;
+                        return false;
+                    }
+                    modalConfirmFeedback.innerHTML = '';
+                    modalStatus.confirm = null;
+                    return false;
+                }
+
+                if (p1 === p2) {
+                    modalConfirm.classList.remove('is-invalid');
+                    modalConfirm.classList.add('is-valid');
+                    modalConfirmFeedback.className = 'form-text text-success fw-semibold';
+                    modalConfirmFeedback.innerHTML = '✓ Mật khẩu xác nhận trùng khớp';
+                    modalStatus.confirm = true;
+                    return true;
+                } else {
+                    modalConfirm.classList.remove('is-valid');
+                    modalConfirm.classList.add('is-invalid');
+                    modalConfirmFeedback.className = 'form-text text-danger fw-semibold';
+                    modalConfirmFeedback.innerHTML = '✕ Mật khẩu xác nhận chưa trùng khớp';
+                    modalStatus.confirm = false;
+                    return false;
+                }
+            }
+
+            if (modalPhone) {
+                modalPhone.addEventListener('input', debounceModal(function () { checkModalField('phone', modalPhone, modalPhoneFeedback); }, 350));
+                modalPhone.addEventListener('blur', function () { checkModalField('phone', modalPhone, modalPhoneFeedback); });
+            }
+            if (modalUser) {
+                modalUser.addEventListener('input', debounceModal(function () { checkModalField('username', modalUser, modalUserFeedback); }, 350));
+                modalUser.addEventListener('blur', function () { checkModalField('username', modalUser, modalUserFeedback); });
+            }
+            if (modalEmail) {
+                modalEmail.addEventListener('input', debounceModal(function () { checkModalField('email', modalEmail, modalEmailFeedback); }, 350));
+                modalEmail.addEventListener('blur', function () { checkModalField('email', modalEmail, modalEmailFeedback); });
+            }
+
+            if (modalPwd) {
+                modalPwd.addEventListener('input', function () {
+                    validateModalPassword(false);
+                    if (modalConfirm && modalConfirm.value.length > 0) {
+                        validateModalConfirm(false);
+                    }
+                });
+                modalPwd.addEventListener('blur', function () {
+                    validateModalPassword(false);
+                });
+            }
+
+            if (modalConfirm) {
+                modalConfirm.addEventListener('input', function () {
+                    validateModalConfirm(false);
+                });
+                modalConfirm.addEventListener('blur', function () {
+                    validateModalConfirm(false);
+                });
+            }
+
+            if (modalForm) {
+                modalForm.addEventListener('submit', function (e) {
+                    if (modalStatus.phone === false || (modalPhone && !modalPhone.value.trim())) {
+                        e.preventDefault();
+                        if (modalPhoneFeedback && !modalPhone.value.trim()) {
+                            modalPhone.classList.add('is-invalid');
+                            modalPhoneFeedback.className = 'form-text text-danger fw-semibold';
+                            modalPhoneFeedback.innerHTML = '✕ Vui lòng nhập số điện thoại';
+                        }
+                        modalPhone.focus();
+                        return;
+                    }
+                    if (modalStatus.username === false) {
+                        e.preventDefault();
+                        modalUser.focus();
+                        return;
+                    }
+                    if (modalStatus.email === false) {
+                        e.preventDefault();
+                        modalEmail.focus();
+                        return;
+                    }
+                    if (!validateModalPassword(true)) {
+                        e.preventDefault();
+                        modalPwd.focus();
+                        return;
+                    }
+                    if (!validateModalConfirm(true)) {
+                        e.preventDefault();
+                        modalConfirm.focus();
+                        return;
+                    }
+                });
+            }
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+
+</html>

@@ -1,0 +1,1003 @@
+@page "/admin/staff"
+@page "/admin/customers"
+@layout AdminLayout
+@attribute [Authorize(Roles = "Admin,Manager")]
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using System.Text.RegularExpressions
+@using IPhoneStore_Blazor.Data
+@using IPhoneStore_Blazor.Models.Entities
+@inject UserManager<ApplicationUser> UserManager
+@inject IDbContextFactory<IPhoneStoreDbContext> DbFactory
+@inject NavigationManager Nav
+@inject IJSRuntime JS
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IServiceProvider ServiceProvider
+
+<PageTitle>Quản lý Khách hàng &amp; Tài khoản - BomChelsea Admin</PageTitle>
+
+<style>
+    /* Tối ưu bảng hiển thị gọn gàng, vừa vặn 100% màn hình, không bị tràn thanh cuộn ngang */
+    .aar-compact-table {
+        width: 100%;
+        margin-bottom: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .aar-compact-table th {
+        padding: 0.75rem 0.65rem !important;
+        font-size: 0.74rem !important;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+        background: #f8fafc;
+        border-bottom: 1px solid #e2e8f0;
+        color: #475569;
+    }
+    .aar-compact-table td {
+        padding: 0.7rem 0.65rem !important;
+        vertical-align: middle !important;
+        font-size: 0.84rem;
+        border-bottom: 1px solid #e2e8f0;
+        color: #1e293b;
+    }
+    .aar-compact-table tr:hover td {
+        background-color: #f8fafc;
+    }
+
+    /* 3 nút thao tác bằng nhau, cùng kích thước chuẩn, chữ không rớt dòng */
+    .btn-action-custom {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 68px !important;
+        height: 30px !important;
+        min-width: 68px !important;
+        max-width: 68px !important;
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        white-space: nowrap !important;
+        border-radius: 6px !important;
+        padding: 0 !important;
+        line-height: 1 !important;
+        text-align: center !important;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+    .btn-action-custom:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+    }
+    .btn-action-custom.disabled, .btn-action-custom:disabled {
+        opacity: 0.35 !important;
+        cursor: not-allowed !important;
+        pointer-events: none !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Avatar tròn ký tự viết tắt */
+    .aar-avatar-circle-sm {
+        width: 34px;
+        height: 34px;
+        font-size: 0.75rem;
+        background: #f0f2f5;
+        color: #1d1d1f;
+        font-weight: 600;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-transform: uppercase;
+    }
+</style>
+
+<!-- ================= HEADER & BREADCRUMB ================= -->
+<div class="d-flex flex-wrap align-items-center justify-content-between mb-4 gap-3">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-primary bg-opacity-10 text-primary fw-bold px-2 py-1">CUSTOMER MANAGEMENT</span>
+            <span class="text-secondary small">Quản lý định danh và tài khoản khách hàng</span>
+        </div>
+        <h1 class="h3 fw-bold text-dark mb-1">Quản lý Khách hàng &amp; Tài khoản</h1>
+        <p class="text-muted small mb-0">Hồ sơ thông tin khách hàng Apple AAR, xem chi tiết và chỉnh sửa trực tiếp qua Pop-up, đổi mật khẩu và quản lý khóa/mở tài khoản.</p>
+    </div>
+</div>
+
+<!-- ================= ALERT NOTIFICATION BANNER ================= -->
+@if (!string.IsNullOrEmpty(_alertMessage))
+{
+    <div class="alert alert-@_alertType alert-dismissible fade show border-0 rounded-3 shadow-sm mb-4 d-flex align-items-center justify-content-between py-2 px-3 small" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            @if (_alertType == "success")
+            {
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="text-success"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+            }
+            else
+            {
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="text-danger"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            }
+            <span class="fw-medium">@_alertMessage</span>
+        </div>
+        <button type="button" class="btn-close py-0" @onclick="() => _alertMessage = null"></button>
+    </div>
+}
+
+<!-- ================= THỐNG KÊ TỔNG QUAN (4 KPI CARDS) ================= -->
+<div class="row g-3 mb-4">
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="aar-card p-3 d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary flex-shrink-0" style="width: 48px; height: 48px;">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            </div>
+            <div>
+                <div class="text-muted small fw-medium">Tổng khách hàng</div>
+                <div class="fs-4 fw-bold text-dark">@_totalCustomers.ToString("N0") <span class="fs-6 fw-normal text-muted">người</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="aar-card p-3 d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success flex-shrink-0" style="width: 48px; height: 48px;">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+                <div class="text-muted small fw-medium">Tài khoản hoạt động</div>
+                <div class="fs-4 fw-bold text-success">@_activeAccounts.ToString("N0") <span class="fs-6 fw-normal text-muted">tài khoản</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="aar-card p-3 d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger flex-shrink-0" style="width: 48px; height: 48px;">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <div>
+                <div class="text-muted small fw-medium">Tài khoản bị khóa</div>
+                <div class="fs-4 fw-bold text-danger">@_lockedAccounts.ToString("N0") <span class="fs-6 fw-normal text-muted">tài khoản</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-sm-6 col-xl-3">
+        <div class="aar-card p-3 d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center bg-info bg-opacity-10 text-info flex-shrink-0" style="width: 48px; height: 48px;">
+                <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
+            </div>
+            <div>
+                <div class="text-muted small fw-medium">Tổng đơn hàng</div>
+                <div class="fs-4 fw-bold text-dark">@_totalOrders.ToString("N0") <span class="fs-6 fw-normal text-muted">đơn</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ================= DANH SÁCH KHÁCH HÀNG & BỘ LỌC ================= -->
+<div class="aar-card mb-4">
+    <div class="aar-card-header flex-wrap gap-2">
+        <div>
+            <h3 class="aar-card-title mb-0">
+                Danh sách Khách hàng (@_filteredCustomers.Count / @_totalCustomers hồ sơ)
+            </h3>
+            <span class="text-muted small">Cập nhật thời gian thực từ cơ sở dữ liệu khách hàng &amp; Identity</span>
+        </div>
+        
+        <!-- BỘ LỌC TÌM KIẾM -->
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <div class="input-group input-group-sm" style="width: 250px;">
+                <span class="input-group-text bg-light border-end-0">🔍</span>
+                <input type="text" @bind="_searchKeyword" @bind:event="oninput" @onkeyup="HandleSearchKeyUp" class="form-control border-start-0" placeholder="Tên, SĐT, Email, Username..." />
+            </div>
+
+            <select @bind="_statusFilter" @bind:after="ApplyFilter" class="form-select form-select-sm" style="width: 155px;">
+                <option value="">Tất cả trạng thái</option>
+                <option value="active">● Đang hoạt động</option>
+                <option value="locked">● Bị khóa</option>
+                <option value="guest">Khách vãng lai</option>
+            </select>
+
+            <button type="button" class="btn btn-primary btn-sm px-3" @onclick="ApplyFilter">Tìm</button>
+            @if (!string.IsNullOrEmpty(_searchKeyword) || !string.IsNullOrEmpty(_statusFilter))
+            {
+                <button type="button" class="btn btn-light btn-sm text-muted" @onclick="ClearFilter">Xóa lọc</button>
+            }
+        </div>
+    </div>
+
+    <!-- BẢNG DỮ LIỆU KHÁCH HÀNG (TỐI ƯU GỌN GÀNG, KHÔNG CUỘN NGANG) -->
+    <div class="table-responsive">
+        <table class="aar-compact-table">
+            <thead>
+                <tr>
+                    <th style="width: 26%;">Khách hàng &amp; Định danh</th>
+                    <th style="width: 18%;">Liên hệ</th>
+                    <th style="width: 22%;">Địa chỉ nhận hàng</th>
+                    <th style="width: 11%;">Giao dịch</th>
+                    <th style="width: 9%;">Trạng thái</th>
+                    <th style="width: 14%; text-align: right; min-width: 218px;">Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (_filteredCustomers.Count == 0)
+                {
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="mb-2 text-secondary"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                            <div>Không tìm thấy khách hàng nào khớp với điều kiện tìm kiếm.</div>
+                        </td>
+                    </tr>
+                }
+                @foreach (var c in _filteredCustomers)
+                {
+                    var initials = !string.IsNullOrEmpty(c.FullName) 
+                        ? (c.FullName.Split(' ').Last().Substring(0, Math.Min(2, c.FullName.Split(' ').Last().Length)).ToUpper()) 
+                        : "KH";
+
+                    <tr>
+                        <!-- CỘT 1: KHÁCH HÀNG & ĐỊNH DANH -->
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="aar-avatar-circle-sm flex-shrink-0">
+                                    @initials
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="fw-bold text-dark text-truncate" title="@c.FullName">
+                                        @c.FullName <span class="badge bg-light text-muted border py-0 px-1" style="font-size: 0.68rem;">#KH-@c.Id</span>
+                                    </div>
+                                    <div class="small text-muted text-truncate d-flex align-items-center gap-1" style="font-size: 0.74rem;">
+                                        @if (c.HasAccount)
+                                        {
+                                            <span class="text-primary fw-medium">@@@c.UserName</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary bg-opacity-10 text-secondary py-0 px-1" style="font-size: 0.65rem;">Vãng lai</span>
+                                        }
+                                        <span class="text-muted ms-1">• @c.CreatedAt.ToString("dd/MM/yyyy")</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- CỘT 2: LIÊN HỆ -->
+                        <td>
+                            <div class="small fw-semibold text-dark text-truncate">
+                                <a href="tel:@c.PhoneNumber" class="text-decoration-none text-dark">📞 @c.PhoneNumber</a>
+                            </div>
+                            <div class="text-muted small text-truncate" style="max-width: 170px;" title="@(c.Email ?? "-")">
+                                ✉️ @(c.Email ?? "Chưa có email")
+                            </div>
+                        </td>
+
+                        <!-- CỘT 3: ĐỊA CHỈ NHẬN HÀNG -->
+                        <td>
+                            <div class="small text-dark text-truncate" style="max-width: 220px;" title="@c.Address">
+                                📍 @(string.IsNullOrWhiteSpace(c.Address) ? "Chưa cập nhật địa chỉ" : c.Address)
+                            </div>
+                        </td>
+
+                        <!-- CỘT 4: GIAO DỊCH -->
+                        <td>
+                            <div class="small fw-semibold text-dark text-nowrap">📦 @c.OrderCount đơn</div>
+                            <div class="text-muted small text-nowrap">🛡️ @c.WarrantyCount bảo hành</div>
+                        </td>
+
+                        <!-- CỘT 5: TRẠNG THÁI TÀI KHOẢN -->
+                        <td>
+                            @if (!c.HasAccount)
+                            {
+                                <span class="badge bg-light text-muted border text-nowrap" style="font-size: 0.72rem;">Vãng lai</span>
+                            }
+                            else if (c.IsActive)
+                            {
+                                <span class="aar-pill aar-pill-green text-nowrap">Hoạt động</span>
+                            }
+                            else
+                            {
+                                <span class="aar-pill aar-pill-red text-nowrap">Bị khóa</span>
+                            }
+                        </td>
+
+                        <!-- CỘT 6: THAO TÁC (3 NÚT BẰNG NHAU, THẲNG HÀNG, KHÔNG RỚT DÒNG) -->
+                        <td style="text-align: right;">
+                            <div class="d-inline-flex gap-1 align-items-center justify-content-end">
+                                <!-- NÚT 1: CHI TIẾT -->
+                                <button type="button" class="btn btn-outline-primary btn-action-custom"
+                                        @onclick="() => OpenEditModal(c)"
+                                        title="Xem chi tiết &amp; Chỉnh sửa thông tin">
+                                    Chi tiết
+                                </button>
+
+                                @if (c.HasAccount)
+                                {
+                                    <!-- NÚT 2: ĐỔI MẬT KHẨU -->
+                                    <button type="button" class="btn btn-outline-secondary btn-action-custom"
+                                            @onclick="() => OpenResetPasswordModal(c)"
+                                            title="Cấp lại mật khẩu mới cho khách hàng">
+                                        Đổi MK
+                                    </button>
+
+                                    <!-- NÚT 3: KHÓA / MỞ -->
+                                    <button type="button" class="btn @(c.IsActive ? "btn-outline-warning" : "btn-outline-success") btn-action-custom"
+                                            @onclick="() => ToggleLockCustomer(c)"
+                                            title="@(c.IsActive ? "Khóa tài khoản này" : "Mở khóa tài khoản này")">
+                                        @(c.IsActive ? "Khóa" : "Mở")
+                                    </button>
+                                }
+                                else
+                                {
+                                    <!-- NÚT ĐỔI MK & KHÓA DISABLED CHO KHÁCH VÃNG LAI ĐỂ 3 NÚT LUÔN CÂN ĐỐI -->
+                                    <button type="button" class="btn btn-outline-secondary btn-action-custom disabled" title="Khách vãng lai chưa có tài khoản">
+                                        Đổi MK
+                                    </button>
+                                    <button type="button" class="btn btn-outline-secondary btn-action-custom disabled" title="Khách vãng lai chưa có tài khoản">
+                                        Khóa
+                                    </button>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ================= MODAL 1: XEM CHI TIẾT & SỬA THÔNG TIN KHÁCH HÀNG (POP-UP) ================= -->
+@if (_showEditModal && _editingCustomer != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5); z-index: 1055;">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-bottom px-4 pt-4 pb-3">
+                    <div>
+                        <h5 class="modal-title fw-bold text-dark mb-0">Hồ sơ khách hàng &amp; Chỉnh sửa</h5>
+                        <span class="text-muted small">Hồ sơ mã số #KH-@_editingCustomer.Id (@_editingCustomer.FullName)</span>
+                    </div>
+                    <button type="button" class="btn-close" @onclick="CloseEditModal"></button>
+                </div>
+
+                <div class="modal-body px-4 py-3">
+                    <!-- KHU VỰC THÔNG BÁO LỖI INLINE TRONG MODAL -->
+                    @if (!string.IsNullOrEmpty(_editModalError))
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 px-3 small mb-3 border-0 rounded-3 shadow-sm" role="alert">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="flex-shrink-0 text-danger"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="fw-medium">@_editModalError</span>
+                        </div>
+                    }
+
+                    <!-- THỐNG KÊ NHANH CỦA KHÁCH TRONG MODAL -->
+                    <div class="bg-light p-3 rounded-3 mb-3 d-flex flex-wrap align-items-center justify-content-between gap-2 border">
+                        <div>
+                            <span class="text-muted small">Tài khoản đăng nhập:</span>
+                            <strong class="text-dark d-block">
+                                @if (_editingCustomer.HasAccount)
+                                {
+                                    <span class="text-primary">@@@_editingCustomer.UserName</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Khách vãng lai</span>
+                                }
+                            </strong>
+                        </div>
+                        <div>
+                            <span class="text-muted small">Đơn hàng đã đặt:</span>
+                            <strong class="text-primary d-block">@_editingCustomer.OrderCount đơn</strong>
+                        </div>
+                        <div>
+                            <span class="text-muted small">Thiết bị bảo hành:</span>
+                            <strong class="text-info d-block">@_editingCustomer.WarrantyCount máy</strong>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Họ và tên khách hàng <span class="text-danger">*</span></label>
+                            <input type="text" @bind="_editFullName" class="form-control" placeholder="Tối thiểu 2 ký tự" />
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Số điện thoại di động <span class="text-danger">*</span></label>
+                            <input type="text" @bind="_editPhoneNumber" class="form-control" placeholder="0901234567" />
+                            <div class="form-text" style="font-size: 0.75rem;">10 chữ số di động đầu 03, 05, 07, 08, 09 (không được trùng với tài khoản khác).</div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label small fw-bold">Địa chỉ Email</label>
+                            <input type="text" @bind="_editEmail" class="form-control" placeholder="example@domain.com" />
+                            <div class="form-text" style="font-size: 0.75rem;">Định dạng chuẩn (VD: tenban@gmail.com), tính duy nhất trên toàn hệ thống.</div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Địa chỉ giao hàng mặc định</label>
+                        <textarea @bind="_editAddress" class="form-control" rows="2" placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành (tối thiểu 5 ký tự)..."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-top px-4 py-3">
+                    <button type="button" class="btn btn-light btn-sm" @onclick="CloseEditModal">Đóng</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4 fw-semibold d-inline-flex align-items-center gap-2" @onclick="SaveCustomerAsync" disabled="@_isSaving">
+                        @if (_isSaving)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                            <span>Đang lưu...</span>
+                        }
+                        else
+                        {
+                            <span>Lưu thay đổi</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- ================= MODAL 2: ĐỔI MẬT KHẨU TÀI KHOẢN KHÁCH HÀNG ================= -->
+@if (_showResetModal && _resetCustomer != null)
+{
+    <div class="modal fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5); z-index: 1055;">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-bottom px-4 pt-4 pb-3">
+                    <h5 class="modal-title fw-bold text-dark">Cấp lại mật khẩu khách hàng</h5>
+                    <button type="button" class="btn-close" @onclick="CloseResetModal"></button>
+                </div>
+
+                <div class="modal-body px-4 py-3">
+                    @if (!string.IsNullOrEmpty(_resetModalError))
+                    {
+                        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 px-3 small mb-3 border-0 rounded-3 shadow-sm" role="alert">
+                            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24" class="flex-shrink-0 text-danger"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="fw-medium">@_resetModalError</span>
+                        </div>
+                    }
+
+                    <div class="alert alert-light border small text-muted mb-3">
+                        Khách hàng: <strong class="text-dark">@_resetCustomer.FullName</strong><br />
+                        Tên đăng nhập: <strong class="text-primary">@@@_resetCustomer.UserName</strong>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Mật khẩu mới <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <input type="@(_showPasswordText ? "text" : "password")" @bind="_newPassword" class="form-control" placeholder="Tối thiểu 6 ký tự" />
+                            <button type="button" class="btn btn-outline-secondary" @onclick="() => _showPasswordText = !_showPasswordText" title="Ẩn/Hiện mật khẩu">
+                                @(_showPasswordText ? "🙈" : "👁")
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none" @onclick="GenerateRandomPassword">
+                        ⚡ Tạo mật khẩu ngẫu nhiên an toàn
+                    </button>
+                </div>
+
+                <div class="modal-footer border-top px-4 py-3">
+                    <button type="button" class="btn btn-light btn-sm" @onclick="CloseResetModal">Hủy</button>
+                    <button type="button" class="btn btn-primary btn-sm px-4 fw-semibold" @onclick="ConfirmResetPasswordAsync" disabled="@_isResetting">
+                        @if (_isResetting)
+                        {
+                            <span class="spinner-border spinner-border-sm"></span>
+                            <span>Đang cập nhật...</span>
+                        }
+                        else
+                        {
+                            <span>Xác nhận cập nhật</span>
+                        }
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    public class CustomerItemViewModel
+    {
+        public int Id { get; set; }
+        public string? UserId { get; set; }
+        public string? UserName { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string? Email { get; set; }
+        public string PhoneNumber { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+        public bool IsActive { get; set; } = true;
+        public int OrderCount { get; set; }
+        public int WarrantyCount { get; set; }
+        public bool HasAccount => !string.IsNullOrEmpty(UserId);
+    }
+
+    private List<CustomerItemViewModel> _allCustomers = new();
+    private List<CustomerItemViewModel> _filteredCustomers = new();
+    private int _totalCustomers;
+    private int _activeAccounts;
+    private int _lockedAccounts;
+    private int _guestCustomers;
+    private int _totalOrders;
+
+    private string? _searchKeyword;
+    private string? _statusFilter = "";
+    private string? _alertMessage;
+    private string _alertType = "success";
+
+    // Modal 1: Edit
+    private bool _showEditModal;
+    private CustomerItemViewModel? _editingCustomer;
+    private string _editFullName = "";
+    private string _editPhoneNumber = "";
+    private string? _editEmail;
+    private string? _editAddress;
+    private string? _editModalError;
+    private bool _isSaving;
+
+    // Modal 2: Reset Password
+    private bool _showResetModal;
+    private CustomerItemViewModel? _resetCustomer;
+    private string _newPassword = "";
+    private bool _showPasswordText;
+    private string? _resetModalError;
+    private bool _isResetting;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await EnsureSeedDataAsync();
+        await LoadCustomersAsync();
+    }
+
+    private async Task EnsureSeedDataAsync()
+    {
+        try
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+
+            // Đảm bảo admin không bị gán nhầm role Customer
+            var adminUser = await UserManager.FindByNameAsync("admin");
+            if (adminUser != null && await UserManager.IsInRoleAsync(adminUser, "Customer"))
+            {
+                await UserManager.RemoveFromRoleAsync(adminUser, "Customer");
+            }
+
+            // Kiểm tra và khởi tạo 5 khách hàng thành viên chuẩn hóa theo mục 3.5 nếu chưa đủ
+            var hasAllFive = await db.Customers.CountAsync(c => c.User != null &&
+                (c.User.UserName == "nghecute" || c.User.UserName == "mainguyen" || c.User.UserName == "hungtran" || c.User.UserName == "longle" || c.User.UserName == "thaopham")) == 5;
+
+            if (!hasAllFive)
+            {
+                await IdentityDataSeeder.SeedAsync(ServiceProvider);
+            }
+        }
+        catch
+        {
+            // Fail-safe init
+        }
+    }
+
+    private async Task LoadCustomersAsync()
+    {
+        using var db = await DbFactory.CreateDbContextAsync();
+
+        var query = db.Customers
+            .Include(c => c.User)
+            .Include(c => c.Orders)
+            .Include(c => c.Warranties)
+            .AsNoTracking();
+
+        var rawList = await query.OrderByDescending(c => c.CreatedAt).ToListAsync();
+
+        var list = rawList.Select(c => new CustomerItemViewModel
+        {
+            Id = c.Id,
+            UserId = c.UserId,
+            UserName = c.User?.UserName,
+            FullName = c.FullName,
+            Email = c.Email,
+            PhoneNumber = c.PhoneNumber,
+            Address = c.Address,
+            CreatedAt = c.CreatedAt,
+            IsActive = c.User?.IsActive ?? true,
+            OrderCount = c.Orders.Count,
+            WarrantyCount = c.Warranties.Count
+        }).ToList();
+
+        _allCustomers = list;
+        _totalCustomers = list.Count;
+        _activeAccounts = list.Count(c => c.HasAccount && c.IsActive);
+        _lockedAccounts = list.Count(c => c.HasAccount && !c.IsActive);
+        _guestCustomers = list.Count(c => !c.HasAccount);
+        _totalOrders = list.Sum(c => c.OrderCount);
+
+        ApplyFilter();
+    }
+
+    private void HandleSearchKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            ApplyFilter();
+        }
+    }
+
+    private void ApplyFilter()
+    {
+        var q = _allCustomers.AsEnumerable();
+
+        if (!string.IsNullOrWhiteSpace(_searchKeyword))
+        {
+            var kw = _searchKeyword.Trim().ToLower();
+            q = q.Where(c => c.FullName.ToLower().Contains(kw) ||
+                             c.PhoneNumber.Contains(kw) ||
+                             (c.Email != null && c.Email.ToLower().Contains(kw)) ||
+                             (c.UserName != null && c.UserName.ToLower().Contains(kw)) ||
+                             c.Id.ToString() == kw);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_statusFilter))
+        {
+            if (_statusFilter == "active")
+                q = q.Where(c => c.HasAccount && c.IsActive);
+            else if (_statusFilter == "locked")
+                q = q.Where(c => c.HasAccount && !c.IsActive);
+            else if (_statusFilter == "guest")
+                q = q.Where(c => !c.HasAccount);
+        }
+
+        _filteredCustomers = q.ToList();
+    }
+
+    private void ClearFilter()
+    {
+        _searchKeyword = null;
+        _statusFilter = "";
+        _filteredCustomers = _allCustomers;
+    }
+
+    // =========================================================================
+    // NGHIỆP VỤ 1: XEM CHI TIẾT & SỬA THÔNG TIN KHÁCH HÀNG (POP-UP MODAL)
+    // =========================================================================
+    private void OpenEditModal(CustomerItemViewModel c)
+    {
+        _editingCustomer = c;
+        _editFullName = c.FullName;
+        _editPhoneNumber = c.PhoneNumber;
+        _editEmail = c.Email ?? "";
+        _editAddress = c.Address;
+        _editModalError = null;
+        _isSaving = false;
+        _showEditModal = true;
+    }
+
+    private void CloseEditModal()
+    {
+        _showEditModal = false;
+        _editingCustomer = null;
+        _editModalError = null;
+    }
+
+    private async Task SaveCustomerAsync()
+    {
+        if (_editingCustomer == null) return;
+        _editModalError = null;
+        _isSaving = true;
+
+        try
+        {
+            using var db = await DbFactory.CreateDbContextAsync();
+
+            // 1. Kiểm tra tồn tại hồ sơ khách hàng
+            var customer = await db.Customers.Include(c => c.User).FirstOrDefaultAsync(c => c.Id == _editingCustomer.Id);
+            if (customer == null)
+            {
+                _editModalError = "Không tìm thấy hồ sơ khách hàng trên hệ thống!";
+                _isSaving = false;
+                return;
+            }
+
+            // 2. Kiểm tra Họ và tên (tối thiểu 2 ký tự theo mục 2.4.4 & 3.5)
+            if (string.IsNullOrWhiteSpace(_editFullName) || _editFullName.Trim().Length < 2)
+            {
+                _editModalError = "Vui lòng nhập họ và tên của bạn (tối thiểu 2 ký tự)!";
+                _isSaving = false;
+                return;
+            }
+
+            // 3. Kiểm tra Số điện thoại di động chuẩn Việt Nam (10 số, đầu 03x-09x theo mục 2.4.4 & 3.5)
+            if (string.IsNullOrWhiteSpace(_editPhoneNumber))
+            {
+                _editModalError = "Vui lòng nhập số điện thoại di động!";
+                _isSaving = false;
+                return;
+            }
+
+            var cleanPhone = _editPhoneNumber.Trim().Replace(" ", "").Replace(".", "").Replace("-", "");
+            if (!Regex.IsMatch(cleanPhone, @"^(0|\+84)(3[2-9]|5[2689]|7[06-9]|8[1-9]|9[0-9])[0-9]{7}$"))
+            {
+                _editModalError = "Số điện thoại không hợp lệ (Phải là 10 chữ số di động đầu 03, 05, 07, 08, 09)!";
+                _isSaving = false;
+                return;
+            }
+
+            string stdPhone = cleanPhone.StartsWith("+84") ? ("0" + cleanPhone.Substring(3)) : cleanPhone;
+            string altPhone = cleanPhone.StartsWith("0") ? ("+84" + cleanPhone.Substring(1)) : cleanPhone;
+
+            // Kiểm tra tính duy nhất của Số điện thoại trên bảng Customers (ngoại trừ chính khách hàng này)
+            var duplicateCustomer = await db.Customers
+                .FirstOrDefaultAsync(c => c.Id != _editingCustomer.Id && (c.PhoneNumber == stdPhone || c.PhoneNumber == altPhone || c.PhoneNumber == cleanPhone));
+            if (duplicateCustomer != null)
+            {
+                _editModalError = $"Số điện thoại {stdPhone} này đã tồn tại trên hệ thống (đang được liên kết với khách hàng #{duplicateCustomer.Id} - {duplicateCustomer.FullName})!";
+                _isSaving = false;
+                return;
+            }
+
+            // Kiểm tra tính duy nhất của Số điện thoại trên bảng AspNetUsers
+            var duplicateUser = await UserManager.Users
+                .FirstOrDefaultAsync(u => u.Id != customer.UserId && (u.PhoneNumber == stdPhone || u.PhoneNumber == altPhone || u.PhoneNumber == cleanPhone));
+            if (duplicateUser != null)
+            {
+                _editModalError = $"Số điện thoại {stdPhone} này đã được liên kết với tài khoản người dùng @{duplicateUser.UserName} trên hệ thống!";
+                _isSaving = false;
+                return;
+            }
+
+            // 4. Kiểm tra Email (nếu có nhập)
+            string? cleanEmail = null;
+            if (!string.IsNullOrWhiteSpace(_editEmail))
+            {
+                cleanEmail = _editEmail.Trim().ToLowerInvariant();
+                if (!Regex.IsMatch(cleanEmail, @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"))
+                {
+                    _editModalError = "Địa chỉ email không đúng định dạng chuẩn (VD: tenban@gmail.com)!";
+                    _isSaving = false;
+                    return;
+                }
+
+                // Kiểm tra trùng Email trên bảng Customers (ngoại trừ chính khách hàng này)
+                var dupEmailCustomer = await db.Customers
+                    .FirstOrDefaultAsync(c => c.Id != _editingCustomer.Id && c.Email != null && c.Email.ToLower() == cleanEmail);
+                if (dupEmailCustomer != null)
+                {
+                    _editModalError = $"Địa chỉ email {cleanEmail} này đã được liên kết với một tài khoản khác ({dupEmailCustomer.FullName})!";
+                    _isSaving = false;
+                    return;
+                }
+
+                // Kiểm tra trùng Email trên bảng AspNetUsers
+                var dupEmailUser = await UserManager.Users
+                    .FirstOrDefaultAsync(u => u.Id != customer.UserId && ((u.Email != null && u.Email.ToLower() == cleanEmail) || u.NormalizedEmail == cleanEmail.ToUpperInvariant()));
+                if (dupEmailUser != null)
+                {
+                    _editModalError = $"Địa chỉ email {cleanEmail} này đã được liên kết với một tài khoản khác trên hệ thống!";
+                    _isSaving = false;
+                    return;
+                }
+            }
+
+            // 5. Kiểm tra Địa chỉ nhận hàng (nếu có nhập, tối thiểu 5 ký tự theo mục 2.4.4 & 3.5)
+            var cleanAddress = _editAddress?.Trim() ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(cleanAddress) && cleanAddress.Length < 5)
+            {
+                _editModalError = "Vui lòng nhập số nhà, tên đường cụ thể (tối thiểu 5 ký tự)!";
+                _isSaving = false;
+                return;
+            }
+
+            // 6. Cập nhật dữ liệu vào Customer
+            customer.FullName = _editFullName.Trim();
+            customer.PhoneNumber = stdPhone;
+            customer.Email = cleanEmail;
+            customer.Address = cleanAddress;
+
+            // 7. Đồng bộ nguyên tử sang ApplicationUser nếu có tài khoản Identity
+            if (customer.User != null)
+            {
+                customer.User.PhoneNumber = stdPhone;
+                if (!string.IsNullOrWhiteSpace(cleanEmail))
+                {
+                    customer.User.Email = cleanEmail;
+                    customer.User.NormalizedEmail = cleanEmail.ToUpperInvariant();
+                }
+                var updateRes = await UserManager.UpdateAsync(customer.User);
+                if (!updateRes.Succeeded)
+                {
+                    var errDetail = string.Join("; ", updateRes.Errors.Select(e => e.Description));
+                    _editModalError = $"Lỗi đồng bộ tài khoản: {errDetail}";
+                    _isSaving = false;
+                    return;
+                }
+            }
+
+            await db.SaveChangesAsync();
+            await LogAuditAsync(db, "EDIT_CUSTOMER", "Customers", customer.Id.ToString(), null,
+                $"Cập nhật thông tin khách hàng {customer.FullName} (#{customer.Id}) - SĐT: {customer.PhoneNumber}");
+
+            _showEditModal = false;
+            await LoadCustomersAsync();
+            _alertMessage = $"Đã cập nhật thông tin khách hàng {customer.FullName} thành công!";
+            _alertType = "success";
+        }
+        catch (Exception ex)
+        {
+            _editModalError = $"Đã xảy ra lỗi khi lưu thông tin: {ex.Message}";
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    // =========================================================================
+    // NGHIỆP VỤ 2: ĐỔI MẬT KHẨU TÀI KHOẢN KHÁCH HÀNG (ADMIN PASSWORD RESET)
+    // =========================================================================
+    private void OpenResetPasswordModal(CustomerItemViewModel c)
+    {
+        _resetCustomer = c;
+        _newPassword = "";
+        _showPasswordText = false;
+        _resetModalError = null;
+        _isResetting = false;
+        _showResetModal = true;
+    }
+
+    private void CloseResetModal()
+    {
+        _showResetModal = false;
+        _resetCustomer = null;
+        _resetModalError = null;
+    }
+
+    private void GenerateRandomPassword()
+    {
+        var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+        var random = new Random();
+        var pass = "Apple@";
+        for (int i = 0; i < 4; i++)
+        {
+            pass += chars[random.Next(chars.Length)];
+        }
+        _newPassword = pass;
+        _showPasswordText = true;
+    }
+
+    private async Task ConfirmResetPasswordAsync()
+    {
+        if (_resetCustomer == null || string.IsNullOrEmpty(_resetCustomer.UserId)) return;
+
+        if (string.IsNullOrWhiteSpace(_newPassword) || _newPassword.Trim().Length < 6)
+        {
+            _resetModalError = "Mật khẩu mới phải có tối thiểu 6 ký tự!";
+            return;
+        }
+
+        _isResetting = true;
+        _resetModalError = null;
+
+        try
+        {
+            var user = await UserManager.FindByIdAsync(_resetCustomer.UserId);
+            if (user == null)
+            {
+                _resetModalError = "Không tìm thấy tài khoản người dùng trên hệ thống!";
+                _isResetting = false;
+                return;
+            }
+
+            var token = await UserManager.GeneratePasswordResetTokenAsync(user);
+            var result = await UserManager.ResetPasswordAsync(user, token, _newPassword.Trim());
+            if (result.Succeeded)
+            {
+                // Thu hồi phiên tức thời (Security Stamp Revocation)
+                await UserManager.UpdateSecurityStampAsync(user);
+
+                using var db = await DbFactory.CreateDbContextAsync();
+                await LogAuditAsync(db, "RESET_PASSWORD", "Users", user.Id, null, $"Cấp lại mật khẩu cho tài khoản {user.UserName}");
+
+                _showResetModal = false;
+                _alertMessage = $"Đã cấp lại mật khẩu thành công cho tài khoản @{user.UserName}!";
+                _alertType = "success";
+            }
+            else
+            {
+                _resetModalError = string.Join("; ", result.Errors.Select(e => e.Description));
+            }
+        }
+        catch (Exception ex)
+        {
+            _resetModalError = $"Đã xảy ra lỗi khi cấp lại mật khẩu: {ex.Message}";
+        }
+        finally
+        {
+            _isResetting = false;
+        }
+    }
+
+    // =========================================================================
+    // NGHIỆP VỤ 3: KHÓA / MỞ KHÓA TÀI KHOẢN KHÁCH HÀNG (ACCOUNT LOCK & UNLOCK)
+    // =========================================================================
+    private async Task ToggleLockCustomer(CustomerItemViewModel c)
+    {
+        if (string.IsNullOrEmpty(c.UserId)) return;
+
+        var actionText = c.IsActive ? "KHÓA" : "MỞ KHÓA";
+        if (!await JS.InvokeAsync<bool>("confirm", $"Bạn có chắc chắn muốn {actionText} tài khoản của khách hàng {c.FullName} (@{c.UserName})?"))
+        {
+            return;
+        }
+
+        try
+        {
+            var user = await UserManager.FindByIdAsync(c.UserId);
+            if (user == null || user.UserName == "admin") return;
+
+            user.IsActive = !user.IsActive;
+
+            if (!user.IsActive)
+            {
+                // Khóa vĩnh viễn cho đến khi Admin chủ động mở
+                user.LockoutEnd = DateTimeOffset.MaxValue;
+                user.LockoutEnabled = true;
+            }
+            else
+            {
+                // Mở khóa phục hồi truy cập tức thì
+                user.LockoutEnd = null;
+                user.AccessFailedCount = 0;
+            }
+
+            await UserManager.UpdateAsync(user);
+            await UserManager.UpdateSecurityStampAsync(user); // Đuổi phiên hiện tại nếu đang đăng nhập
+
+            using var db = await DbFactory.CreateDbContextAsync();
+            await LogAuditAsync(db, "LOCK_CUSTOMER", "Users", user.Id, null,
+                $"Trạng thái tài khoản: {(user.IsActive ? "Mở khóa" : "Khóa")}");
+
+            await LoadCustomersAsync();
+
+            _alertMessage = $"Tài khoản @{user.UserName} đã {(user.IsActive ? "được mở khóa" : "bị khóa quyền đăng nhập")}!";
+            _alertType = "success";
+        }
+        catch (Exception ex)
+        {
+            _alertMessage = $"Lỗi khi thay đổi trạng thái tài khoản: {ex.Message}";
+            _alertType = "danger";
+        }
+    }
+
+    // =========================================================================
+    // AUDIT LOG HELPER
+    // =========================================================================
+    private async Task LogAuditAsync(IPhoneStoreDbContext db, string action, string entityName, string recordId, string? oldValues, string? newValues)
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            var currentUser = authState.User;
+            var currentUserId = UserManager.GetUserId(currentUser);
+            var currentUserName = currentUser.Identity?.Name ?? "Hoàng Linh (Admin)";
+
+            var log = new AuditLog
+            {
+                UserId = currentUserId,
+                UserName = currentUserName,
+                Action = action,
+                EntityName = entityName,
+                RecordId = recordId,
+                OldValues = oldValues,
+                NewValues = newValues,
+                Timestamp = DateTime.Now,
+                IpAddress = "127.0.0.1"
+            };
+
+            db.AuditLogs.Add(log);
+            await db.SaveChangesAsync();
+        }
+        catch
+        {
+            // Fail-safe audit
+        }
+    }
+}

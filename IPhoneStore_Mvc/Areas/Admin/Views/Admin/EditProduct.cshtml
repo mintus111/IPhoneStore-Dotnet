@@ -1,0 +1,358 @@
+@model Product
+@{
+    bool isEdit = Model.Id > 0;
+    ViewData["Title"] = isEdit ? $"Chỉnh sửa: {Model.Name}" : "Thêm sản phẩm iPhone mới";
+    var categories = ViewBag.Categories as List<Category> ?? new List<Category>();
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a asp-area="Admin" asp-controller="Admin" asp-action="Products" class="text-decoration-none text-muted small">
+                &larr; Quay lại danh sách sản phẩm
+            </a>
+        </div>
+        <h1 class="h3 fw-bold text-dark mb-1">@(isEdit ? $"Chỉnh sửa sản phẩm: {Model.Name}" : "Thêm sản phẩm iPhone mới")</h1>
+        <p class="text-muted small mb-0">Thiết lập thông số kỹ thuật chuẩn Apple AAR, cấu hình mã SKU và kiểm soát bảng giá bán lẻ.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-area="Admin" asp-controller="Admin" asp-action="Products" class="btn btn-light btn-sm px-3 rounded-pill">
+            Hủy bỏ
+        </a>
+        <button type="submit" form="productForm" class="btn btn-primary btn-sm px-4 rounded-pill fw-semibold shadow-sm">
+            Lưu sản phẩm
+        </button>
+    </div>
+</div>
+
+<form asp-area="Admin" asp-controller="Admin" asp-action="SaveProduct" method="post" enctype="multipart/form-data" id="productForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="RowVersion" />
+
+    <div class="row g-4">
+        <!-- ================= CỘT TRÁI (8 COLS) ================= -->
+        <div class="col-lg-8">
+            <!-- 1. Thông tin cơ bản & SKU -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">1. Thông tin cơ bản &amp; Định danh Apple</h3>
+                </div>
+                <div class="aar-card-body">
+                    <div class="mb-3">
+                        <label asp-for="Name" class="form-label small fw-bold">Tên hiển thị sản phẩm <span class="text-danger">*</span></label>
+                        <input asp-for="Name" class="form-control" placeholder="VD: iPhone 16 Pro Max 256GB - Titan Sa Mạc" required />
+                        <span asp-validation-for="Name" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="Sku" class="form-label small fw-bold">Mã SKU chuẩn Apple</label>
+                            <input asp-for="Sku" class="form-control font-monospace" placeholder="VD: IP16PM-256-DES" />
+                            <div class="form-text small">Mã định danh duy nhất cho việc quét mã vạch và phân loại kho.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ModelSeries" class="form-label small fw-bold">Dòng máy (Model Series) <span class="text-danger">*</span></label>
+                            <input asp-for="ModelSeries" class="form-control" placeholder="VD: iPhone 16 Pro Max" required />
+                            <span asp-validation-for="ModelSeries" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label asp-for="CategoryId" class="form-label small fw-bold">Thế hệ iPhone <span class="text-danger">*</span></label>
+                            <select asp-for="CategoryId" class="form-select" required>
+                                <option value="">-- Chọn thế hệ --</option>
+                                @foreach (var c in categories)
+                                {
+                                    <option value="@c.Id">@c.Name</option>
+                                }
+                            </select>
+                            <span asp-validation-for="CategoryId" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Storage" class="form-label small fw-bold">Dung lượng bộ nhớ <span class="text-danger">*</span></label>
+                            <select asp-for="Storage" class="form-select" required>
+                                <option value="128GB">128GB</option>
+                                <option value="256GB">256GB</option>
+                                <option value="512GB">512GB</option>
+                                <option value="1TB">1TB</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="Color" class="form-label small fw-bold">Màu sắc <span class="text-danger">*</span></label>
+                            <input asp-for="Color" class="form-control" placeholder="VD: Titan Sa Mạc" required />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Bảng giá bán lẻ & Tồn kho -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">2. Chính sách giá bán &amp; Tồn kho</h3>
+                </div>
+                <div class="aar-card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <label asp-for="ListedPrice" class="form-label small fw-bold">Giá niêm yết chính hãng (VNĐ)</label>
+                            <div class="input-group">
+                                <input asp-for="ListedPrice" type="number" step="10000" min="0" class="form-control" id="inputListedPrice" placeholder="VD: 34990000" />
+                                <span class="input-group-text">₫</span>
+                            </div>
+                            <div class="form-text small">Giá trần công bố bởi Apple Authorized Reseller (phải ≥ 0).</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Price" class="form-label small fw-bold">Giá bán khuyến mại AAR (VNĐ) <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input asp-for="Price" type="number" step="10000" min="1000" class="form-control" id="inputSalePrice" placeholder="VD: 31990000" required />
+                                <span class="input-group-text">₫</span>
+                            </div>
+                            <div id="priceNegativeWarning" class="text-danger small mt-1 d-none fw-semibold">
+                                ❌ Lỗi: Giá sản phẩm không được là số âm (phải lớn hơn 0 VNĐ)!
+                            </div>
+                            <div id="priceWarning" class="text-warning text-dark small mt-1 d-none fw-semibold">
+                                ⚠️ Cảnh báo: Giá bán khuyến mãi không thể vượt quá Giá niêm yết chính hãng!
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="WarrantyMonths" class="form-label small fw-bold">Thời hạn bảo hành Apple Care (Tháng)</label>
+                            <input asp-for="WarrantyMonths" type="number" class="form-control" value="@(Model.WarrantyMonths > 0 ? Model.WarrantyMonths : 12)" min="1" max="60" />
+                            <div class="form-text small">Mặc định 12 tháng theo chính sách 1 đổi 1 của Apple.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold text-muted">Quản lý tồn kho IMEI</label>
+                            @if (Model.Id > 0)
+                            {
+                                <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light">
+                                    <span class="fw-bold fs-6 @(Model.Quantity > 0 ? "text-success" : "text-danger")">
+                                        @(Model.Quantity > 0 ? $"🟢 Tồn kho: {Model.Quantity} máy" : "🔴 Hết hàng trong kho IMEI")
+                                    </span>
+                                    <a asp-area="Admin" asp-controller="Admin" asp-action="Inventory" asp-route-productId="@Model.Id" class="btn btn-outline-primary btn-sm rounded-pill px-3">
+                                        Kho IMEI &rarr;
+                                    </a>
+                                </div>
+                                <div class="form-text small text-muted">Hệ thống AAR tự động tính tồn kho theo số lượng IMEI có trạng thái InStock.</div>
+                            }
+                            else
+                            {
+                                <div class="p-2 border rounded bg-light text-muted small">
+                                    📦 <em>Tồn kho ban đầu là <strong>0 máy</strong>. Sau khi thêm sản phẩm thành công, bạn nạp số lượng máy tại mục <strong>Nhập lô IMEI</strong>.</em>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Thông số kỹ thuật & Mô tả -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">3. Thông số kỹ thuật &amp; Mô tả sản phẩm</h3>
+                </div>
+                <div class="aar-card-body">
+                    <div class="mb-3">
+                        <label asp-for="Specifications" class="form-label small fw-bold">Thông số kỹ thuật tóm tắt</label>
+                        <textarea asp-for="Specifications" class="form-control" rows="3" placeholder="VD: Chip A18 Pro 3nm, Màn hình 6.9 inch 120Hz ProMotion, Camera 48MP Zoom 5x, Pin 33h, Cổng USB-C 3.0"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label small fw-bold">Mô tả tiếp thị chi tiết</label>
+                        <textarea asp-for="Description" class="form-control" rows="5" placeholder="Nội dung mô tả sản phẩm trên trang chi tiết khách hàng..."></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= CỘT PHẢI (4 COLS) ================= -->
+        <div class="col-lg-4">
+            <!-- Trạng thái & Publish -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">Trạng thái phát hành</h3>
+                </div>
+                <div class="aar-card-body">
+                    <div class="form-check form-switch mb-3">
+                        <input asp-for="IsActive" class="form-check-input" type="checkbox" id="switchIsActive" />
+                        <label class="form-check-label small fw-bold" for="switchIsActive">Đang mở bán công khai</label>
+                    </div>
+                    <p class="text-muted small">
+                        Khi tắt trạng thái này, sản phẩm sẽ chuyển sang chế độ <strong>Tạm ẩn</strong> và không hiển thị trên storefront của khách.
+                    </p>
+
+                    <hr />
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary fw-semibold py-2">
+                            Lưu thông tin sản phẩm
+                        </button>
+                        <a asp-area="Admin" asp-controller="Admin" asp-action="Products" class="btn btn-light py-2">
+                            Quay lại
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hình ảnh đại diện -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">Ảnh sản phẩm</h3>
+                </div>
+                <div class="aar-card-body text-center">
+                    <div class="mb-3">
+                        <img id="imagePreview" 
+                             src="@(string.IsNullOrEmpty(Model.ImageUrl) ? "/images/products/iphone16promax.png" : Model.ImageUrl)" 
+                             alt="Product Preview" 
+                             style="max-width: 180px; height: 180px; object-fit: contain; border-radius: 12px; background: #f8fafc; border: 1px dashed #cbd5e1; padding: 8px;" />
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label small fw-bold">Chọn tệp hình ảnh mới</label>
+                        <input type="file" name="imageFile" class="form-control form-control-sm" accept="image/*" onchange="previewFile(this)" />
+                    </div>
+
+                    <div class="form-text small">Định dạng hỗ trợ: PNG, JPG, WEBP. Khuyên dùng nền trong suốt.</div>
+
+                    <input type="hidden" asp-for="ImageUrl" />
+                </div>
+            </div>
+
+            <!-- Quản lý IMEI (nếu Edit) -->
+            @if (isEdit)
+            {
+                <div class="aar-card mb-4">
+                    <div class="aar-card-header">
+                        <h3 class="aar-card-title">Kho IMEI sản phẩm</h3>
+                    </div>
+                    <div class="aar-card-body">
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span class="text-muted">Tổng số IMEI:</span>
+                            <span class="fw-bold">@(Model.ProductImeis?.Count ?? 0) máy</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 small">
+                            <span class="text-muted">Sẵn bán (InStock):</span>
+                            <span class="fw-bold text-success">@(Model.ProductImeis?.Count(i => i.Status == "InStock") ?? 0) máy</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3 small">
+                            <span class="text-muted">Đã bán (Sold):</span>
+                            <span class="fw-bold text-primary">@(Model.ProductImeis?.Count(i => i.Status == "Sold") ?? 0) máy</span>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <a asp-area="Admin" asp-controller="Admin" asp-action="Inventory" asp-route-skuFilter="@Model.Sku" class="btn btn-outline-primary btn-sm fw-semibold">
+                                Quản lý danh sách IMEI &rarr;
+                            </a>
+                            <a asp-area="Admin" asp-controller="Admin" asp-action="BatchImport" class="btn btn-outline-secondary btn-sm fw-semibold">
+                                + Nhập thêm IMEI cho máy này
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function previewFile(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('imagePreview').src = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        // Live validation for Price and ListedPrice
+        const salePriceInput = document.getElementById('inputSalePrice');
+        const listedPriceInput = document.getElementById('inputListedPrice');
+        const warningDiv = document.getElementById('priceWarning');
+        const negativeWarningDiv = document.getElementById('priceNegativeWarning');
+        const productForm = document.querySelector('form');
+
+        function checkPrices() {
+            const sale = parseFloat(salePriceInput.value);
+            const listed = parseFloat(listedPriceInput.value);
+
+            let hasError = false;
+
+            // 1. Kiểm tra giá âm
+            if ((!isNaN(sale) && sale < 0) || (!isNaN(listed) && listed < 0)) {
+                negativeWarningDiv.classList.remove('d-none');
+                hasError = true;
+            } else {
+                negativeWarningDiv.classList.add('d-none');
+            }
+
+            // 2. Kiểm tra giá bán > giá niêm yết
+            if (!isNaN(listed) && listed > 0 && !isNaN(sale) && sale > listed) {
+                warningDiv.classList.remove('d-none');
+            } else {
+                warningDiv.classList.add('d-none');
+            }
+
+            return !hasError;
+        }
+
+        salePriceInput.addEventListener('input', checkPrices);
+        listedPriceInput.addEventListener('input', checkPrices);
+
+        // Chặn phím '-' (dấu âm), 'e', 'E' ngay khi người dùng bấm phím
+        [salePriceInput, listedPriceInput].forEach(input => {
+            input.addEventListener('keydown', function(e) {
+                if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+                    e.preventDefault();
+                }
+            });
+
+            // Nếu người dùng paste chuỗi có dấu trừ vào
+            input.addEventListener('paste', function(e) {
+                const pasteData = (e.clipboardData || window.clipboardData).getData('text');
+                if (pasteData && pasteData.includes('-')) {
+                    e.preventDefault();
+                    const clean = pasteData.replace(/[^0-9]/g, '');
+                    this.value = clean;
+                    checkPrices();
+                }
+            });
+        });
+
+        // Chặn submit form nếu giá âm
+        if (productForm) {
+            productForm.addEventListener('submit', function(e) {
+                const sale = parseFloat(salePriceInput.value) || 0;
+                const listed = parseFloat(listedPriceInput.value) || 0;
+
+                if (sale <= 0) {
+                    e.preventDefault();
+                    negativeWarningDiv.classList.remove('d-none');
+                    salePriceInput.focus();
+                    alert('Lỗi: Giá bán sản phẩm phải lớn hơn 0 VNĐ!');
+                    return false;
+                }
+
+                if (listed < 0) {
+                    e.preventDefault();
+                    negativeWarningDiv.classList.remove('d-none');
+                    listedPriceInput.focus();
+                    alert('Lỗi: Giá niêm yết chính hãng không được là số âm!');
+                    return false;
+                }
+
+                if (listed > 0 && sale > listed) {
+                    e.preventDefault();
+                    warningDiv.classList.remove('d-none');
+                    salePriceInput.focus();
+                    alert('Cảnh báo: Giá bán khuyến mãi không thể cao hơn Giá niêm yết chính hãng!');
+                    return false;
+                }
+            });
+        }
+    </script>
+}

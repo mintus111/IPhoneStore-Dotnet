@@ -1,0 +1,631 @@
+@model OrderDetailViewModel
+@{
+    var order = Model.Order;
+    var orderCode = order.OrderCode ?? "DH261024-" + order.Id.ToString("D3");
+    ViewData["Title"] = $"Chi tiết Đơn hàng #{orderCode}";
+    bool isTerminal = order.OrderStatus == "Completed" || order.OrderStatus == "Cancelled" 
+                   || order.OrderStatus == "Hoàn tất" || order.OrderStatus == "Đã hủy";
+    bool isCancelled = order.OrderStatus == "Cancelled" || order.OrderStatus == "Đã hủy";
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <a asp-area="Admin" asp-controller="Admin" asp-action="Orders" class="text-decoration-none text-muted small">
+                &larr; Quay lại danh sách đơn hàng
+            </a>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <h1 class="h3 fw-bold text-dark mb-0">Đơn hàng #@orderCode</h1>
+            @if (order.OrderStatus == "Pending" || order.OrderStatus == "Chờ duyệt")
+            {
+                <span class="aar-pill aar-pill-amber">Chờ duyệt xuất kho</span>
+            }
+            else if (order.OrderStatus == "Confirmed" || order.OrderStatus == "Đã duyệt")
+            {
+                <span class="aar-pill aar-pill-blue">Đã duyệt</span>
+            }
+            else if (order.OrderStatus == "Shipping" || order.OrderStatus == "Đang giao")
+            {
+                <span class="aar-pill aar-pill-blue">Đang giao hàng</span>
+            }
+            else if (order.OrderStatus == "Completed" || order.OrderStatus == "Hoàn tất")
+            {
+                <span class="aar-pill aar-pill-green">Đã hoàn tất</span>
+            }
+            else if (order.OrderStatus == "Cancelled" || order.OrderStatus == "Đã hủy")
+            {
+                <span class="aar-pill aar-pill-red">Đã hủy</span>
+            }
+        </div>
+        <p class="text-muted small mt-1 mb-0">Thời gian đặt: @order.OrderDate.ToString("dd/MM/yyyy HH:mm:ss") · Kênh: Storefront Online BomChelsea</p>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm px-3 rounded-pill" onclick="window.print()">
+            🖨️ In phiếu xuất kho AAR
+        </button>
+        @if (!isTerminal)
+        {
+            <button type="submit" form="fulfillmentForm" class="btn btn-primary btn-sm px-4 rounded-pill fw-semibold shadow-sm">
+                Cập nhật &amp; Xuất kho &rarr;
+            </button>
+        }
+        else
+        {
+            <span class="badge bg-secondary d-inline-flex align-items-center px-3 py-2 rounded-pill">
+                🔒 Đơn hàng đã đóng
+            </span>
+        }
+    </div>
+</div>
+
+@if (TempData["ErrorMessage"] != null)
+{
+    <div class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fs-5">⚠️</span>
+            <div><strong>Lỗi nghiệp vụ:</strong> @TempData["ErrorMessage"]</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show mb-4 shadow-sm" role="alert">
+        <div class="d-flex align-items-center gap-2">
+            <span class="fs-5">✅</span>
+            <div><strong>Thành công:</strong> @TempData["Success"]</div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+@if (order.OrderStatus == "Cancelled" || order.OrderStatus == "Đã hủy")
+{
+    <div class="alert alert-danger d-flex align-items-center gap-3 mb-4 border-danger border-opacity-25 shadow-sm" role="alert">
+        <div class="fs-3">🚫</div>
+        <div>
+            <h5 class="alert-heading mb-1 fw-bold">Đơn hàng đã hoàn tất / đã hủy, không thể thay đổi trạng thái.</h5>
+            <div class="small">Đơn hàng này đã bị hủy. Hệ thống đã thu hồi phân bổ giữ kho, các mã IMEI và khóa toàn bộ quyền cập nhật thông tin đơn hàng.</div>
+        </div>
+    </div>
+}
+else if (order.OrderStatus == "Completed" || order.OrderStatus == "Hoàn tất")
+{
+    <div class="alert alert-success d-flex align-items-center gap-3 mb-4 border-success border-opacity-25 shadow-sm" role="alert">
+        <div class="fs-3">🎉</div>
+        <div>
+            <h5 class="alert-heading mb-1 fw-bold">Đơn hàng đã hoàn tất / đã hủy, không thể thay đổi trạng thái.</h5>
+            <div class="small">Đơn hàng đã giao thành công đến tay khách hàng. Mã bảo hành điện tử AAR đã được kích hoạt, hệ thống đã đóng đơn hàng và khóa mọi chỉnh sửa.</div>
+        </div>
+    </div>
+}
+
+<!-- ================= 4-STEP FULFILLMENT STEPPER ================= -->
+<div class="aar-stepper mb-4">
+    <div class="aar-stepper-line"></div>
+    <div class="aar-step completed">
+        <div class="aar-step-num">✓</div>
+        <span>1. Tiếp nhận đơn</span>
+    </div>
+    @if (order.OrderStatus == "Cancelled" || order.OrderStatus == "Đã hủy")
+    {
+        <div class="aar-step completed" style="background:#fef2f2; border-color:#f87171;">
+            <div class="aar-step-num" style="background:#ef4444; color:white;">✕</div>
+            <span class="text-danger fw-bold">Đã hủy đơn hàng</span>
+        </div>
+    }
+    else
+    {
+        <div class="aar-step @(order.OrderStatus != "Completed" ? "active" : "completed")">
+            <div class="aar-step-num">@(order.OrderStatus == "Completed" ? "✓" : "2")</div>
+            <span>2. Gán IMEI xuất kho</span>
+        </div>
+        <div class="aar-step @(order.OrderStatus == "Shipping" || order.OrderStatus == "Completed" ? "completed" : "")">
+            <div class="aar-step-num">@(order.OrderStatus == "Shipping" || order.OrderStatus == "Completed" ? "✓" : "3")</div>
+            <span>3. Đóng gói &amp; Vận chuyển</span>
+        </div>
+        <div class="aar-step @(order.OrderStatus == "Completed" ? "completed" : "")">
+            <div class="aar-step-num">@(order.OrderStatus == "Completed" ? "✓" : "4")</div>
+            <span>4. Giao thành công</span>
+        </div>
+    }
+</div>
+
+<form asp-area="Admin" asp-controller="Admin" asp-action="FulfillOrder" method="post" id="fulfillmentForm">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="orderId" value="@order.Id" />
+
+    <div class="row g-4">
+        <!-- ================= CỘT TRÁI (8 COLS) ================= -->
+        <div class="col-lg-8">
+            <!-- 1. Danh sách sản phẩm & Phân bổ IMEI -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">
+                        Danh sách sản phẩm &amp; Gán mã IMEI
+                    </h3>
+                    <span class="badge bg-light text-muted border">Bắt buộc gán IMEI trước khi chuyển sang Đang giao</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="aar-table">
+                        <thead>
+                            <tr>
+                                <th>Sản phẩm</th>
+                                <th>Đơn giá</th>
+                                <th>SL</th>
+                                <th>Thành tiền</th>
+                                <th style="width: 280px;">Gán mã IMEI máy xuất</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var detail in order.OrderDetails)
+                            {
+                                var availableForThis = Model.AvailableImeis.Where(i => i.ProductId == detail.ProductId).ToList();
+                                var assignedImeis = (order.ProductImeis ?? new List<ProductImei>())
+                                    .Where(pi => pi.ProductId == detail.ProductId)
+                                    .ToList();
+
+                                if (detail.ProductImei != null && !assignedImeis.Any(pi => pi.Imei == detail.ProductImei.Imei))
+                                {
+                                    assignedImeis.Insert(0, detail.ProductImei);
+                                }
+
+                                var assignedImeiStrings = assignedImeis.Select(pi => pi.Imei).ToHashSet();
+                                var inStockForThis = availableForThis.Where(i => !assignedImeiStrings.Contains(i.Imei)).ToList();
+
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <img src="@(detail.Product?.ImageUrl ?? "/images/products/iphone16promax.png")" 
+                                                 alt="@detail.Product?.Name" 
+                                                 style="width: 40px; height: 40px; object-fit: contain; border-radius: 6px; background:#f8fafc; border:1px solid #e2e8f0; padding:2px;" />
+                                            <div>
+                                                <div class="fw-bold text-dark">@(detail.Product?.Name ?? "iPhone")</div>
+                                                <div class="text-muted small">SKU: @(detail.Product?.Sku ?? "-") · @detail.Product?.Storage · @detail.Product?.Color</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>@detail.UnitPrice.ToString("N0") ₫</td>
+                                    <td class="fw-bold">@detail.Quantity</td>
+                                    <td class="fw-bold text-primary">@((detail.UnitPrice * detail.Quantity).ToString("N0")) ₫</td>
+                                    <td>
+                                        <div class="d-flex flex-column gap-2">
+                                            @for (int k = 0; k < detail.Quantity; k++)
+                                            {
+                                                var currentImei = k < assignedImeis.Count ? assignedImeis[k] : null;
+                                                <input type="hidden" name="detailIds" value="@detail.Id" />
+                                                @if (currentImei != null)
+                                                {
+                                                    <div class="p-2 border rounded bg-success bg-opacity-10 border-success border-opacity-25 shadow-sm">
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <span class="small text-success fw-bold">✓ @(detail.Quantity > 1 ? $"Máy #{k + 1}/{detail.Quantity}:" : "Đã gán IMEI:")</span>
+                                                            <span class="badge bg-success bg-opacity-75 text-white" style="font-size: 0.65rem;">Đã gán</span>
+                                                        </div>
+                                                        <span class="font-monospace fw-bold text-dark fs-6">@currentImei.Imei</span>
+                                                        <input type="hidden" name="selectedImeis" value="@currentImei.Imei" />
+                                                    </div>
+                                                }
+                                                else if (isTerminal)
+                                                {
+                                                    <div class="p-2 border rounded bg-light text-muted">
+                                                        <div class="d-flex justify-content-between align-items-center">
+                                                            <span class="small fw-semibold text-secondary">Máy #@(k + 1)/@detail.Quantity</span>
+                                                            <span class="badge bg-secondary" style="font-size: 0.65rem;">Chưa gán</span>
+                                                        </div>
+                                                        <div class="small text-muted mt-1 fst-italic">Đơn hàng đã kết thúc (Không gán IMEI)</div>
+                                                    </div>
+                                                }
+                                                else
+                                                {
+                                                    <div class="p-2 border rounded bg-light border-warning border-opacity-50 shadow-sm">
+                                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                                            <span class="small text-dark fw-bold">⚠️ Máy #@(k + 1)/@detail.Quantity:</span>
+                                                            <span class="badge bg-warning text-dark" style="font-size: 0.65rem;">Chờ gán</span>
+                                                        </div>
+                                                        <select name="selectedImeis" class="form-select form-select-sm font-monospace border-primary imei-select" required>
+                                                            <option value="">-- Quét / Chọn IMEI Máy #@(k + 1) --</option>
+                                                            @foreach (var imei in inStockForThis)
+                                                            {
+                                                                <option value="@imei.Imei">@imei.Imei (@imei.Status)</option>
+                                                            }
+                                                        </select>
+                                                        <div class="form-text small text-muted mt-1" style="font-size: 0.72rem;">Có @inStockForThis.Count máy sẵn bán trong kho.</div>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            @if (!isTerminal)
+            {
+                <!-- 2. Quét mã vạch IMEI (Barcode Scanner Box) -->
+                <div class="aar-scanner-box mb-4">
+                    <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+                        <svg width="24" height="24" fill="none" stroke="#2563eb" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/></svg>
+                        <h4 class="h6 fw-bold text-primary mb-0">Quét mã vạch IMEI bằng đầu đọc Laser / Camera</h4>
+                    </div>
+                    <p class="text-muted small mb-3">Đưa đầu đọc mã vạch quét trực tiếp lên tem hộp máy iPhone để gán nhanh tự động.</p>
+                    <div class="input-group input-group-lg mx-auto" style="max-width: 480px;">
+                        <span class="input-group-text bg-white border-end-0">🏷️</span>
+                        <input type="text" id="barcodeScanInput" class="form-control font-monospace border-start-0" placeholder="Chờ quét mã vạch 15 số..." autofocus />
+                        <button class="btn btn-primary px-3 fw-semibold" type="button" onclick="handleBarcodeScan()">Gán mã</button>
+                    </div>
+                </div>
+            }
+
+            <!-- 3. Thông tin vận chuyển & Vận đơn -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">
+                        Thông tin giao vận &amp; Đơn vị liên kết
+                    </h3>
+                </div>
+                <div class="aar-card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Đơn vị vận chuyển</label>
+                            <select name="shippingUnit" class="form-select" @(isTerminal ? "disabled" : "")>
+                                <option value="Giao Hàng Nhanh (GHN)" selected="@(order.ShippingUnit == "Giao Hàng Nhanh (GHN)")">Giao Hàng Nhanh (GHN)</option>
+                                <option value="Viettel Post" selected="@(order.ShippingUnit == "Viettel Post")">Viettel Post</option>
+                                <option value="Shopee Express" selected="@(order.ShippingUnit == "Shopee Express")">Shopee Express</option>
+                                <option value="BomChelsea Apple Direct Delivery" selected="@(order.ShippingUnit == "BomChelsea Apple Direct Delivery")">BomChelsea Apple Direct Delivery (Hỏa tốc 2H)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-bold">Mã vận đơn (Tracking Number)</label>
+                            <input type="text" name="trackingNumber" value="@order.TrackingNumber" class="form-control font-monospace" placeholder="VD: GHN-88901234VN" @(isTerminal ? "disabled" : "") />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= CỘT PHẢI (4 COLS) ================= -->
+        <div class="col-lg-4">
+            <!-- Thông tin khách hàng -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">Thông tin khách nhận hàng</h3>
+                </div>
+                <div class="aar-card-body">
+                    <div class="mb-3">
+                        <div class="small text-muted">Họ và tên khách hàng:</div>
+                        <div class="fw-bold text-dark fs-6">@(order.Customer?.FullName ?? "Khách vãng lai")</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="small text-muted">Số điện thoại liên hệ:</div>
+                        <div class="fw-bold text-dark">@(order.Customer?.PhoneNumber ?? "-")</div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="small text-muted">Địa chỉ nhận hàng:</div>
+                        <div class="text-secondary small">@(string.IsNullOrEmpty(order.ShippingAddress) ? (order.Customer?.Address ?? "-") : order.ShippingAddress)</div>
+                    </div>
+                    @if (!string.IsNullOrEmpty(order.Notes))
+                    {
+                        <div class="p-2 border rounded bg-light small">
+                            <strong class="text-dark">Ghi chú:</strong> @order.Notes
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Tổng kết thanh toán & Điều hướng trạng thái -->
+            <div class="aar-card mb-4">
+                <div class="aar-card-header">
+                    <h3 class="aar-card-title">Thanh toán &amp; Trạng thái</h3>
+                </div>
+                <div class="aar-card-body">
+                    <div class="d-flex justify-content-between mb-2 small">
+                        <span class="text-muted">Tổng tiền hàng:</span>
+                        <span class="fw-semibold">@order.TotalAmount.ToString("N0") ₫</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 small">
+                        <span class="text-muted">Phí giao hàng:</span>
+                        <span class="text-success fw-semibold">Miễn phí (AAR Free)</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3 pt-2 border-top">
+                        <span class="fw-bold text-dark">Tổng thanh toán:</span>
+                        <span class="fw-bold text-primary fs-5">@order.TotalAmount.ToString("N0") ₫</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Trạng thái thanh toán</label>
+                        <select name="paymentStatus" id="paymentStatusSelect" class="form-select form-select-sm" @(isTerminal ? "disabled" : "")>
+                            <option value="Đã thanh toán" selected="@(order.PaymentStatus == "Đã thanh toán")">Đã thanh toán</option>
+                            <option value="Chưa thanh toán" selected="@(order.PaymentStatus == "Chưa thanh toán")">Chưa thanh toán</option>
+                            <option value="Chờ hoàn tiền" disabled="@(!isCancelled)" selected="@(order.PaymentStatus == "Chờ hoàn tiền")">Chờ hoàn tiền</option>
+                            <option value="Đã hoàn tiền" disabled="@(!isCancelled)" selected="@(order.PaymentStatus == "Đã hoàn tiền")">Đã hoàn tiền</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Trạng thái đơn hàng</label>
+                        <select name="orderStatus" id="orderStatusSelect" class="form-select form-select-sm" @(isTerminal ? "disabled" : "")>
+                            <option value="Pending" selected="@(order.OrderStatus == "Pending" || order.OrderStatus == "Chờ duyệt")">Chờ duyệt</option>
+                            <option value="Confirmed" selected="@(order.OrderStatus == "Confirmed" || order.OrderStatus == "Đã duyệt")">Đã duyệt</option>
+                            <option value="Shipping" selected="@(order.OrderStatus == "Shipping" || order.OrderStatus == "Đang giao")">Đang giao hàng (In Transit)</option>
+                            <option value="Completed" selected="@(order.OrderStatus == "Completed" || order.OrderStatus == "Hoàn tất")">Hoàn tất giao hàng</option>
+                            <option value="Cancelled" selected="@(order.OrderStatus == "Cancelled" || order.OrderStatus == "Đã hủy")">Hủy đơn hàng</option>
+                        </select>
+                        <div id="statusConstraintNotice" class="mt-2 small" style="display:none;"></div>
+                        @if (isTerminal)
+                        {
+                            <div class="form-text text-danger small mt-1">
+                                🔒 Đơn hàng đã kết thúc, không thể thay đổi trạng thái.
+                            </div>
+                        }
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        @if (!isTerminal)
+                        {
+                            <button type="submit" class="btn btn-primary fw-semibold py-2">
+                                Lưu &amp; Cập nhật xuất kho
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="text-center p-3 rounded bg-light border border-secondary border-opacity-25 text-muted small fw-semibold">
+                                🔒 Đơn hàng đã đóng &mdash; Toàn bộ thao tác bị khóa
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        function handleBarcodeScan() {
+            @if (isTerminal) {
+                <text>return;</text>
+            }
+            const scanInput = document.getElementById('barcodeScanInput');
+            if (!scanInput) return;
+            const val = scanInput.value.trim();
+            if (!val || val.length !== 15) {
+                alert('Vui lòng quét hoặc nhập đúng mã IMEI chuẩn 15 chữ số!');
+                scanInput.focus();
+                return;
+            }
+
+            // Kiểm tra trùng lặp với các máy đã được gán hoặc đang chọn trong đơn hàng
+            const allAssignedImeis = [];
+            document.querySelectorAll('input[name="selectedImeis"], select[name="selectedImeis"]').forEach(el => {
+                if (el.value) allAssignedImeis.push(el.value.trim());
+            });
+
+            if (allAssignedImeis.includes(val)) {
+                alert('Mã IMEI ' + val + ' đã được gán cho một máy trong đơn này! Vui lòng quét mã IMEI khác.');
+                scanInput.value = '';
+                scanInput.focus();
+                return;
+            }
+
+            // Gán vào dropdown đầu tiên chưa có giá trị
+            const selects = document.querySelectorAll('select[name="selectedImeis"]');
+            let found = false;
+            let targetSlotName = '';
+
+            for (let sel of selects) {
+                if (!sel.value || sel.value === '') {
+                    for (let opt of sel.options) {
+                        if (opt.value === val) {
+                            sel.value = val;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        const newOpt = new Option(val + ' (Đã quét)', val, true, true);
+                        sel.add(newOpt);
+                        found = true;
+                    }
+
+                    const parentCard = sel.closest('.border');
+                    if (parentCard) {
+                        const labelSpan = parentCard.querySelector('.small.fw-bold');
+                        if (labelSpan) targetSlotName = labelSpan.textContent.trim();
+                    }
+                    break;
+                }
+            }
+
+            if (found) {
+                scanInput.value = '';
+                alert('Đã gán thành công mã IMEI: ' + val + (targetSlotName ? ' cho ' + targetSlotName : ''));
+            } else {
+                alert('Tất cả các máy trong đơn hàng này đã được gán đầy đủ mã IMEI!');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            @if (isTerminal)
+            {
+                <text>
+                const form = document.getElementById('fulfillmentForm');
+                if (form) {
+                    form.addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        alert('Đơn hàng đã ở trạng thái kết thúc, không thể chỉnh sửa!');
+                        return false;
+                    });
+                }
+                </text>
+            }
+            else
+            {
+                <text>
+                const scanInput = document.getElementById('barcodeScanInput');
+                if (scanInput) {
+                    scanInput.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleBarcodeScan();
+                        }
+                    });
+                }
+
+                // Ràng buộc nghiệp vụ giữa Trạng thái Đơn hàng và Trạng thái Thanh toán (AAR State Machine)
+                const orderStatusSelect = document.getElementById('orderStatusSelect');
+                const paymentStatusSelect = document.getElementById('paymentStatusSelect');
+                const noticeBox = document.getElementById('statusConstraintNotice');
+
+                function syncStatusRules() {
+                    if (!orderStatusSelect || !paymentStatusSelect) return;
+                    const oVal = orderStatusSelect.value;
+                    const pVal = paymentStatusSelect.value;
+
+                    const optChoHoan = paymentStatusSelect.querySelector('option[value="Chờ hoàn tiền"]');
+                    const optDaHoan = paymentStatusSelect.querySelector('option[value="Đã hoàn tiền"]');
+                    const optDaThanhToan = paymentStatusSelect.querySelector('option[value="Đã thanh toán"]');
+                    const optChuaThanhToan = paymentStatusSelect.querySelector('option[value="Chưa thanh toán"]');
+
+                    if (oVal !== 'Cancelled') {
+                        // ĐƠN HÀNG ĐANG LƯU HÀNH (Chờ duyệt, Đã duyệt, Đang giao, Hoàn tất)
+                        // Khóa tuyệt đối: Không cho chọn "Chờ hoàn tiền" hoặc "Đã hoàn tiền"
+                        if (optChoHoan) optChoHoan.disabled = true;
+                        if (optDaHoan) optDaHoan.disabled = true;
+                        if (optDaThanhToan) optDaThanhToan.disabled = false;
+                        if (optChuaThanhToan) optChuaThanhToan.disabled = false;
+
+                        // Nếu trước đó đang chọn trạng thái hoàn tiền thì đưa về "Đã thanh toán"
+                        if (paymentStatusSelect.value === 'Chờ hoàn tiền' || paymentStatusSelect.value === 'Đã hoàn tiền') {
+                            paymentStatusSelect.value = 'Đã thanh toán';
+                        }
+
+                        if (oVal === 'Completed') {
+                            if (paymentStatusSelect.value === 'Chưa thanh toán') {
+                                paymentStatusSelect.value = 'Đã thanh toán';
+                            }
+                            if (noticeBox) {
+                                noticeBox.style.display = 'block';
+                                noticeBox.className = 'mt-2 small p-2 rounded bg-success bg-opacity-10 border border-success border-opacity-25 text-success';
+                                noticeBox.innerHTML = '✓ <strong>Quy chuẩn AAR:</strong> Đơn hàng "Hoàn tất" bắt buộc đã thu đủ tiền. Trạng thái thanh toán tự động xác nhận <strong>Đã thanh toán</strong> (khóa các tùy chọn hoàn tiền).';
+                            }
+                        } else {
+                            if (noticeBox) {
+                                noticeBox.style.display = 'none';
+                            }
+                        }
+                    } else {
+                        // ĐƠN HÀNG BỊ HỦY (Cancelled)
+                        // Mở khóa các tùy chọn hoàn tiền
+                        if (optChoHoan) optChoHoan.disabled = false;
+                        if (optDaHoan) optDaHoan.disabled = false;
+
+                        if (pVal === 'Đã thanh toán') {
+                            paymentStatusSelect.value = 'Chờ hoàn tiền';
+                            if (noticeBox) {
+                                noticeBox.style.display = 'block';
+                                noticeBox.className = 'mt-2 small p-2 rounded bg-danger bg-opacity-10 border border-danger border-opacity-25 text-danger';
+                                noticeBox.innerHTML = '⚠️ <strong>Chính sách hoàn tiền:</strong> Đơn hàng bị hủy nếu đã thanh toán trước sẽ tự động chuyển sang trạng thái <strong>Chờ hoàn tiền</strong> để bộ phận kế toán thực hiện hoàn tiền cho khách.';
+                            }
+                        } else if (paymentStatusSelect.value === 'Chờ hoàn tiền' || paymentStatusSelect.value === 'Đã hoàn tiền') {
+                            if (noticeBox) {
+                                noticeBox.style.display = 'block';
+                                noticeBox.className = 'mt-2 small p-2 rounded bg-warning bg-opacity-10 border border-warning border-opacity-25 text-dark';
+                                noticeBox.innerHTML = '🔄 <strong>Đơn hàng xử lý hoàn tiền:</strong> Trạng thái ghi nhận hoàn tất thủ tục tài chính cho khách.';
+                            }
+                        } else {
+                            // Trường hợp khách CHƯA THANH TOÁN (COD hoặc chưa chuyển khoản)
+                            if (noticeBox) {
+                                noticeBox.style.display = 'block';
+                                noticeBox.className = 'mt-2 small p-2 rounded bg-secondary bg-opacity-10 border border-secondary border-opacity-25 text-secondary';
+                                noticeBox.innerHTML = 'ℹ️ <strong>Hủy đơn chưa thanh toán:</strong> Đơn hàng chưa thu tiền (COD hoặc chưa chuyển khoản) khi hủy sẽ <strong>giữ nguyên Chưa thanh toán</strong> (không phát sinh hoàn tiền). Hệ thống tự động hoàn tồn kho và giải phóng mã IMEI.';
+                            }
+                        }
+                    }
+                }
+
+                // Khởi tạo trạng thái ràng buộc ban đầu
+                syncStatusRules();
+
+                if (orderStatusSelect) {
+                    orderStatusSelect.addEventListener('change', syncStatusRules);
+                }
+
+                if (paymentStatusSelect) {
+                    paymentStatusSelect.addEventListener('change', function () {
+                        const oVal = orderStatusSelect ? orderStatusSelect.value : '';
+                        if (oVal === 'Completed' && this.value === 'Chưa thanh toán') {
+                            alert('⚠️ Cảnh báo nghiệp vụ AAR: Đơn hàng "Hoàn tất giao hàng" không thể để "Chưa thanh toán"! Nếu máy đã giao thành công cho khách, dòng tiền phải được ghi nhận "Đã thanh toán".');
+                            this.value = 'Đã thanh toán';
+                            syncStatusRules();
+                        } else if (oVal === 'Cancelled') {
+                            syncStatusRules();
+                        }
+                    });
+                }
+
+                // Kiểm tra form trước khi xuất kho
+                const form = document.getElementById('fulfillmentForm');
+                if (form) {
+                    form.addEventListener('submit', function (e) {
+                        const statusSelect = document.querySelector('select[name="orderStatus"]');
+                        const isShippingOrCompleted = statusSelect && (statusSelect.value === 'Shipping' || statusSelect.value === 'Completed');
+
+                        // 0. Kiểm tra nếu đơn hàng không phải là Hủy thì không được chọn Chờ hoàn tiền / Đã hoàn tiền
+                        if (statusSelect && statusSelect.value !== 'Cancelled') {
+                            const paySelect = document.querySelector('select[name="paymentStatus"]');
+                            if (paySelect && (paySelect.value === 'Chờ hoàn tiền' || paySelect.value === 'Đã hoàn tiền')) {
+                                e.preventDefault();
+                                alert('Lỗi nghiệp vụ: Chỉ đơn hàng ở trạng thái "Hủy đơn hàng" mới được phép chọn Chờ hoàn tiền hoặc Đã hoàn tiền!');
+                                paySelect.focus();
+                                return false;
+                            }
+                        }
+
+                        // 1. Kiểm tra đơn hoàn tất không được Chưa thanh toán
+                        if (statusSelect && statusSelect.value === 'Completed') {
+                            const paySelect = document.querySelector('select[name="paymentStatus"]');
+                            if (paySelect && paySelect.value === 'Chưa thanh toán') {
+                                e.preventDefault();
+                                alert('Lỗi nghiệp vụ: Đơn hàng hoàn tất bắt buộc phải ở trạng thái "Đã thanh toán"!');
+                                paySelect.focus();
+                                return false;
+                            }
+                        }
+
+                        // 2. Kiểm tra gán đầy đủ IMEI cho từng máy
+                        const selects = document.querySelectorAll('select[name="selectedImeis"]');
+                        for (let sel of selects) {
+                            if (!sel.value && isShippingOrCompleted) {
+                                e.preventDefault();
+                                alert('Vui lòng gán đầy đủ mã IMEI cho tất cả các máy trước khi chuyển đơn sang trạng thái Đang giao hoặc Hoàn tất!');
+                                sel.focus();
+                                return false;
+                            }
+                        }
+
+                        const allImeis = [];
+                        const allInputs = document.querySelectorAll('input[name="selectedImeis"], select[name="selectedImeis"]');
+                        for (let el of allInputs) {
+                            if (el.value) {
+                                const trimmed = el.value.trim();
+                                if (allImeis.includes(trimmed)) {
+                                    e.preventDefault();
+                                    alert('Phát hiện trùng lặp mã IMEI: ' + trimmed + '. Mỗi máy phải được gán một mã IMEI duy nhất!');
+                                    return false;
+                                }
+                                allImeis.push(trimmed);
+                            }
+                        }
+                    });
+                }
+                </text>
+            }
+        });
+    </script>
+}
+

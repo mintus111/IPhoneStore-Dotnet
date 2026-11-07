@@ -1,0 +1,506 @@
+@page "/"
+@inject IDbContextFactory<IPhoneStoreDbContext> DbFactory
+@inject CartService Cart
+@inject ToastService Toast
+@inject NavigationManager Nav
+@inject AuthenticationStateProvider AuthProvider
+
+<PageTitle>BomChelsea - Đại Lý Ủy Quyền Apple Chính Hãng VN/A</PageTitle>
+
+<!-- ================= 1. HERO BANNER: IPHONE 16 PRO MAX TITAN SA MẠC ================= -->
+<section class="apple-hero-banner" style="background: radial-gradient(ellipse at 85% 30%, #2e2e33 0%, #17171a 55%, #0d0d0f 100%); border-radius: 28px; padding: 48px 40px; color: #fff; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.4); margin-bottom: 2rem;">
+    <div class="row align-items-center">
+        <div class="col-lg-7">
+            <div class="hero-content">
+                <div class="d-inline-flex align-items-center gap-2 mb-3" style="background: rgba(234, 179, 8, 0.15); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.3); border-radius: 20px; font-weight: 700; text-transform: uppercase; font-size: 0.8rem; padding: 6px 14px;">
+                    <span>✨</span> Titan Sa Mạc • Đỉnh Cao Công Nghệ
+                </div>
+                <h1 class="hero-title" style="font-size: 3.2rem; font-weight: 800; color: #fff; letter-spacing: -0.03em; margin: 10px 0;">iPhone 16 Pro Max</h1>
+                <p class="hero-subtitle" style="color: #a1a1aa; line-height: 1.6; max-width: 540px; font-size: 1.05rem; margin-bottom: 1.5rem;">
+                    Sức mạnh chip Apple A18 Pro, Nút Điều khiển Camera (Camera Control) hoàn toàn mới cùng thời lượng pin tốt nhất từng có trên iPhone.
+                </p>
+                <div class="hero-price mb-4" style="color: #fff; font-size: 1.8rem; font-weight: 800;">
+                    Từ 34.990.000 ₫ <span class="fs-6 fw-normal text-secondary ms-2 text-decoration-line-through">36.990.000 ₫</span>
+                    <span class="badge bg-danger ms-2 fs-6 fw-bold">-6%</span>
+                </div>
+                <div class="hero-actions d-flex flex-wrap gap-3">
+                    <a href="/product/@(_products.FirstOrDefault()?.Id ?? 1)" class="apple-cta-primary px-4 py-3 fs-6">
+                        Mua ngay
+                    </a>
+                    <a href="#danh-sach-iphone" class="btn btn-outline-light rounded-pill px-4 py-3 fs-6 fw-semibold" style="border-width: 1.5px; backdrop-filter: blur(8px);">
+                        Khám phá tất cả dòng máy &darr;
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5 text-center mt-4 mt-lg-0">
+            <img src="/images/hero-iphone16.jpg"
+                 alt="iPhone 16 Pro Max Titan Sa Mạc"
+                 class="img-fluid rounded-4 shadow-lg"
+                 style="max-height: 380px; object-fit: cover; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 20px 40px rgba(0,0,0,0.6);" />
+        </div>
+    </div>
+</section>
+
+<!-- ================= 2. TRUST BADGES GRID ================= -->
+<section class="trust-badges-grid mb-4">
+    <div class="trust-badge-card">
+        <div class="trust-icon-box">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+        </div>
+        <div>
+            <div class="trust-title">100% Chính Hãng Apple VN</div>
+            <p class="trust-desc">Bảo hành 12 tháng tại các trung tâm uỷ quyền Apple AASP toàn quốc.</p>
+        </div>
+    </div>
+    <div class="trust-badge-card">
+        <div class="trust-icon-box">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        </div>
+        <div>
+            <div class="trust-title">Giao Siêu Tốc 2 Giờ</div>
+            <p class="trust-desc">Miễn phí giao hàng nội thành TP.HCM & Hà Nội, giữ chỗ máy ngay lập tức.</p>
+        </div>
+    </div>
+    <div class="trust-badge-card">
+        <div class="trust-icon-box">
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </div>
+        <div>
+            <div class="trust-title">1 Đổi 1 Trong 30 Ngày</div>
+            <p class="trust-desc">Lỗi phần cứng từ nhà sản xuất được đổi ngay máy mới nguyên seal.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ================= 3. CATEGORY CARDS GRID ================= -->
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="fs-4 fw-bold text-dark mb-0">Danh Mục Sản Phẩm Apple</h2>
+    <span class="text-secondary small">Chuẩn máy mới 100% VN/A</span>
+</div>
+<section class="category-cards-grid mb-4">
+    <a href="@Url(cat: 1, page: 1)" class="category-card text-decoration-none @(CategoryId == 1 ? "active" : "")">
+        <img src="https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" alt="iPhone 16 Series" class="category-img" />
+        <div class="category-name">iPhone 16 Series</div>
+        <div class="category-count">Titan Sa Mạc, Pro & Plus</div>
+    </a>
+    <a href="@Url(cat: 2, page: 1)" class="category-card text-decoration-none @(CategoryId == 2 ? "active" : "")">
+        <img src="https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-15-finish-select-202309-6-1inch-blue?wid=5120&hei=2880&fmt=p-jpg" alt="iPhone 15 Series" class="category-img" />
+        <div class="category-name">iPhone 15 Series</div>
+        <div class="category-count">Dynamic Island, USB-C</div>
+    </a>
+    <a href="@Url(cat: 3, page: 1)" class="category-card text-decoration-none @(CategoryId == 3 ? "active" : "")">
+        <img src="https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-14-finish-select-202209-6-1inch-blue?wid=5120&hei=2880&fmt=p-jpg" alt="iPhone 14 Series" class="category-img" />
+        <div class="category-name">iPhone 14 Series</div>
+        <div class="category-count">Bền bỉ, hiệu năng cao</div>
+    </a>
+    <a href="@Url(cat: 4, page: 1)" class="category-card text-decoration-none @(CategoryId == 4 ? "active" : "")">
+        <img src="https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MTJV3?wid=1144&hei=1144&fmt=jpeg" alt="iPhone 13 & Cũ" class="category-img" />
+        <div class="category-name">iPhone 13 & Cũ</div>
+        <div class="category-count">Giá tốt, pin trâu, mượt mà</div>
+    </a>
+</section>
+
+<!-- ================= 4. MAIN CATALOG ================= -->
+<div class="container py-2" id="danh-sach-iphone">
+    <!-- Series Filter Pills Bar & Dropdowns (Ảnh 4: Bộ Lọc xổ ra kế bên Sắp xếp) -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-4 pb-3 border-bottom">
+        <!-- Left: Category Pills (Giữ nguyên tại chỗ không nhảy về đầu trang) -->
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <a href="@Url(cat: 0, page: 1)"
+               class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(!CategoryId.HasValue || CategoryId == 0 ? "btn-primary" : "btn-light text-dark")">
+                Tất cả iPhone
+            </a>
+            @foreach (var cat in _categories)
+            {
+                <a href="@Url(cat: cat.Id, page: 1)"
+                   class="btn btn-sm rounded-pill px-3 py-2 fw-semibold @(CategoryId == cat.Id ? "btn-primary" : "btn-light text-dark")">
+                    @cat.Name
+                </a>
+            }
+        </div>
+
+        <!-- Right: Filter Dropdown (Xổ ra) + Sort Dropdown -->
+        <div class="d-flex align-items-center gap-2">
+            <!-- Dropdown Bộ Lọc -->
+            <div class="dropdown">
+                <button class="btn btn-sm rounded-pill px-3 py-2 fw-semibold dropdown-toggle d-flex align-items-center gap-1 @(!string.IsNullOrEmpty(_storage) ? "btn-primary text-white" : "btn-outline-secondary")"
+                        type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+                    Bộ Lọc @(!string.IsNullOrEmpty(_storage) ? $"({_storage})" : "")
+                </button>
+                <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-3 rounded-4" style="min-width: 260px;">
+                    <h6 class="dropdown-header px-0 text-dark fw-bold mb-2">Dung lượng bộ nhớ</h6>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <a href="@Url(storage: "", page: 1)"
+                           class="btn btn-sm rounded-pill @(string.IsNullOrEmpty(_storage) ? "btn-dark" : "btn-light border")" style="font-size: 0.8rem;">
+                            Tất cả
+                        </a>
+                        @foreach (var s in new[] { "128GB", "256GB", "512GB", "1TB" })
+                        {
+                            <a href="@Url(storage: s, page: 1)"
+                               class="btn btn-sm rounded-pill @(_storage == s ? "btn-primary" : "btn-light border")" style="font-size: 0.8rem;">
+                                @s
+                            </a>
+                        }
+                    </div>
+                    @if (!string.IsNullOrEmpty(_storage) || (CategoryId.HasValue && CategoryId.Value > 0) || !string.IsNullOrEmpty(_keyword))
+                    {
+                        <div class="border-top pt-2">
+                            <a href="/#danh-sach-iphone" class="btn btn-outline-danger btn-sm w-100 rounded-pill" style="font-size:0.75rem;">
+                                Xóa tất cả bộ lọc
+                            </a>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Sort By Dropdown -->
+            <div class="d-flex align-items-center gap-2">
+                <span class="text-secondary small d-none d-sm-inline">Sắp xếp:</span>
+                <select @bind="_sort" class="form-select form-select-sm rounded-pill px-3" style="width: auto;" @bind:after="ApplyFilter">
+                    <option value="">Mới nhất</option>
+                    <option value="price_asc">Giá thấp đến cao</option>
+                    <option value="price_desc">Giá cao đến thấp</option>
+                    <option value="name">Tên máy A-Z</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section Title & Counter -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fs-4 fw-bold text-dark mb-0">Các Dòng iPhone Chính Hãng</h2>
+            <div class="text-secondary small">Hiện có @_totalCount sản phẩm đáp ứng tiêu chí</div>
+        </div>
+        <span class="badge bg-light text-dark border px-3 py-2">Trang @_page / @_totalPages</span>
+    </div>
+
+    <!-- ================= 2. PRODUCT CATALOG GRID (MOCKUP 01 & 02) ================= -->
+    @if (_loading)
+    {
+        <div class="text-center py-5 text-secondary">
+            <span class="spinner-border spinner-border-sm me-2"></span> Đang tải sản phẩm...
+        </div>
+    }
+    else if (_products.Count == 0)
+    {
+        <div class="bg-white border rounded-3 p-5 text-center shadow-sm">
+            <h5 class="fw-bold text-dark">Không tìm thấy sản phẩm iPhone nào</h5>
+            <p class="text-secondary small">Vui lòng thử tìm kiếm với từ khóa hoặc dòng máy khác.</p>
+            <a href="/" class="apple-cta-primary">Xem tất cả iPhone</a>
+        </div>
+    }
+    else
+    {
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 g-4 mb-4">
+            @foreach (var item in _products)
+            {
+                <div class="col" @key="item.Id">
+                    <div class="apple-card h-100 d-flex flex-column">
+                        <!-- Product Image with fixed container & fallback -->
+                        <a href="/product/@item.Id" class="product-img-wrap text-decoration-none">
+                            <img src="@(string.IsNullOrEmpty(item.ImageUrl) ? "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-16-pro-finish-select-202409-6-9inch-deserttitanium?wid=940&hei=1112&fmt=png-alpha" : item.ImageUrl)"
+                                 alt="@item.Name"
+                                 class="product-card-img"
+                                 onerror="this.onerror=null;this.src='/images/hero-iphone16.jpg';" />
+                        </a>
+
+                        <!-- Top Series Tag & Trả góp -->
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="product-series-tag mb-0">@(item.ModelSeries ?? item.Category?.Name ?? "Apple VN/A")</span>
+                            <span class="badge bg-light text-success border fw-semibold" style="font-size: 0.72rem;">Trả góp 0%</span>
+                        </div>
+
+                        <!-- Product Title -->
+                        <h3 class="product-title flex-grow-1">
+                            <a href="/product/@item.Id" class="text-dark text-decoration-none">
+                                @item.Name
+                            </a>
+                        </h3>
+
+                        <!-- Color Dots Preview -->
+                        <div class="color-dots-row">
+                            <span class="color-dot" style="background-color: #c9b19e;" title="Titan Sa Mạc"></span>
+                            <span class="color-dot" style="background-color: #9f9b96;" title="Titan Tự Nhiên"></span>
+                            <span class="color-dot" style="background-color: #f2f1ed;" title="Titan Trắng"></span>
+                            <span class="color-dot" style="background-color: #3c3b3e;" title="Titan Đen"></span>
+                        </div>
+
+                        <!-- Storage Mini Pills (Không bị dính liền) -->
+                        <div class="storage-pills-row">
+                            <span class="storage-mini-pill">@(string.IsNullOrEmpty(item.Storage) ? "128GB" : item.Storage)</span>
+                            <span class="storage-mini-pill">VN/A</span>
+                            <span class="storage-mini-pill">12 Tháng</span>
+                        </div>
+
+                        <!-- Price Row -->
+                        <div class="product-price-row mt-auto">
+                            <span class="price-current">@(item.Price > 0 ? item.Price.ToString("N0") + " ₫" : "Liên hệ")</span>
+                            @if (item.Price > 0)
+                            {
+                                <span class="price-old">@((item.Price * 1.08m).ToString("N0")) ₫</span>
+                                <span class="badge-discount">-6%</span>
+                            }
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2 mt-3">
+                            <a href="/product/@item.Id" class="btn btn-outline-secondary btn-sm rounded-pill flex-fill py-2 text-center text-decoration-none">
+                                Chi tiết
+                            </a>
+                            <button type="button" class="apple-cta-primary btn-sm flex-fill py-2 fs-6 text-center" @onclick="() => AddToCart(item)">
+                                Mua Ngay
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <!-- ================= 3. PAGINATION (MOCKUP 01 & 02) ================= -->
+        @if (_totalPages > 1)
+        {
+            <nav class="apple-pagination mt-5 mb-4">
+                @if (_page > 1)
+                {
+                    <a href="@Url(page: _page - 1)" class="page-link">‹ Trước</a>
+                }
+                else
+                {
+                    <span class="page-item disabled">‹ Trước</span>
+                }
+
+                @for (int i = 1; i <= _totalPages; i++)
+                {
+                    var pageNum = i;
+                    if (_page == pageNum)
+                    {
+                        <span class="page-item active">@pageNum</span>
+                    }
+                    else
+                    {
+                        <a href="@Url(page: pageNum)" class="page-link">@pageNum</a>
+                    }
+                }
+
+                @if (_page < _totalPages)
+                {
+                    <a href="@Url(page: _page + 1)" class="page-link">Sau ›</a>
+                }
+                else
+                {
+                    <span class="page-item disabled">Sau ›</span>
+                }
+            </nav>
+        }
+    }
+</div>
+
+<!-- ================= 2. DARK CAMERA CONTROL BANNER (MOCKUP 02) ================= -->
+<section class="apple-camera-banner my-5">
+    <div class="container">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-6">
+                <span class="badge bg-danger bg-opacity-25 text-white border border-danger border-opacity-50 px-3 py-1 rounded-pill mb-2">ĐỘT PHÁ CÔNG NGHỆ 2026</span>
+                <h2 class="fs-1 fw-bold text-white mb-3">Nhiếp Ảnh Điện Toán Đỉnh Cao.</h2>
+                <p class="text-secondary mb-4" style="line-height:1.7;">
+                    Phím <strong>Camera Control</strong> tích hợp cảm biến lực và điện dung, cho phép chạm nhẹ để lấy nét, trượt để thu phóng tiêu cự và bấm đúp để chuyển đổi hệ ống kính 48MP Fusion Camera một cách trực quan chưa từng có.
+                </p>
+                <div class="d-flex gap-3">
+                    <a href="/product/1" class="apple-cta-primary">Khám phá Camera Control &rarr;</a>
+                </div>
+            </div>
+            <div class="col-lg-6 text-center">
+                <img src="/images/camera-iphone16.jpg"
+                     alt="Camera Control iPhone 16 Pro" class="img-fluid rounded-4 shadow-lg"
+                     style="max-height: 340px; margin: 0 auto; object-fit: cover; border: 1px solid rgba(255,255,255,0.15);" />
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ================= WARRANTY COMMITMENT SECTION ================= -->
+<div class="container py-4">
+    <div class="text-center mb-4">
+        <h2 class="fs-3 fw-bold text-dark mb-1">Đặc Quyền Mua Hàng Tại BomChelsea</h2>
+        <div class="text-secondary small">Trải nghiệm dịch vụ mua sắm chuẩn phong cách Apple Store toàn cầu</div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="apple-policy-card">
+                <div class="policy-icon">🛡️</div>
+                <div class="policy-title">Bảo Hành Apple Care</div>
+                <div class="policy-desc">Chính sách bảo hành 12 tháng tại các trung tâm AASP toàn quốc.</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="apple-policy-card">
+                <div class="policy-icon">🔄</div>
+                <div class="policy-title">1 Đổi 1 Trong 30 Ngày</div>
+                <div class="policy-desc">Đổi mới nguyên hộp nếu phát sinh lỗi phần cứng do nhà sản xuất.</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="apple-policy-card">
+                <div class="policy-icon">💳</div>
+                <div class="policy-title">Trả Góp 0% Lãi Suất</div>
+                <div class="policy-desc">Hỗ trợ trả góp qua thẻ tín dụng hoặc các công ty tài chính đối tác.</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="apple-policy-card">
+                <div class="policy-icon">👨‍💻</div>
+                <div class="policy-title">Kỹ Thuật Viên Apple</div>
+                <div class="policy-desc">Đội ngũ chuyên gia hỗ trợ chuyển dữ liệu và cài đặt trọn đời.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hotline Callout Banner -->
+    <div class="apple-hotline-banner">
+        <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+                <h3 class="fs-4 fw-bold mb-1">Cần Tư Vấn Chọn Mua Phiên Bản iPhone Phù Hợp?</h3>
+                <p class="mb-0 text-white-50 small">Liên hệ chuyên viên Apple BomChelsea để được hỗ trợ báo giá và kiểm tra tồn kho tại cửa hàng gần nhất.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <a href="tel:19006789" class="btn btn-light rounded-pill px-4 py-2 fw-bold text-primary">
+                    📞 Gọi 1900.6789 (Miễn Phí)
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private const int PageSize = 8;
+
+    [SupplyParameterFromQuery] public int? CategoryId { get; set; }
+    [SupplyParameterFromQuery] public string? SearchKeyword { get; set; }
+    [SupplyParameterFromQuery] public string? StorageFilter { get; set; }
+    [SupplyParameterFromQuery] public string? SortBy { get; set; }
+    [SupplyParameterFromQuery] public int? CurrentPage { get; set; }
+
+    private List<Category> _categories = new();
+    private List<Product> _products = new();
+    private int _page = 1, _totalPages = 1, _totalCount;
+    private bool _loading = true;
+    private string? _keyword, _storage, _sort;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _keyword = SearchKeyword;
+        _storage = StorageFilter ?? "";
+        _sort = SortBy ?? "";
+        await LoadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await Cart.EnsureLoadedAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        await using var db = await DbFactory.CreateDbContextAsync();
+
+        _categories = await db.Categories.Where(c => c.IsActive).OrderBy(c => c.DisplayOrder).ToListAsync();
+
+        var query = db.Products.Include(p => p.Category).Where(p => p.IsActive);
+
+        if (CategoryId.HasValue && CategoryId.Value > 0)
+        {
+            query = query.Where(p => p.CategoryId == CategoryId.Value);
+        }
+
+        if (!string.IsNullOrWhiteSpace(_keyword))
+        {
+            var kw = _keyword.Trim().ToLower();
+            query = query.Where(p => p.Name.ToLower().Contains(kw) ||
+                                     p.ModelSeries.ToLower().Contains(kw) ||
+                                     p.Color.ToLower().Contains(kw));
+        }
+
+        if (!string.IsNullOrWhiteSpace(_storage))
+        {
+            query = query.Where(p => p.Storage == _storage);
+        }
+
+        query = _sort switch
+        {
+            "price_asc" => query.OrderBy(p => p.Price),
+            "price_desc" => query.OrderByDescending(p => p.Price),
+            "name" => query.OrderBy(p => p.Name),
+            _ => query.OrderByDescending(p => p.Id)
+        };
+
+        _totalCount = await query.CountAsync();
+        _totalPages = (int)Math.Ceiling(_totalCount / (double)PageSize);
+        if (_totalPages < 1) _totalPages = 1;
+
+        _page = CurrentPage ?? 1;
+        if (_page < 1) _page = 1;
+        if (_page > _totalPages) _page = _totalPages;
+
+        _products = await query.Skip((_page - 1) * PageSize).Take(PageSize).ToListAsync();
+        _loading = false;
+    }
+
+    private void ApplyFilter()
+    {
+        Nav.NavigateTo(Url(cat: CategoryId, page: 1, kw: _keyword, storage: _storage, sort: _sort));
+    }
+
+    private string Url(int? cat = null, int? page = null, string? kw = null, string? storage = null, string? sort = null)
+    {
+        var targetCat = cat ?? CategoryId;
+        var targetPage = page ?? _page;
+        var targetKw = kw ?? _keyword;
+        var targetStorage = storage ?? _storage;
+        var targetSort = sort ?? _sort;
+
+        var q = new List<string>();
+        if (targetCat.HasValue && targetCat.Value > 0) q.Add($"categoryId={targetCat.Value}");
+        if (!string.IsNullOrWhiteSpace(targetKw)) q.Add($"searchKeyword={Uri.EscapeDataString(targetKw)}");
+        if (!string.IsNullOrWhiteSpace(targetStorage)) q.Add($"storageFilter={Uri.EscapeDataString(targetStorage)}");
+        if (!string.IsNullOrWhiteSpace(targetSort)) q.Add($"sortBy={Uri.EscapeDataString(targetSort)}");
+        if (targetPage > 1) q.Add($"currentPage={targetPage}");
+
+        return (q.Count == 0 ? "/" : "/?" + string.Join("&", q)) + "#danh-sach-iphone";
+    }
+
+    private async Task AddToCart(Product p)
+    {
+        var state = await AuthProvider.GetAuthenticationStateAsync();
+        var user = state.User;
+        if (user.Identity?.IsAuthenticated != true)
+        {
+            // Chưa đăng nhập thì không có giỏ hàng -> Chuyển sang trang Đăng nhập
+            Nav.NavigateTo($"/Account/Login?returnUrl={Uri.EscapeDataString($"/product/{p.Id}")}", forceLoad: true);
+            return;
+        }
+
+        if ((user.IsInRole("Admin") || user.IsInRole("Manager") || user.IsInRole("Staff") || user.IsInRole("Cashier") || user.IsInRole("Shipper")) &&
+            !user.IsInRole("Customer"))
+        {
+            Toast.Warning("Tài khoản quản trị viên / nội bộ không được phép mua hàng theo chuẩn AAR!");
+            return;
+        }
+
+        var result = await Cart.AddToCartAsync(p, 1);
+        if (result.Success)
+        {
+            Toast.Success(result.Message);
+            Nav.NavigateTo("/cart");
+        }
+        else
+        {
+            Toast.Error(result.Message);
+        }
+    }
+}
+

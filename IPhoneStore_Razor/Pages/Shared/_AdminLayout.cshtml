@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - BomChelsea Apple Authorized Reseller Portal (Razor)</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        .notification-btn {
+            position: relative;
+            background: #f1f5f9;
+            border: 1px solid var(--aar-border);
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #475569;
+            transition: all 0.2s;
+        }
+        .notification-btn:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+        .notification-dot {
+            position: absolute;
+            top: 7px;
+            right: 7px;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            border: 2px solid #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="aar-admin-wrapper">
+        <!-- ================= AAR FIXED SIDEBAR (270px) ================= -->
+        <aside class="aar-sidebar">
+            <div class="aar-sidebar-brand">
+                <a asp-page="/Admin/Index" class="aar-brand-title d-flex align-items-center gap-2 text-decoration-none">
+                    <img src="~/images/chelsea-logo.svg" alt="Chelsea FC" width="28" height="28" class="rounded-circle shadow-sm" style="border: 1px solid #d1ab3e;" />
+                    <span class="fw-bold tracking-tight text-white">BomChelsea</span>
+                </a>
+                <span class="aar-brand-badge" style="background: linear-gradient(135deg, #034694, #0956b5); color: #ffffff; border: 1px solid rgba(255,255,255,0.2);">RAZOR</span>
+            </div>
+
+            <nav class="aar-sidebar-nav">
+                <div class="aar-nav-section-title">Tổng quan &amp; Kho hàng</div>
+                
+                <a class="aar-nav-item @(ViewContext.HttpContext.Request.Path.Value?.EndsWith("/Admin/Index") == true || ViewContext.HttpContext.Request.Path.Value == "/Admin" ? "active" : "")" 
+                   asp-page="/Admin/Index">
+                    <span>Tổng quan vận hành</span>
+                </a>
+
+                <a class="aar-nav-item @(ViewContext.HttpContext.Request.Path.Value?.Contains("/Admin/Categories") == true ? "active" : "")" 
+                   asp-page="/Admin/Categories">
+                    <span>Danh mục dòng máy</span>
+                </a>
+
+                <a class="aar-nav-item @(ViewContext.HttpContext.Request.Path.Value?.Contains("/Admin/Products") == true ? "active" : "")" 
+                   asp-page="/Admin/Products">
+                    <span>Sản phẩm &amp; biến thể</span>
+                </a>
+
+                <a class="aar-nav-item @(ViewContext.HttpContext.Request.Path.Value?.Contains("/Admin/Inventory") == true ? "active" : "")" 
+                   asp-page="/Admin/Inventory">
+                    <span>Kho IMEI / Serial</span>
+                </a>
+
+                <a class="aar-nav-item @(ViewContext.HttpContext.Request.Path.Value?.Contains("/Admin/BatchImport") == true ? "active" : "")" 
+                   asp-page="/Admin/BatchImport">
+                    <span>Nhập lô IMEI</span>
+                    <span class="aar-badge aar-badge-blue">Lô</span>
+                </a>
+
+                <div class="aar-nav-section-title mt-2">Bán hàng &amp; Dịch vụ</div>
+
+                <a class="aar-nav-item @(ViewContext.HttpContext.Request.Path.Value?.Contains("/Admin/Orders") == true ? "active" : "")" 
+                   asp-page="/Admin/Orders">
+                    <span>Quản lý Đơn hàng</span>
+                    <span class="aar-badge aar-badge-red">3 mới</span>
+                </a>
+
+                <a class="aar-nav-item @(ViewContext.HttpContext.Request.Path.Value?.Contains("/Admin/Warranty") == true ? "active" : "")" 
+                   asp-page="/Admin/Warranty">
+                    <span>Bảo hành &amp; 1 Đổi 1</span>
+                </a>
+
+                <div class="aar-nav-section-title mt-2">Khách hàng &amp; Hệ thống</div>
+
+                <a class="aar-nav-item @(ViewContext.HttpContext.Request.Path.Value?.Contains("/Admin/Staff") == true || ViewContext.HttpContext.Request.Path.Value?.Contains("/Admin/Accounts") == true ? "active" : "")" 
+                   asp-page="/Admin/Staff">
+                    <span>Quản lý Khách hàng</span>
+                </a>
+
+                <a class="aar-nav-item @(ViewContext.HttpContext.Request.Path.Value?.Contains("/Admin/AuditLogs") == true ? "active" : "")" 
+                   asp-page="/Admin/AuditLogs">
+                    <span>Nhật ký kiểm toán</span>
+                </a>
+            </nav>
+
+            <div class="aar-sidebar-footer">
+                <div class="aar-status-indicator">
+                    <span class="aar-status-dot"></span>
+                    <span>Hệ thống AAR: Đang hoạt động</span>
+                </div>
+                <div class="d-flex align-items-center justify-content-between pt-2 border-top border-secondary border-opacity-25">
+                    <a asp-page="/Index" class="d-flex align-items-center gap-2 text-decoration-none text-light small fw-medium">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+                        <span>Cửa hàng bán lẻ</span>
+                    </a>
+                    <a asp-page="/Admin/Login" asp-page-handler="Logout" class="text-danger small" title="Đăng xuất">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ================= MAIN CONTENT AREA ================= -->
+        <main class="aar-main">
+            <!-- Topbar -->
+            <header class="aar-topbar">
+                <div class="aar-breadcrumb">
+                    <a asp-page="/Admin/Index">BomChelsea Razor Admin</a>
+                    <span>/</span>
+                    <span class="aar-breadcrumb-current">@(ViewData["Title"] ?? "Vận hành hệ thống")</span>
+                </div>
+
+                <div class="d-flex align-items-center gap-3">
+                    <div class="aar-quick-search d-none d-md-block">
+                        <svg class="search-icon" width="15" height="15" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                        <input type="text" placeholder="Tìm kiếm SKU, IMEI, Đơn hàng..." />
+                        <span class="kbd-shortcut">⌘ K</span>
+                    </div>
+
+                    <div class="notification-btn" title="Thông báo hệ thống">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                        </svg>
+                        <span class="notification-dot"></span>
+                    </div>
+
+                    <div class="aar-user-profile ps-2 border-start">
+                        <div class="aar-avatar-circle">HL</div>
+                        <div class="d-none d-lg-block text-start" style="line-height:1.2;">
+                            <div class="fw-bold text-dark small">Hoàng Linh</div>
+                            <div class="text-muted" style="font-size:0.75rem;">Quản trị viên (Admin)</div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Body -->
+            <div class="aar-content">
+                @if (TempData["Success"] != null)
+                {
+                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-4" role="alert">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div>@TempData["Success"]</div>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+                @if (TempData["Error"] != null)
+                {
+                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 mb-4" role="alert">
+                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <div>@TempData["Error"]</div>
+                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                @RenderBody()
+            </div>
+        </main>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
